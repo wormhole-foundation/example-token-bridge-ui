@@ -30,7 +30,7 @@ export default function Footer() {
 
       <Button
         variant="outlined"
-        href="https://wormholenetwork.com/"
+        href="https://wormhole.com/"
         target="_blank"
         rel="noopener noreferrer"
         color="inherit"
