@@ -926,15 +926,15 @@ export const getTerraFCDBaseUrl = (chainId: TerraChainId) =>
 export const getTerraGasPricesUrl = (chainId: TerraChainId) =>
   `${getTerraFCDBaseUrl(chainId)}/v1/txs/gas_prices`;
 
-export const WORMHOLE_EXPLORER_BASE = "https://wormholenetwork.com/en/explorer";
+export const WORMHOLE_EXPLORER_BASE = "https://wormhole.com/explorer";
 
 export const SOLANA_SYSTEM_PROGRAM_ADDRESS = "11111111111111111111111111111111";
 
 export const getHowToAddTokensToWalletUrl = (chainId: ChainId) => {
   if (isEVMChain(chainId)) {
-    return "https://docs.wormholenetwork.com/wormhole/video-tutorial-how-to-manually-add-tokens-to-your-wallet#1.-metamask-ethereum-polygon-and-bsc";
+    return "https://docs.wormhole.com/wormhole/video-tutorial-how-to-manually-add-tokens-to-your-wallet#metamask"
   } else if (isTerraChain(chainId)) {
-    return "https://docs.wormholenetwork.com/wormhole/video-tutorial-how-to-manually-add-tokens-to-your-wallet#2.-terra-station";
+    return "https://docs.wormhole.com/wormhole/video-tutorial-how-to-manually-add-tokens-to-your-wallet#terra-station";
   }
   return "";
 };
