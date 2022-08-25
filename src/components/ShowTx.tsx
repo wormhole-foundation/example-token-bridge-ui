@@ -13,7 +13,6 @@ import {
   CHAIN_ID_OASIS,
   CHAIN_ID_POLYGON,
   CHAIN_ID_SOLANA,
-  CHAIN_ID_TERRA,
   CHAIN_ID_ACALA,
   isTerraChain,
   CHAIN_ID_TERRA2,
@@ -42,7 +41,6 @@ export default function ShowTx({
   const classes = useStyles();
   const showExplorerLink =
     CLUSTER === "testnet" ||
-    CLUSTER === "mainnet" ||
     (CLUSTER === "devnet" &&
       (chainId === CHAIN_ID_SOLANA || isTerraChain(chainId)));
   const explorerAddress =
@@ -108,10 +106,6 @@ export default function ShowTx({
             ? "?cluster=custom&customUrl=http%3A%2F%2Flocalhost%3A8899"
             : ""
         }`
-      : chainId === CHAIN_ID_TERRA
-      ? CLUSTER === "mainnet"
-        ? `https://finder.terra.money/columbus-5/tx/${tx?.id}`
-        : undefined
       : chainId === CHAIN_ID_TERRA2
       ? `https://finder.terra.money/${
           CLUSTER === "devnet"

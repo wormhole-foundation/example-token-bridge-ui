@@ -1,7 +1,7 @@
 import { ChainId, isNativeDenom, TerraChainId } from "@certusone/wormhole-sdk";
 import { formatUnits } from "@ethersproject/units";
 import { LCDClient } from "@terra-money/terra.js";
-import React, { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { createParsedTokenAccount } from "../../hooks/useGetSourceParsedTokenAccounts";
 import useIsWalletReady from "../../hooks/useIsWalletReady";
 import useTerraNativeBalances from "../../hooks/useTerraNativeBalances";
@@ -25,8 +25,6 @@ type TerraTokenPickerProps = {
   resetAccounts: (() => void) | undefined;
   chainId: TerraChainId;
 };
-
-const returnsFalse = () => false;
 
 export default function TerraTokenPicker(props: TerraTokenPickerProps) {
   const { value, onChange, disabled, chainId } = props;
@@ -88,15 +86,7 @@ export default function TerraTokenPicker(props: TerraTokenPickerProps) {
     return balancesItems.filter((metadata) =>
       SUPPORTED_TERRA_TOKENS.includes(metadata.mintKey)
     );
-    // const values = tokenMap.data?.mainnet;
-    // const tokenMapItems = Object.values(values || {}) || [];
-    // return [...balancesItems, ...tokenMapItems];
-  }, [
-    walletAddress,
-    balances,
-    props.chainId,
-    // tokenMap
-  ]);
+  }, [walletAddress, balances, props.chainId]);
 
   //TODO this only supports non-native assets. Native assets come from the hook.
   //TODO correlate against token list to get metadata
@@ -153,7 +143,7 @@ export default function TerraTokenPicker(props: TerraTokenPickerProps) {
 
   const RenderComp = useCallback(
     ({ account }: { account: NFTParsedTokenAccount }) => {
-      return BasicAccountRender(account, returnsFalse, false);
+      return BasicAccountRender(account, false);
     },
     []
   );

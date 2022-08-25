@@ -23,7 +23,7 @@ import {
   selectTransferTargetParsedTokenAccount,
 } from "../../store/selectors";
 import { incrementStep, setTargetChain } from "../../store/transferSlice";
-import { CHAINS, CLUSTER } from "../../utils/consts";
+import { CHAINS } from "../../utils/consts";
 import ButtonWithLoader from "../ButtonWithLoader";
 import ChainSelect from "../ChainSelect";
 import FeeMethodSelector from "../FeeMethodSelector";
@@ -33,7 +33,6 @@ import SmartAddress from "../SmartAddress";
 import SolanaCreateAssociatedAddress, {
   useAssociatedAccountExistsState,
 } from "../SolanaCreateAssociatedAddress";
-import SolanaTPSWarning from "../SolanaTPSWarning";
 import StepDescription from "../StepDescription";
 import RegisterNowButton from "./RegisterNowButton";
 
@@ -170,9 +169,6 @@ function Target() {
       ) : null}
       {isEVMChain(targetChain) && !isReady ? null : <FeeMethodSelector />}
       <LowBalanceWarning chainId={targetChain} />
-      {targetChain === CHAIN_ID_SOLANA && CLUSTER === "mainnet" && (
-        <SolanaTPSWarning />
-      )}
       <ButtonWithLoader
         disabled={!isTargetComplete || !associatedAccountExists}
         onClick={handleNextClick}

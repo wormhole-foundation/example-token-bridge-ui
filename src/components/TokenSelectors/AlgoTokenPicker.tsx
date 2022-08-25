@@ -1,7 +1,7 @@
 import { ChainId, CHAIN_ID_ALGORAND } from "@certusone/wormhole-sdk";
 import { formatUnits } from "@ethersproject/units";
 import { Algodv2 } from "algosdk";
-import React, { useCallback } from "react";
+import { useCallback } from "react";
 import { fetchSingleMetadata } from "../../hooks/useAlgoMetadata";
 import { createParsedTokenAccount } from "../../hooks/useGetSourceParsedTokenAccounts";
 import useIsWalletReady from "../../hooks/useIsWalletReady";
@@ -18,8 +18,6 @@ type AlgoTokenPickerProps = {
   disabled: boolean;
   resetAccounts: (() => void) | undefined;
 };
-
-const returnsFalse = () => false;
 
 export default function AlgoTokenPicker(props: AlgoTokenPickerProps) {
   const { value, onChange, disabled, tokenAccounts, resetAccounts } = props;
@@ -102,7 +100,7 @@ export default function AlgoTokenPicker(props: AlgoTokenPickerProps) {
 
   const RenderComp = useCallback(
     ({ account }: { account: NFTParsedTokenAccount }) => {
-      return BasicAccountRender(account, returnsFalse, false);
+      return BasicAccountRender(account, false);
     },
     []
   );

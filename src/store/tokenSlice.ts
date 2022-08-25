@@ -1,6 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { TokenInfo } from "@solana/spl-token-registry";
-import { MarketsMap } from "../hooks/useMarketsMap";
 import { RelayerTokenInfo } from "../hooks/useRelayersAvailable";
 import { TerraTokenMap } from "../hooks/useTerraTokenMap";
 import {
@@ -14,14 +13,12 @@ import {
 export interface TokenMetadataState {
   solanaTokenMap: DataWrapper<TokenInfo[]>;
   terraTokenMap: DataWrapper<TerraTokenMap>; //TODO make a decent type for this.
-  marketsMap: DataWrapper<MarketsMap>;
   relayerTokenInfo: DataWrapper<RelayerTokenInfo>;
 }
 
 const initialState: TokenMetadataState = {
   solanaTokenMap: getEmptyDataWrapper(),
   terraTokenMap: getEmptyDataWrapper(),
-  marketsMap: getEmptyDataWrapper(),
   relayerTokenInfo: getEmptyDataWrapper(),
 };
 
@@ -49,16 +46,6 @@ export const tokenSlice = createSlice({
       state.terraTokenMap = errorDataWrapper(action.payload);
     },
 
-    receiveMarketsMap: (state, action: PayloadAction<MarketsMap>) => {
-      state.marketsMap = receiveDataWrapper(action.payload);
-    },
-    fetchMarketsMap: (state) => {
-      state.marketsMap = fetchDataWrapper();
-    },
-    errorMarketsMap: (state, action: PayloadAction<string>) => {
-      state.marketsMap = errorDataWrapper(action.payload);
-    },
-
     receiveRelayerTokenInfo: (
       state,
       action: PayloadAction<RelayerTokenInfo>
@@ -83,9 +70,6 @@ export const {
   receiveTerraTokenMap,
   fetchTerraTokenMap,
   errorTerraTokenMap,
-  receiveMarketsMap,
-  fetchMarketsMap,
-  errorMarketsMap,
   receiveRelayerTokenInfo,
   fetchRelayerTokenInfo,
   errorRelayerTokenInfo,

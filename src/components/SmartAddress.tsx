@@ -13,7 +13,6 @@ import {
   CHAIN_ID_OASIS,
   CHAIN_ID_POLYGON,
   CHAIN_ID_SOLANA,
-  CHAIN_ID_TERRA,
   isNativeDenom,
   CHAIN_ID_ACALA,
   isTerraChain,
@@ -172,10 +171,6 @@ export default function SmartAddress({
           ? "?cluster=custom&customUrl=http%3A%2F%2Flocalhost%3A8899"
           : ""
       }`
-    : chainId === CHAIN_ID_TERRA
-    ? CLUSTER === "mainnet"
-      ? `https://finder.terra.money/columbus-5/address/${useableAddress}`
-      : undefined
     : chainId === CHAIN_ID_TERRA2
     ? `https://finder.terra.money/${
         CLUSTER === "devnet"

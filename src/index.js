@@ -5,9 +5,7 @@ import ReactDOM from "react-dom";
 import { Provider } from "react-redux";
 import { HashRouter } from "react-router-dom";
 import App from "./App";
-import BackgroundImage from "./components/BackgroundImage";
 import { AlgorandContextProvider } from "./contexts/AlgorandWalletContext";
-import { BetaContextProvider } from "./contexts/BetaContext";
 import { EthereumProviderProvider } from "./contexts/EthereumProviderContext";
 import { SolanaWalletProvider } from "./contexts/SolanaWalletContext.tsx";
 import { TerraWalletProvider } from "./contexts/TerraWalletContext.tsx";
@@ -22,20 +20,17 @@ ReactDOM.render(
         <CssBaseline />
         <ErrorBoundary>
           <SnackbarProvider maxSnack={3}>
-            <BetaContextProvider>
               <SolanaWalletProvider>
                 <EthereumProviderProvider>
                   <TerraWalletProvider>
                     <AlgorandContextProvider>
                       <HashRouter>
-                        <BackgroundImage />
                         <App />
                       </HashRouter>
                     </AlgorandContextProvider>
                   </TerraWalletProvider>
                 </EthereumProviderProvider>
               </SolanaWalletProvider>
-            </BetaContextProvider>
           </SnackbarProvider>
         </ErrorBoundary>
       </ThemeProvider>

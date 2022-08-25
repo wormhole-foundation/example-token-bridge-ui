@@ -1,14 +1,7 @@
-import {
-  CHAIN_ID_BSC,
-  CHAIN_ID_ETH,
-  CHAIN_ID_SOLANA,
-} from "@certusone/wormhole-sdk";
-import { getAddress } from "@ethersproject/address";
 import { Button, makeStyles, Typography } from "@material-ui/core";
 import { VerifiedUser } from "@material-ui/icons";
 import { useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useHistory } from "react-router";
 import { Link } from "react-router-dom";
 import useIsWalletReady from "../../hooks/useIsWalletReady";
 import {
@@ -27,21 +20,13 @@ import {
   setSourceChain,
   setTargetChain,
 } from "../../store/transferSlice";
-import {
-  BSC_MIGRATION_ASSET_MAP,
-  CHAINS,
-  CLUSTER,
-  ETH_MIGRATION_ASSET_MAP,
-  getIsTransferDisabled,
-  MIGRATION_ASSET_MAP,
-} from "../../utils/consts";
+import { CHAINS, CLUSTER, getIsTransferDisabled } from "../../utils/consts";
 import ButtonWithLoader from "../ButtonWithLoader";
 import ChainSelect from "../ChainSelect";
 import ChainSelectArrow from "../ChainSelectArrow";
 import KeyAndBalance from "../KeyAndBalance";
 import LowBalanceWarning from "../LowBalanceWarning";
 import NumberTextField from "../NumberTextField";
-import SolanaTPSWarning from "../SolanaTPSWarning";
 import StepDescription from "../StepDescription";
 import { TokenSelector } from "../TokenSelectors/SourceTokenSelector";
 import SourceAssetWarning from "./SourceAssetWarning";
@@ -76,7 +61,6 @@ const useStyles = makeStyles((theme) => ({
 function Source() {
   const classes = useStyles();
   const dispatch = useDispatch();
-  const history = useHistory();
   const sourceChain = useSelector(selectTransferSourceChain);
   const targetChain = useSelector(selectTransferTargetChain);
   const targetChainOptions = useMemo(
@@ -93,20 +77,6 @@ function Source() {
     selectTransferSourceParsedTokenAccount
   );
   const hasParsedTokenAccount = !!parsedTokenAccount;
-  const isSolanaMigration =
-    sourceChain === CHAIN_ID_SOLANA &&
-    !!parsedTokenAccount &&
-    !!MIGRATION_ASSET_MAP.get(parsedTokenAccount.mintKey);
-  const isEthereumMigration =
-    sourceChain === CHAIN_ID_ETH &&
-    !!parsedTokenAccount &&
-    !!ETH_MIGRATION_ASSET_MAP.get(getAddress(parsedTokenAccount.mintKey));
-  const isBscMigration =
-    sourceChain === CHAIN_ID_BSC &&
-    !!parsedTokenAccount &&
-    !!BSC_MIGRATION_ASSET_MAP.get(getAddress(parsedTokenAccount.mintKey));
-  const isMigrationAsset =
-    isSolanaMigration || isEthereumMigration || isBscMigration;
   const uiAmountString = useSelector(selectTransferSourceBalanceString);
   const amount = useSelector(selectTransferAmount);
   const error = useSelector(selectTransferSourceError);
@@ -114,17 +84,6 @@ function Source() {
   const shouldLockFields = useSelector(selectTransferShouldLockFields);
   const { isReady, statusMessage } = useIsWalletReady(sourceChain);
   const isTransferLimited = useIsTransferLimited();
-  const handleMigrationClick = useCallback(() => {
-    if (sourceChain === CHAIN_ID_SOLANA) {
-      history.push(
-        `/migrate/Solana/${parsedTokenAccount?.mintKey}/${parsedTokenAccount?.publicKey}`
-      );
-    } else if (sourceChain === CHAIN_ID_ETH) {
-      history.push(`/migrate/Ethereum/${parsedTokenAccount?.mintKey}`);
-    } else if (sourceChain === CHAIN_ID_BSC) {
-      history.push(`/migrate/BinanceSmartChain/${parsedTokenAccount?.mintKey}`);
-    }
-  }, [history, parsedTokenAccount, sourceChain]);
   const handleSourceChange = useCallback(
     (event) => {
       dispatch(setSourceChain(event.target.value));
@@ -156,7 +115,7 @@ function Source() {
     <>
       <StepDescription>
         <div style={{ display: "flex", alignItems: "center" }}>
-          Select tokens to send through the Portal.
+          Select tokens to send through the {CLUSTER.toUpperCase()} bridge.
           <div style={{ flexGrow: 1 }} />
           <div>
             <Button
@@ -214,59 +173,43 @@ function Source() {
           <TokenSelector disabled={shouldLockFields} />
         </div>
       ) : null}
-      {isMigrationAsset ? (
-        <Button
-          variant="contained"
-          color="primary"
+      <LowBalanceWarning chainId={sourceChain} />
+      <SourceAssetWarning
+        sourceChain={sourceChain}
+        sourceAsset={parsedTokenAccount?.mintKey}
+      />
+      {hasParsedTokenAccount ? (
+        <NumberTextField
+          variant="outlined"
+          label="Amount"
           fullWidth
-          onClick={handleMigrationClick}
-        >
-          Go to Migration Page
-        </Button>
-      ) : (
-        <>
-          <LowBalanceWarning chainId={sourceChain} />
-          {sourceChain === CHAIN_ID_SOLANA && CLUSTER === "mainnet" && (
-            <SolanaTPSWarning />
-          )}
-          <SourceAssetWarning
-            sourceChain={sourceChain}
-            sourceAsset={parsedTokenAccount?.mintKey}
-          />
-          {hasParsedTokenAccount ? (
-            <NumberTextField
-              variant="outlined"
-              label="Amount"
-              fullWidth
-              className={classes.transferField}
-              value={amount}
-              onChange={handleAmountChange}
-              disabled={shouldLockFields}
-              onMaxClick={
-                uiAmountString && !parsedTokenAccount.isNativeAsset
-                  ? handleMaxClick
-                  : undefined
-              }
-            />
-          ) : null}
-          <ChainWarningMessage chainId={sourceChain} />
-          <ChainWarningMessage chainId={targetChain} />
-          <TransferLimitedWarning isTransferLimited={isTransferLimited} />
-          <ButtonWithLoader
-            disabled={
-              !isSourceComplete ||
-              isSourceTransferDisabled ||
-              isTargetTransferDisabled ||
-              isTransferLimited.reason === "EXCEEDS_MAX_NOTIONAL"
-            }
-            onClick={handleNextClick}
-            showLoader={false}
-            error={statusMessage || error}
-          >
-            Next
-          </ButtonWithLoader>
-        </>
-      )}
+          className={classes.transferField}
+          value={amount}
+          onChange={handleAmountChange}
+          disabled={shouldLockFields}
+          onMaxClick={
+            uiAmountString && !parsedTokenAccount.isNativeAsset
+              ? handleMaxClick
+              : undefined
+          }
+        />
+      ) : null}
+      <ChainWarningMessage chainId={sourceChain} />
+      <ChainWarningMessage chainId={targetChain} />
+      <TransferLimitedWarning isTransferLimited={isTransferLimited} />
+      <ButtonWithLoader
+        disabled={
+          !isSourceComplete ||
+          isSourceTransferDisabled ||
+          isTargetTransferDisabled ||
+          isTransferLimited.reason === "EXCEEDS_MAX_NOTIONAL"
+        }
+        onClick={handleNextClick}
+        showLoader={false}
+        error={statusMessage || error}
+      >
+        Next
+      </ButtonWithLoader>
     </>
   );
 }

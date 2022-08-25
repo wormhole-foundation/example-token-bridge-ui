@@ -16,15 +16,13 @@ import {
 } from "@material-ui/core";
 import ArrowDropDownIcon from "@material-ui/icons/ArrowDropDown";
 import { useCallback, useMemo, useState } from "react";
-import { useBetaContext } from "../contexts/BetaContext";
 import useFetchForeignAsset, {
   ForeignAssetInfo,
 } from "../hooks/useFetchForeignAsset";
 import useIsWalletReady from "../hooks/useIsWalletReady";
 import useMetadata from "../hooks/useMetadata";
 import useOriginalAsset, { OriginalAssetInfo } from "../hooks/useOriginalAsset";
-import { COLORS } from "../muiTheme";
-import { BETA_CHAINS, CHAINS, CHAINS_BY_ID } from "../utils/consts";
+import { CHAINS, CHAINS_BY_ID } from "../utils/consts";
 import HeaderText from "./HeaderText";
 import KeyAndBalance from "./KeyAndBalance";
 import SmartAddress from "./SmartAddress";
@@ -41,7 +39,6 @@ const useStyles = makeStyles((theme) => ({
   },
   mainCard: {
     padding: "32px 32px 16px",
-    backgroundColor: COLORS.whiteWithTransparency,
   },
   spacer: {
     height: theme.spacing(3),
@@ -60,10 +57,8 @@ const useStyles = makeStyles((theme) => ({
 
 function PrimaryAssetInfomation({
   lookupChain,
-  lookupAsset,
   originChain,
   originAsset,
-  showLoader,
 }: {
   lookupChain: ChainId;
   lookupAsset: string;
@@ -76,12 +71,12 @@ function PrimaryAssetInfomation({
   const metadata = useMetadata(originChain, tokenArray);
   const nativeContent = (
     <div>
-      <Typography>{`This is not a Portal wrapped token.`}</Typography>
+      <Typography>{`This is not a wrapped asset.`}</Typography>
     </div>
   );
   const wrapped = (
     <div>
-      <Typography>{`This is wrapped by Portal! Here is the original token: `}</Typography>
+      <Typography>{`This is wrapped asset! Here is the original token: `}</Typography>
       <div className={classes.flexBox}>
         <Typography>{`Chain: ${CHAINS_BY_ID[originChain].name}`}</Typography>
         <div>
@@ -180,7 +175,6 @@ function SecondaryAssetInformation({
 
 export default function TokenOriginVerifier() {
   const classes = useStyles();
-  const isBeta = useBetaContext();
 
   const [primaryLookupChain, setPrimaryLookupChain] = useState(CHAIN_ID_SOLANA);
   const [primaryLookupAsset, setPrimaryLookupAsset] = useState("");
@@ -188,18 +182,10 @@ export default function TokenOriginVerifier() {
   const [secondaryLookupChain, setSecondaryLookupChain] =
     useState<ChainId>(CHAIN_ID_ETH);
 
-  const primaryLookupChainOptions = useMemo(
-    () => (isBeta ? CHAINS.filter((x) => !BETA_CHAINS.includes(x.id)) : CHAINS),
-    [isBeta]
-  );
+  const primaryLookupChainOptions = CHAINS;
   const secondaryLookupChainOptions = useMemo(
-    () =>
-      isBeta
-        ? CHAINS.filter(
-            (x) => !BETA_CHAINS.includes(x.id) && x.id !== primaryLookupChain
-          )
-        : CHAINS.filter((x) => x.id !== primaryLookupChain),
-    [isBeta, primaryLookupChain]
+    () => CHAINS.filter((x) => x.id !== primaryLookupChain),
+    [primaryLookupChain]
   );
 
   const handlePrimaryLookupChainChange = useCallback(

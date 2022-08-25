@@ -16,14 +16,12 @@ import {
 } from "../../store/selectors";
 import {
   CHAINS_WITH_NFT_SUPPORT,
-  CLUSTER,
   getIsTransferDisabled,
 } from "../../utils/consts";
 import ButtonWithLoader from "../ButtonWithLoader";
 import ChainSelect from "../ChainSelect";
 import KeyAndBalance from "../KeyAndBalance";
 import LowBalanceWarning from "../LowBalanceWarning";
-import SolanaTPSWarning from "../SolanaTPSWarning";
 import StepDescription from "../StepDescription";
 import { TokenSelector } from "../TokenSelectors/SourceTokenSelector";
 import ChainWarningMessage from "../ChainWarningMessage";
@@ -100,9 +98,6 @@ function Source() {
         </div>
       ) : null}
       <LowBalanceWarning chainId={sourceChain} />
-      {sourceChain === CHAIN_ID_SOLANA && CLUSTER === "mainnet" && (
-        <SolanaTPSWarning />
-      )}
       <ChainWarningMessage chainId={sourceChain} />
       <ButtonWithLoader
         disabled={!isSourceComplete || isTransferDisabled}

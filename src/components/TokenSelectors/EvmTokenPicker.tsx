@@ -1,12 +1,9 @@
 import {
   ChainId,
-  CHAIN_ID_ETH,
   NFTImplementation,
   TokenImplementation,
 } from "@certusone/wormhole-sdk";
-import { WormholeAbi__factory } from "@certusone/wormhole-sdk/lib/esm/ethers-contracts/abi";
-import { getAddress as getEthAddress } from "@ethersproject/address";
-import React, { useCallback } from "react";
+import { useCallback } from "react";
 import { useSelector } from "react-redux";
 import { useEthereumProvider } from "../../contexts/EthereumProviderContext";
 import useIsWalletReady from "../../hooks/useIsWalletReady";
@@ -18,10 +15,6 @@ import {
 } from "../../store/selectors";
 import { ParsedTokenAccount } from "../../store/transferSlice";
 import {
-  getMigrationAssetMap,
-  WORMHOLE_V1_ETH_ADDRESS,
-} from "../../utils/consts";
-import {
   ethNFTToNFTParsedTokenAccount,
   ethTokenToParsedTokenAccount,
   getEthereumNFT,
@@ -29,17 +22,6 @@ import {
   isValidEthereumAddress,
 } from "../../utils/ethereum";
 import TokenPicker, { BasicAccountRender } from "./TokenPicker";
-
-const isWormholev1 = (provider: any, address: string, chainId: ChainId) => {
-  if (chainId !== CHAIN_ID_ETH) {
-    return Promise.resolve(false);
-  }
-  const connection = WormholeAbi__factory.connect(
-    WORMHOLE_V1_ETH_ADDRESS,
-    provider
-  );
-  return connection.isWrappedAsset(address);
-};
 
 type EthereumSourceTokenSelectorProps = {
   value: ParsedTokenAccount | null;
@@ -89,14 +71,6 @@ export default function EvmTokenPicker(
     [selectedTokenAccount]
   );
 
-  const isMigrationEligible = useCallback(
-    (address: string) => {
-      const assetMap = getMigrationAssetMap(chainId);
-      return !!assetMap.get(getEthAddress(address));
-    },
-    [chainId]
-  );
-
   const getAddress: (
     address: string,
     tokenId?: string
@@ -140,34 +114,17 @@ export default function EvmTokenPicker(
         onChange(null);
         return Promise.resolve();
       }
-      let v1 = false;
-      try {
-        v1 = await isWormholev1(provider, account.mintKey, chainId);
-      } catch (e) {
-        //For now, just swallow this one.
-      }
-      const migration = isMigrationEligible(account.mintKey);
-      if (v1 === true && !migration) {
-        throw new Error(
-          "Wormhole v1 assets cannot be transferred with this bridge."
-        );
-      }
       onChange(account);
       return Promise.resolve();
     },
-    [chainId, onChange, provider, isMigrationEligible]
+    [onChange]
   );
 
   const RenderComp = useCallback(
     ({ account }: { account: NFTParsedTokenAccount }) => {
-      return BasicAccountRender(
-        account,
-        isMigrationEligible,
-        nft || false,
-        shouldDisplayBalance
-      );
+      return BasicAccountRender(account, nft || false, shouldDisplayBalance);
     },
-    [nft, isMigrationEligible, shouldDisplayBalance]
+    [nft, shouldDisplayBalance]
   );
 
   return (

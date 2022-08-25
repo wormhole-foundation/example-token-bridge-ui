@@ -29,14 +29,12 @@ import {
 import {
   CHAINS_BY_ID,
   CHAINS_WITH_NFT_SUPPORT,
-  CLUSTER,
   getIsTransferDisabled,
 } from "../../utils/consts";
 import ButtonWithLoader from "../ButtonWithLoader";
 import ChainSelect from "../ChainSelect";
 import KeyAndBalance from "../KeyAndBalance";
 import LowBalanceWarning from "../LowBalanceWarning";
-import SolanaTPSWarning from "../SolanaTPSWarning";
 import StepDescription from "../StepDescription";
 import ChainWarningMessage from "../ChainWarningMessage";
 
@@ -146,9 +144,6 @@ function Target() {
         )}
       </Alert>
       <LowBalanceWarning chainId={targetChain} />
-      {targetChain === CHAIN_ID_SOLANA && CLUSTER === "mainnet" && (
-        <SolanaTPSWarning />
-      )}
       <ChainWarningMessage chainId={targetChain} />
       <ButtonWithLoader
         disabled={!isTargetComplete || isTransferDisabled} //|| !associatedAccountExists}

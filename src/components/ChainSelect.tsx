@@ -7,9 +7,7 @@ import {
   TextField,
 } from "@material-ui/core";
 import clsx from "clsx";
-import { useMemo } from "react";
-import { useBetaContext } from "../contexts/BetaContext";
-import { BETA_CHAINS, ChainInfo } from "../utils/consts";
+import { ChainInfo } from "../utils/consts";
 
 const useStyles = makeStyles((theme) => ({
   select: {
@@ -42,15 +40,10 @@ interface ChainSelectProps extends OutlinedTextFieldProps {
 
 export default function ChainSelect({ chains, ...rest }: ChainSelectProps) {
   const classes = useStyles();
-  const isBeta = useBetaContext();
-  const filteredChains = useMemo(
-    () =>
-      chains.filter(({ id }) => (isBeta ? true : !BETA_CHAINS.includes(id))),
-    [chains, isBeta]
-  );
+
   return (
     <TextField {...rest} className={clsx(classes.select, rest.className)}>
-      {filteredChains.map((chain) => createChainMenuItem(chain, classes))}
+      {chains.map((chain) => createChainMenuItem(chain, classes))}
     </TextField>
   );
 }

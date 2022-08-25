@@ -31,14 +31,11 @@ import { Launch } from "@material-ui/icons";
 import { Alert } from "@material-ui/lab";
 import { Connection } from "@solana/web3.js";
 import { useCallback, useEffect, useState } from "react";
-import { useBetaContext } from "../contexts/BetaContext";
 import { useEthereumProvider } from "../contexts/EthereumProviderContext";
 import useIsWalletReady from "../hooks/useIsWalletReady";
 import { getMetaplexData } from "../hooks/useMetaplexData";
-import { COLORS } from "../muiTheme";
 import { NFTParsedTokenAccount } from "../store/nftSlice";
 import {
-  BETA_CHAINS,
   CHAINS_BY_ID,
   CHAINS_WITH_NFT_SUPPORT,
   getNFTBridgeAddressForChain,
@@ -58,7 +55,6 @@ import NFTViewer from "./TokenSelectors/NFTViewer";
 const useStyles = makeStyles((theme) => ({
   mainCard: {
     padding: "32px 32px 16px",
-    backgroundColor: COLORS.whiteWithTransparency,
   },
   originHeader: {
     marginTop: theme.spacing(4),
@@ -77,7 +73,6 @@ const useStyles = makeStyles((theme) => ({
 
 export default function NFTOriginVerifier() {
   const classes = useStyles();
-  const isBeta = useBetaContext();
   const { provider, signerAddress } = useEthereumProvider();
   const [lookupChain, setLookupChain] = useState<ChainId>(CHAIN_ID_ETH);
   const { isReady, statusMessage } = useIsWalletReady(lookupChain);
@@ -237,9 +232,7 @@ export default function NFTOriginVerifier() {
             fullWidth
             margin="normal"
           >
-            {CHAINS_WITH_NFT_SUPPORT.filter(({ id }) =>
-              isBeta ? true : !BETA_CHAINS.includes(id)
-            ).map(({ id, name }) => (
+            {CHAINS_WITH_NFT_SUPPORT.map(({ id, name }) => (
               <MenuItem key={id} value={id}>
                 {name}
               </MenuItem>

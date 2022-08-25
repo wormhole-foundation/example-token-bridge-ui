@@ -10,7 +10,6 @@ import {
 import { TokenInfo } from "@solana/spl-token-registry";
 import { useMemo } from "react";
 import { DataWrapper, getEmptyDataWrapper } from "../store/helpers";
-import { logoOverrides } from "../utils/consts";
 import { Metadata } from "../utils/metaplex";
 import useAlgoMetadata, { AlgoMetadata } from "./useAlgoMetadata";
 import useEvmMetadata, { EvmMetadata } from "./useEvmMetadata";
@@ -104,7 +103,7 @@ const constructEthMetadata = (
     const meta = metadataMap.data?.get(address);
     const obj = {
       symbol: meta?.symbol || undefined,
-      logo: logoOverrides.get(address) || meta?.logo || undefined,
+      logo: meta?.logo || undefined,
       tokenName: meta?.tokenName || undefined,
       decimals: meta?.decimals,
     };
@@ -131,7 +130,7 @@ const constructAlgoMetadata = (
     const meta = metadataMap.data?.get(address);
     const obj = {
       symbol: meta?.symbol || undefined,
-      logo: logoOverrides.get(address) || undefined,
+      logo: undefined,
       tokenName: meta?.tokenName || undefined,
       decimals: meta?.decimals,
     };

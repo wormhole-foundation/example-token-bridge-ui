@@ -89,7 +89,6 @@ import {
   BLOCKSCOUT_GET_TOKENS_URL,
   KAR_ADDRESS,
   KAR_DECIMALS,
-  logoOverrides,
   ROPSTEN_WETH_ADDRESS,
   ROPSTEN_WETH_DECIMALS,
   SOLANA_HOST,
@@ -110,7 +109,7 @@ import {
   WMATIC_ADDRESS,
   WMATIC_DECIMALS,
   WNEON_ADDRESS,
-  WNEON_DECIMALS,  
+  WNEON_DECIMALS,
   WROSE_ADDRESS,
   WROSE_DECIMALS,
   getDefaultNativeCurrencyAddressEvm,
@@ -213,7 +212,7 @@ const createParsedTokenAccountFromCovalent = (
     uiAmountString: formatUnits(covalent.balance, covalent.contract_decimals),
     symbol: covalent.contract_ticker_symbol,
     name: covalent.contract_name,
-    logo: logoOverrides.get(covalent.contract_address) || covalent.logo_url,
+    logo: covalent.logo_url,
   };
 };
 
@@ -221,7 +220,6 @@ const createNativeSolParsedTokenAccount = async (
   connection: Connection,
   walletAddress: string
 ) => {
-  // const walletAddress = "H69q3Q8E74xm7swmMQpsJLVp2Q9JuBwBbxraAMX5Drzm" // known solana mainnet wallet with tokens
   const fetchAccounts = await getMultipleAccountsRPC(connection, [
     new PublicKey(walletAddress),
   ]);
@@ -1376,7 +1374,7 @@ function useGetAvailableTokens(nft: boolean = false) {
       cancelled = true;
     };
   }, [lookupChain, provider, signerAddress, nft, ethNativeAccount]);
-  
+
   useEffect(() => {
     let cancelled = false;
     if (
