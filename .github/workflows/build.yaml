@@ -17,7 +17,7 @@ jobs:
         run: |
           npm ci
           IFS='/' read -a strarr <<< $GITHUB_REPOSITORY && sed -i "`wc -l < package.json`i\,\"homepage\":\"https://${strarr[0]}.github.io/${strarr[1]}\"" package.json
-          npm run build
+          REACT_APP_CLUSTER=testnet npm run build
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4.2.5
         with:
