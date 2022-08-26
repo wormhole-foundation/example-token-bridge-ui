@@ -1,9 +1,8 @@
-# Example Token Bridge UI
+# Example Token Bridge UI &middot; [![GitHub license](https://img.shields.io/badge/license-Apache2.0-blue.svg)](https://github.com/wormhole-foundation/example-token-bridge-ui/blob/main/LICENSE) ![Build](https://github.com/wormhole-foundation/example-token-bridge-ui/actions/workflows/build.yaml/badge.svg)
 
-## Prerequisites
+This app serves as a testnet and local devnet UI for the example token bridge contracts. 
 
-- NodeJS v14+
-- NPM v7.18+
+View at https://wormhole-foundation.github.io/example-token-bridge-ui/
 
 ## Install
 
@@ -27,18 +26,4 @@ npm run build
 
 ```bash
 REACT_APP_CLUSTER=testnet npm run build
-```
-
-## Test Server
-
-```bash
-npx serve -s build
-```
-
-## Environment Variables (optional)
-
-Create `.env` from the sample file, then add your Covalent API key:
-
-```bash
-cp .env.sample .env
 ```
