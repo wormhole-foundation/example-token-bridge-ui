@@ -1,6 +1,6 @@
 {
   "files": {
-    "main.js": "/example-token-bridge-ui/static/js/main.e7befeed.js",
+    "main.js": "/example-token-bridge-ui/static/js/main.785b4934.js",
     "static/js/893.3258da0d.chunk.js": "/example-token-bridge-ui/static/js/893.3258da0d.chunk.js",
     "static/js/673.1bd9879d.chunk.js": "/example-token-bridge-ui/static/js/673.1bd9879d.chunk.js",
     "static/js/546.e31bd919.chunk.js": "/example-token-bridge-ui/static/js/546.e31bd919.chunk.js",
@@ -40,7 +40,7 @@
     "static/media/avax.svg": "/example-token-bridge-ui/static/media/avax.1e98fe3597e8eaf3f1fbacc3013f2d2f.svg",
     "static/media/algorand.svg": "/example-token-bridge-ui/static/media/algorand.699bf008d7073523b8edd75d8f3b38ac.svg",
     "static/media/eth.svg": "/example-token-bridge-ui/static/media/eth.5a5de20bf3808241fc61ed9ad7680ab5.svg",
-    "main.e7befeed.js.map": "/example-token-bridge-ui/static/js/main.e7befeed.js.map",
+    "main.785b4934.js.map": "/example-token-bridge-ui/static/js/main.785b4934.js.map",
     "893.3258da0d.chunk.js.map": "/example-token-bridge-ui/static/js/893.3258da0d.chunk.js.map",
     "546.e31bd919.chunk.js.map": "/example-token-bridge-ui/static/js/546.e31bd919.chunk.js.map",
     "319.66bfd126.chunk.js.map": "/example-token-bridge-ui/static/js/319.66bfd126.chunk.js.map",
@@ -56,6 +56,6 @@
     "535.583bbca7.chunk.js.map": "/example-token-bridge-ui/static/js/535.583bbca7.chunk.js.map"
   },
   "entrypoints": [
-    "static/js/main.e7befeed.js"
+    "static/js/main.785b4934.js"
   ]
 }
