@@ -2,8 +2,11 @@ import {
   AppBar,
   Container,
   makeStyles,
+  MenuItem,
+  Select,
   Tab,
   Tabs,
+  Toolbar,
   Typography,
 } from "@material-ui/core";
 import { useCallback } from "react";
@@ -77,14 +80,31 @@ function App() {
     },
     [push]
   );
+  const handleClusterChange = useCallback((event) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set("cluster", event.target.value);
+    window.location.search = urlParams;
+  }, []);
   return (
     <div className={classes.bg}>
       {
         <AppBar position="static" elevation={0} style={{ marginBottom: 40 }}>
-          <Typography align="center" variant="subtitle1">
-            Caution! You are using the {CLUSTER.toUpperCase()} build of this
-            app.
-          </Typography>
+          <Toolbar variant="dense">
+            <Typography>
+              Caution! You are using the {CLUSTER.toUpperCase()} build of this
+              app.
+            </Typography>
+            <div style={{ flexGrow: 1 }} />
+            <Select
+              value={CLUSTER}
+              onChange={handleClusterChange}
+              variant="outlined"
+              margin="dense"
+            >
+              <MenuItem value="testnet">Testnet</MenuItem>
+              <MenuItem value="devnet">Devnet</MenuItem>
+            </Select>
+          </Toolbar>
         </AppBar>
       }
       {["/transfer", "/nft", "/redeem"].includes(pathname) ? (

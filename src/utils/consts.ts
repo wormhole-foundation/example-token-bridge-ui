@@ -43,8 +43,10 @@ import terraIcon from "../icons/terra.svg";
 import terra2Icon from "../icons/terra2.svg";
 
 export type Cluster = "devnet" | "testnet";
+const urlParams = new URLSearchParams(window.location.search);
+const paramCluster = urlParams.get("cluster");
 export const CLUSTER: Cluster =
-  process.env.REACT_APP_CLUSTER === "testnet" ? "testnet" : "devnet";
+  paramCluster === "devnet" ? "devnet" : "testnet";
 export interface ChainInfo {
   id: ChainId;
   name: string;
@@ -932,7 +934,7 @@ export const SOLANA_SYSTEM_PROGRAM_ADDRESS = "11111111111111111111111111111111";
 
 export const getHowToAddTokensToWalletUrl = (chainId: ChainId) => {
   if (isEVMChain(chainId)) {
-    return "https://docs.wormhole.com/wormhole/video-tutorial-how-to-manually-add-tokens-to-your-wallet#metamask"
+    return "https://docs.wormhole.com/wormhole/video-tutorial-how-to-manually-add-tokens-to-your-wallet#metamask";
   } else if (isTerraChain(chainId)) {
     return "https://docs.wormhole.com/wormhole/video-tutorial-how-to-manually-add-tokens-to-your-wallet#terra-station";
   }
