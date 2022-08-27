@@ -42,7 +42,7 @@ export default function Footer() {
 
       <Button
         variant="outlined"
-        href="https://github.com/certusone/wormhole"
+        href="https://github.com/wormhole-foundation/wormhole"
         target="_blank"
         rel="noopener noreferrer"
         color="inherit"
