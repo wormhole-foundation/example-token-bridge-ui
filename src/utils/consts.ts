@@ -17,6 +17,7 @@ import {
   CHAIN_ID_SOLANA,
   CHAIN_ID_TERRA,
   CHAIN_ID_TERRA2,
+  coalesceChainName,
   CONTRACTS,
   isEVMChain,
   isTerraChain,
@@ -374,213 +375,6 @@ export const KARURA_HOST =
   CLUSTER === "testnet" ? "https://karura-dev.aca-dev.network/eth/http" : "";
 export const ACALA_HOST =
   CLUSTER === "testnet" ? "https://acala-dev.aca-dev.network/eth/http" : "";
-export const ETH_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x706abc4E45D419950511e474C7B9Ed348A4a716c"
-    : "0xC89Ce4735882C9F0f0FE26686c53074E09B0D550"
-);
-export const ETH_NFT_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0xD8E4C2DbDd2e2bd8F1336EA691dBFF6952B1a6eB"
-    : "0x26b4afb60d6c903165150c6f0aa14f8016be4aec"
-);
-export const ETH_TOKEN_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0xF890982f9310df57d00f659cf4fd87e65adEd8d7"
-    : "0x0290FB167208Af455bB137780163b7B7a9a10C16"
-);
-export const BSC_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x68605AD7b15c732a30b1BbC62BE8F2A509D74b4D"
-    : "0xC89Ce4735882C9F0f0FE26686c53074E09B0D550"
-);
-export const BSC_NFT_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0xcD16E5613EF35599dc82B24Cb45B5A93D779f1EE"
-    : "0x26b4afb60d6c903165150c6f0aa14f8016be4aec"
-);
-export const BSC_TOKEN_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x9dcF9D205C9De35334D646BeE44b2D2859712A09"
-    : "0x0290FB167208Af455bB137780163b7B7a9a10C16"
-);
-export const POLYGON_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x0CBE91CF822c73C2315FB05100C2F714765d5c20"
-    : "0xC89Ce4735882C9F0f0FE26686c53074E09B0D550"
-);
-export const POLYGON_NFT_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x51a02d0dcb5e52F5b92bdAA38FA013C91c7309A9"
-    : "0x26b4afb60d6c903165150c6f0aa14f8016be4aec"
-);
-export const POLYGON_TOKEN_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x377D55a7928c046E18eEbb61977e714d2a76472a"
-    : "0x0290FB167208Af455bB137780163b7B7a9a10C16"
-);
-export const AVAX_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x7bbcE28e64B3F8b84d876Ab298393c38ad7aac4C"
-    : "0xC89Ce4735882C9F0f0FE26686c53074E09B0D550"
-);
-export const AVAX_NFT_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0xD601BAf2EEE3C028344471684F6b27E789D9075D"
-    : "0x26b4afb60d6c903165150c6f0aa14f8016be4aec"
-);
-export const AVAX_TOKEN_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x61E44E506Ca5659E6c0bba9b678586fA2d729756"
-    : "0x0290FB167208Af455bB137780163b7B7a9a10C16"
-);
-export const OASIS_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0xc1C338397ffA53a2Eb12A7038b4eeb34791F8aCb"
-    : "0xC89Ce4735882C9F0f0FE26686c53074E09B0D550"
-);
-export const OASIS_NFT_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0xC5c25B41AB0b797571620F5204Afa116A44c0ebA"
-    : "0x26b4afb60d6c903165150c6f0aa14f8016be4aec"
-);
-export const OASIS_TOKEN_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x88d8004A9BdbfD9D28090A02010C19897a29605c"
-    : "0x0290FB167208Af455bB137780163b7B7a9a10C16"
-);
-export const AURORA_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0xBd07292de7b505a4E803CEe286184f7Acf908F5e"
-    : "0xC89Ce4735882C9F0f0FE26686c53074E09B0D550"
-);
-export const AURORA_NFT_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x8F399607E9BA2405D87F5f3e1B78D950b44b2e24"
-    : "0x26b4afb60d6c903165150c6f0aa14f8016be4aec"
-);
-export const AURORA_TOKEN_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0xD05eD3ad637b890D68a854d607eEAF11aF456fba"
-    : "0x0290FB167208Af455bB137780163b7B7a9a10C16"
-);
-export const FANTOM_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x1BB3B4119b7BA9dfad76B0545fb3F531383c3bB7"
-    : "0xC89Ce4735882C9F0f0FE26686c53074E09B0D550"
-);
-export const FANTOM_NFT_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x63eD9318628D26BdCB15df58B53BB27231D1B227"
-    : "0x26b4afb60d6c903165150c6f0aa14f8016be4aec"
-);
-export const FANTOM_TOKEN_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x599CEa2204B4FaECd584Ab1F2b6aCA137a0afbE8"
-    : "0x0290FB167208Af455bB137780163b7B7a9a10C16"
-);
-export const KARURA_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0xE4eacc10990ba3308DdCC72d985f2a27D20c7d03"
-    : "0xC89Ce4735882C9F0f0FE26686c53074E09B0D550"
-);
-export const KARURA_NFT_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x0A693c2D594292B6Eb89Cb50EFe4B0b63Dd2760D"
-    : "0x26b4afb60d6c903165150c6f0aa14f8016be4aec"
-);
-export const KARURA_TOKEN_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0xd11De1f930eA1F7Dd0290Fe3a2e35b9C91AEFb37"
-    : "0x0290FB167208Af455bB137780163b7B7a9a10C16"
-);
-export const ACALA_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x4377B49d559c0a9466477195C6AdC3D433e265c0"
-    : "0xC89Ce4735882C9F0f0FE26686c53074E09B0D550"
-);
-export const ACALA_NFT_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x96f1335e0AcAB3cfd9899B30b2374e25a2148a6E"
-    : "0x26b4afb60d6c903165150c6f0aa14f8016be4aec"
-);
-export const ACALA_TOKEN_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0xebA00cbe08992EdD08ed7793E07ad6063c807004"
-    : "0x0290FB167208Af455bB137780163b7B7a9a10C16"
-);
-export const KLAYTN_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x1830CC6eE66c84D2F177B94D544967c774E624cA"
-    : "0xC89Ce4735882C9F0f0FE26686c53074E09B0D550"
-);
-export const KLAYTN_NFT_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x94c994fC51c13101062958b567e743f1a04432dE"
-    : "0x26b4afb60d6c903165150c6f0aa14f8016be4aec"
-);
-export const KLAYTN_TOKEN_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0xC7A13BE098720840dEa132D860fDfa030884b09A"
-    : "0x0290FB167208Af455bB137780163b7B7a9a10C16"
-);
-export const CELO_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x88505117CA88e7dd2eC6EA1E13f0948db2D50D56"
-    : "0xC89Ce4735882C9F0f0FE26686c53074E09B0D550"
-);
-export const CELO_NFT_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0xaCD8190F647a31E56A656748bC30F69259f245Db"
-    : "0x26b4afb60d6c903165150c6f0aa14f8016be4aec"
-);
-export const CELO_TOKEN_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x05ca6037eC51F8b712eD2E6Fa72219FEaE74E153"
-    : "0x0290FB167208Af455bB137780163b7B7a9a10C16"
-);
-export const NEON_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? CONTRACTS.TESTNET.neon.core
-    : "0xC89Ce4735882C9F0f0FE26686c53074E09B0D550"
-);
-export const NEON_NFT_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? CONTRACTS.TESTNET.neon.nft_bridge
-    : "0x26b4afb60d6c903165150c6f0aa14f8016be4aec"
-);
-export const NEON_TOKEN_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? CONTRACTS.TESTNET.neon.token_bridge
-    : "0x0290FB167208Af455bB137780163b7B7a9a10C16"
-);
-export const SOL_BRIDGE_ADDRESS =
-  CLUSTER === "testnet"
-    ? "3u8hJUVTA4jH1wYAyUur7FFZVQ8H635K3tSHHF4ssjQ5"
-    : "Bridge1p5gheXUvJ6jGWGeCsgPKgnE3YgdGKRVCMY9o";
-export const SOL_NFT_BRIDGE_ADDRESS =
-  CLUSTER === "testnet"
-    ? "2rHhojZ7hpu1zA91nvZmT8TqWWvMcKmmNBCr2mKTtMq4"
-    : "NFTWqJR8YnRVqPDvTJrYuLrQDitTG5AScqbeghi4zSA";
-export const SOL_TOKEN_BRIDGE_ADDRESS =
-  CLUSTER === "testnet"
-    ? "DZnkkTmCiFWfYTfT41X3Rd1kDgozqzxWaHqsw6W4x2oe"
-    : "B6RHG3mfcckmrYN1UhmJzyS1XX3fZKbkeUcpJe9Sy3FE";
-export const ROPSTEN_ETH_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x210c5F5e2AF958B4defFe715Dc621b7a3BA888c5"
-    : "0xC89Ce4735882C9F0f0FE26686c53074E09B0D550"
-);
-export const ROPSTEN_ETH_NFT_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0x2b048Da40f69c8dc386a56705915f8E966fe1eba"
-    : "0x26b4afb60d6c903165150c6f0aa14f8016be4aec"
-);
-export const ROPSTEN_ETH_TOKEN_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? "0xF174F9A837536C449321df1Ca093Bb96948D5386"
-    : "0x0290FB167208Af455bB137780163b7B7a9a10C16"
-);
 
 export const SOL_CUSTODY_ADDRESS =
   "GugU1tP7doLeTw9hQP51xRJyS8Da1fWxuiy2rVrnMD2m";
@@ -588,128 +382,36 @@ export const SOL_NFT_CUSTODY_ADDRESS =
   "D63bhHo634eXSj4Jq3xgu2fjB5XKc8DFHzDY9iZk7fv1";
 export const TERRA_TEST_TOKEN_ADDRESS =
   "terra13nkgqrfymug724h8pprpexqj9h629sa3ncw7sh";
-export const TERRA_BRIDGE_ADDRESS =
-  CLUSTER === "testnet"
-    ? "terra1pd65m0q9tl3v8znnz5f5ltsfegyzah7g42cx5v"
-    : "terra18vd8fpwxzck93qlwghaj6arh4p7c5n896xzem5";
-export const TERRA_TOKEN_BRIDGE_ADDRESS =
-  CLUSTER === "testnet"
-    ? "terra1pseddrv0yfsn76u4zxrjmtf45kdlmalswdv39a"
-    : "terra10pyejy66429refv3g35g2t7am0was7ya7kz2a4";
-export const TERRA2_BRIDGE_ADDRESS =
-  CLUSTER === "testnet"
-    ? CONTRACTS.TESTNET.terra2.core
-    : "terra14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9ssrc8au";
-export const TERRA2_TOKEN_BRIDGE_ADDRESS =
-  CLUSTER === "testnet"
-    ? CONTRACTS.TESTNET.terra2.token_bridge
-    : "terra1nc5tatafv6eyq7llkr2gv50ff9e22mnf70qgjlv737ktmt4eswrquka9l6";
-export const ALGORAND_BRIDGE_ID = BigInt(
-  CLUSTER === "testnet" ? "86525623" : "4"
-);
-export const ALGORAND_TOKEN_BRIDGE_ID = BigInt(
-  CLUSTER === "testnet" ? "86525641" : "6"
-);
+
 export const ALGORAND_WAIT_FOR_CONFIRMATIONS = CLUSTER === "testnet" ? 4 : 1;
 
+export const SOL_BRIDGE_ADDRESS =
+  CONTRACTS[CLUSTER === "testnet" ? "TESTNET" : "DEVNET"].solana.core;
+
+export const SOL_NFT_BRIDGE_ADDRESS =
+  CONTRACTS[CLUSTER === "testnet" ? "TESTNET" : "DEVNET"].solana.nft_bridge;
+export const SOL_TOKEN_BRIDGE_ADDRESS =
+  CONTRACTS[CLUSTER === "testnet" ? "TESTNET" : "DEVNET"].solana.token_bridge;
+
+export const ALGORAND_BRIDGE_ID = BigInt(
+  CONTRACTS[CLUSTER === "testnet" ? "TESTNET" : "DEVNET"].algorand.core
+);
+export const ALGORAND_TOKEN_BRIDGE_ID = BigInt(
+  CONTRACTS[CLUSTER === "testnet" ? "TESTNET" : "DEVNET"].algorand.token_bridge
+);
+
 export const getBridgeAddressForChain = (chainId: ChainId) =>
-  chainId === CHAIN_ID_SOLANA
-    ? SOL_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_ETH
-    ? ETH_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_BSC
-    ? BSC_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_TERRA
-    ? TERRA_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_TERRA2
-    ? TERRA2_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_POLYGON
-    ? POLYGON_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_ETHEREUM_ROPSTEN
-    ? ROPSTEN_ETH_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_AVAX
-    ? AVAX_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_OASIS
-    ? OASIS_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_AURORA
-    ? AURORA_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_FANTOM
-    ? FANTOM_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_KARURA
-    ? KARURA_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_ACALA
-    ? ACALA_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_KLAYTN
-    ? KLAYTN_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_CELO
-    ? CELO_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_NEON
-    ? NEON_BRIDGE_ADDRESS
-    : "";
+  CONTRACTS[CLUSTER === "testnet" ? "TESTNET" : "DEVNET"][
+    coalesceChainName(chainId)
+  ].core || "";
 export const getNFTBridgeAddressForChain = (chainId: ChainId) =>
-  chainId === CHAIN_ID_SOLANA
-    ? SOL_NFT_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_ETH
-    ? ETH_NFT_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_BSC
-    ? BSC_NFT_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_POLYGON
-    ? POLYGON_NFT_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_ETHEREUM_ROPSTEN
-    ? ROPSTEN_ETH_NFT_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_AVAX
-    ? AVAX_NFT_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_OASIS
-    ? OASIS_NFT_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_AURORA
-    ? AURORA_NFT_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_FANTOM
-    ? FANTOM_NFT_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_KARURA
-    ? KARURA_NFT_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_ACALA
-    ? ACALA_NFT_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_KLAYTN
-    ? KLAYTN_NFT_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_CELO
-    ? CELO_NFT_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_NEON
-    ? NEON_NFT_BRIDGE_ADDRESS
-    : "";
+  CONTRACTS[CLUSTER === "testnet" ? "TESTNET" : "DEVNET"][
+    coalesceChainName(chainId)
+  ].nft_bridge || "";
 export const getTokenBridgeAddressForChain = (chainId: ChainId) =>
-  chainId === CHAIN_ID_SOLANA
-    ? SOL_TOKEN_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_ETH
-    ? ETH_TOKEN_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_BSC
-    ? BSC_TOKEN_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_TERRA
-    ? TERRA_TOKEN_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_TERRA2
-    ? TERRA2_TOKEN_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_POLYGON
-    ? POLYGON_TOKEN_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_ETHEREUM_ROPSTEN
-    ? ROPSTEN_ETH_TOKEN_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_AVAX
-    ? AVAX_TOKEN_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_OASIS
-    ? OASIS_TOKEN_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_AURORA
-    ? AURORA_TOKEN_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_FANTOM
-    ? FANTOM_TOKEN_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_KARURA
-    ? KARURA_TOKEN_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_ACALA
-    ? ACALA_TOKEN_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_KLAYTN
-    ? KLAYTN_TOKEN_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_CELO
-    ? CELO_TOKEN_BRIDGE_ADDRESS
-    : chainId === CHAIN_ID_NEON
-    ? NEON_TOKEN_BRIDGE_ADDRESS
-    : "";
+  CONTRACTS[CLUSTER === "testnet" ? "TESTNET" : "DEVNET"][
+    coalesceChainName(chainId)
+  ].token_bridge || "";
 
 export const COVALENT_API_KEY = process.env.REACT_APP_COVALENT_API_KEY
   ? process.env.REACT_APP_COVALENT_API_KEY
