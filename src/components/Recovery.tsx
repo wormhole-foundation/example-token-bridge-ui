@@ -694,7 +694,9 @@ export default function Recovery() {
         >
           Recover
         </ButtonWithLoader>
-        {isVAAPending && <PendingVAAWarning />}
+        {isVAAPending && (
+          <PendingVAAWarning sourceChain={recoverySourceChain} />
+        )}
         <div className={classes.advancedContainer}>
           <Accordion>
             <AccordionSummary expandIcon={<ExpandMore />}>
