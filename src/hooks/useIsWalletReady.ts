@@ -3,6 +3,7 @@ import {
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
   CHAIN_ID_INJECTIVE,
+  CHAIN_ID_NEAR,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
   isEVMChain,
@@ -18,6 +19,7 @@ import {
   ConnectType,
   useEthereumProvider,
 } from "../contexts/EthereumProviderContext";
+import { useNearContext } from "../contexts/NearWalletContext";
 import { useSolanaWallet } from "../contexts/SolanaWalletContext";
 import { APTOS_NETWORK, CLUSTER, getEvmChainId } from "../utils/consts";
 import {
@@ -79,6 +81,7 @@ function useIsWalletReady(
     .includes(APTOS_NETWORK.toLowerCase());
   const { address: injAddress } = useInjectiveContext();
   const hasInjWallet = !!injAddress;
+  const { accountId: nearPK } = useNearContext();
 
   const forceNetworkSwitch = useCallback(async () => {
     if (provider && correctEvmNetwork) {
@@ -176,6 +179,9 @@ function useIsWalletReady(
         injAddress
       );
     }
+    if (chainId === CHAIN_ID_NEAR && nearPK) {
+      return createWalletStatus(true, undefined, forceNetworkSwitch, nearPK);
+    }
     if (isEVMChain(chainId) && hasEthInfo && signerAddress) {
       if (hasCorrectEvmNetwork) {
         return createWalletStatus(
@@ -223,6 +229,7 @@ function useIsWalletReady(
     hasCorrectAptosNetwork,
     hasInjWallet,
     injAddress,
+    nearPK,
   ]);
 }
 

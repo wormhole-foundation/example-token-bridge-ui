@@ -22,6 +22,7 @@ import {
   CHAIN_ID_ARBITRUM,
   CHAIN_ID_INJECTIVE,
   terra,
+  CHAIN_ID_NEAR,
 } from "@certusone/wormhole-sdk";
 import { Button, makeStyles, Tooltip, Typography } from "@material-ui/core";
 import { FileCopy, OpenInNew } from "@material-ui/icons";
@@ -203,6 +204,8 @@ export default function SmartAddress({
       }`
     : chainId === CHAIN_ID_INJECTIVE
     ? `https://testnet.explorer.injective.network/account/${useableAddress}`
+    : chainId === CHAIN_ID_NEAR && CLUSTER === "testnet"
+    ? `https://explorer.testnetnear.org/accounts/${useableAddress}`
     : undefined;
   const explorerName = getExplorerName(chainId);
 

@@ -2,12 +2,14 @@ import {
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
   CHAIN_ID_INJECTIVE,
+  CHAIN_ID_NEAR,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
   getIsTransferCompletedAlgorand,
   getIsTransferCompletedAptos,
   getIsTransferCompletedEth,
   getIsTransferCompletedInjective,
+  getIsTransferCompletedNear,
   getIsTransferCompletedSolana,
   getIsTransferCompletedTerra,
   getIsTransferCompletedXpla,
@@ -20,6 +22,7 @@ import algosdk from "algosdk";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { useEthereumProvider } from "../contexts/EthereumProviderContext";
+import { useNearContext } from "../contexts/NearWalletContext";
 import {
   selectTransferIsRecovery,
   selectTransferTargetAddressHex,
@@ -34,7 +37,9 @@ import {
   getTerraGasPricesUrl,
   getTerraConfig,
   XPLA_LCD_CLIENT_CONFIG,
+  NEAR_TOKEN_BRIDGE_ACCOUNT,
 } from "../utils/consts";
+import { makeNearProvider } from "../utils/near";
 import useIsWalletReady from "./useIsWalletReady";
 import useTransferSignedVAA from "./useTransferSignedVAA";
 import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
@@ -60,6 +65,7 @@ export default function useGetIsTransferCompleted(
 
   const { isReady } = useIsWalletReady(targetChain, false);
   const { provider, chainId: evmChainId } = useEthereumProvider();
+  const { accountId: nearAccountId } = useNearContext();
   const signedVAA = useTransferSignedVAA();
 
   const hasCorrectEvmNetwork = evmChainId === getEvmChainId(targetChain);
@@ -217,6 +223,23 @@ export default function useGetIsTransferCompleted(
             setIsLoading(false);
           }
         })();
+      } else if (targetChain === CHAIN_ID_NEAR && nearAccountId) {
+        setIsLoading(true);
+        (async () => {
+          try {
+            transferCompleted = await getIsTransferCompletedNear(
+              makeNearProvider(),
+              NEAR_TOKEN_BRIDGE_ACCOUNT,
+              signedVAA
+            );
+          } catch (error) {
+            console.error(error);
+          }
+          if (!cancelled) {
+            setIsTransferCompleted(transferCompleted);
+            setIsLoading(false);
+          }
+        })();
       }
     }
     return () => {
@@ -231,6 +254,7 @@ export default function useGetIsTransferCompleted(
     isReady,
     provider,
     pollState,
+    nearAccountId,
   ]);
 
   return { isTransferCompletedLoading: isLoading, isTransferCompleted };

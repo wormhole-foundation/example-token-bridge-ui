@@ -1,7 +1,9 @@
 import {
   ChainId,
   CHAIN_ID_ETH,
+  CHAIN_ID_NEAR,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_TERRA2,
   isEVMChain,
   nativeToHexString,
 } from "@certusone/wormhole-sdk";
@@ -57,6 +59,7 @@ const useStyles = makeStyles((theme) => ({
 
 function PrimaryAssetInformation({
   lookupChain,
+  lookupAsset,
   originChain,
   originAsset,
 }: {
@@ -78,7 +81,7 @@ function PrimaryAssetInformation({
   );
   const wrapped = (
     <div>
-      <Typography>{`This is wrapped asset! Here is the original token: `}</Typography>
+      <Typography>{`This is a wrapped asset! Here is the original token: `}</Typography>
       <div className={classes.flexBox}>
         <Typography>{`Chain: ${CHAINS_BY_ID[originChain].name}`}</Typography>
         <div>
@@ -147,10 +150,21 @@ function SecondaryAssetInformation({
       <RegisterNowButtonCore
         originChain={originAssetInfo?.originChain || undefined}
         originAsset={
-          nativeToHexString(
-            originAssetInfo?.originAddress || undefined,
-            originAssetInfo?.originChain || CHAIN_ID_SOLANA // this should exist
-          ) || undefined
+          // use pre-image for these
+          originAssetInfo?.originChain === CHAIN_ID_TERRA2 ||
+          originAssetInfo?.originChain === CHAIN_ID_NEAR
+            ? originAssetInfo?.originAddress || undefined
+            : nativeToHexString(
+                originAssetInfo?.originAddress || undefined,
+                originAssetInfo?.originChain || CHAIN_ID_SOLANA // this should exist
+              ) || undefined
+        }
+        forceAsset={
+          // use pre-image for these
+          originAssetInfo?.originChain === CHAIN_ID_TERRA2 ||
+          originAssetInfo?.originChain === CHAIN_ID_NEAR
+            ? originAssetInfo?.originAddress || undefined
+            : undefined
         }
         targetChain={chainId}
       />
