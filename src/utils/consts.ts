@@ -13,6 +13,7 @@ import {
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_KARURA,
   CHAIN_ID_KLAYTN,
+  CHAIN_ID_NEAR,
   CHAIN_ID_NEON,
   CHAIN_ID_OASIS,
   CHAIN_ID_POLYGON,
@@ -52,6 +53,8 @@ import injectiveIcon from "../icons/injective.svg";
 import { AptosNetwork } from "./aptos";
 import { getNetworkInfo, Network } from "@injectivelabs/networks";
 import { ChainId as InjectiveChainId } from "@injectivelabs/ts-types";
+import nearIcon from "../icons/near.svg";
+import { ConnectConfig, keyStores } from "near-api-js";
 
 export type Cluster = "devnet" | "testnet";
 const urlParams = new URLSearchParams(window.location.search);
@@ -132,6 +135,11 @@ export const CHAINS: ChainInfo[] =
           logo: klaytnIcon,
         },
         {
+          id: CHAIN_ID_NEAR,
+          name: "Near",
+          logo: nearIcon,
+        },
+        {
           id: CHAIN_ID_NEON,
           name: "Neon",
           logo: neonIcon,
@@ -187,6 +195,11 @@ export const CHAINS: ChainInfo[] =
           id: CHAIN_ID_ETH,
           name: "Ethereum",
           logo: ethIcon,
+        },
+        {
+          id: CHAIN_ID_NEAR,
+          name: "Near",
+          logo: nearIcon,
         },
         {
           id: CHAIN_ID_SOLANA,
@@ -460,6 +473,12 @@ export const ALGORAND_TOKEN_BRIDGE_ID = BigInt(
   CONTRACTS[CLUSTER === "testnet" ? "TESTNET" : "DEVNET"].algorand.token_bridge
 );
 
+export const NEAR_CORE_BRIDGE_ACCOUNT =
+  CLUSTER === "testnet" ? "wormhole.wormhole.testnet" : "wormhole.test.near";
+
+export const NEAR_TOKEN_BRIDGE_ACCOUNT =
+  CLUSTER === "testnet" ? "token.wormhole.testnet" : "token.test.near";
+
 export const getBridgeAddressForChain = (chainId: ChainId) =>
   CONTRACTS[CLUSTER === "testnet" ? "TESTNET" : "DEVNET"][
     coalesceChainName(chainId)
@@ -689,6 +708,31 @@ export const getTerraFCDBaseUrl = (chainId: TerraChainId) =>
 
 export const getTerraGasPricesUrl = (chainId: TerraChainId) =>
   `${getTerraFCDBaseUrl(chainId)}/v1/txs/gas_prices`;
+
+export const nearKeyStore = new keyStores.BrowserLocalStorageKeyStore();
+
+export const getNearConnectionConfig = (): ConnectConfig =>
+  CLUSTER === "testnet"
+    ? {
+        networkId: "testnet",
+        keyStore: nearKeyStore,
+        nodeUrl: "https://rpc.testnet.near.org",
+        walletUrl: "https://wallet.testnet.near.org",
+        helperUrl: "https://helper.testnet.near.org",
+        headers: {},
+      }
+    : {
+        networkId: "sandbox",
+        keyStore: nearKeyStore,
+        nodeUrl: "http://localhost:3030",
+        helperUrl: "",
+        headers: {},
+      };
+
+export const NATIVE_NEAR_DECIMALS = 24;
+export const NATIVE_NEAR_PLACEHOLDER = "near";
+export const NATIVE_NEAR_WH_ADDRESS =
+  "0000000000000000000000000000000000000000000000000000000000000000";
 
 export const WORMHOLE_EXPLORER_BASE = "https://wormhole.com/explorer";
 

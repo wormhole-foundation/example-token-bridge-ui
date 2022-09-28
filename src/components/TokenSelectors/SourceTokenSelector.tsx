@@ -1,8 +1,8 @@
-//import Autocomplete from '@material-ui/lab/Autocomplete';
 import {
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
   CHAIN_ID_INJECTIVE,
+  CHAIN_ID_NEAR,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
   isEVMChain,
@@ -31,6 +31,7 @@ import {
 import AlgoTokenPicker from "./AlgoTokenPicker";
 import AptosTokenPicker from "./AptosTokenPicker";
 import EvmTokenPicker from "./EvmTokenPicker";
+import NearTokenPicker from "./NearTokenPicker";
 import RefreshButtonWrapper from "./RefreshButtonWrapper";
 import SolanaTokenPicker from "./SolanaTokenPicker";
 import TerraTokenPicker from "./TerraTokenPicker";
@@ -149,6 +150,14 @@ export const TokenSelector = (props: TokenSelectorProps) => {
     />
   ) : lookupChain === CHAIN_ID_INJECTIVE ? (
     <InjectiveTokenPicker
+      value={sourceParsedTokenAccount || null}
+      disabled={disabled}
+      onChange={handleOnChange}
+      resetAccounts={maps?.resetAccounts}
+      tokenAccounts={maps?.tokenAccounts}
+    />
+  ) : lookupChain === CHAIN_ID_NEAR ? (
+    <NearTokenPicker
       value={sourceParsedTokenAccount || null}
       disabled={disabled}
       onChange={handleOnChange}

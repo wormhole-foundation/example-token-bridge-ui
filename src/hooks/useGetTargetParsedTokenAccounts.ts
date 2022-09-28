@@ -2,6 +2,7 @@ import {
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
   CHAIN_ID_INJECTIVE,
+  CHAIN_ID_NEAR,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
   ensureHexPrefix,
@@ -39,6 +40,8 @@ import {
   getTerraConfig,
   SOLANA_HOST,
   XPLA_LCD_CLIENT_CONFIG,
+  NATIVE_NEAR_PLACEHOLDER,
+  NATIVE_NEAR_DECIMALS,
 } from "../utils/consts";
 import {
   getInjectiveBankClient,
@@ -49,6 +52,9 @@ import { NATIVE_TERRA_DECIMALS } from "../utils/terra";
 import { NATIVE_XPLA_DECIMALS } from "../utils/xpla";
 import { createParsedTokenAccount } from "./useGetSourceParsedTokenAccounts";
 import useMetadata from "./useMetadata";
+import { useNearContext } from "../contexts/NearWalletContext";
+import { makeNearAccount } from "../utils/near";
+import { fetchSingleMetadata } from "./useNearMetadata";
 
 function useGetTargetParsedTokenAccounts() {
   const dispatch = useDispatch();
@@ -81,6 +87,7 @@ function useGetTargetParsedTokenAccounts() {
   const { account: aptosAccount } = useAptosContext();
   const aptosAddress = aptosAccount?.address?.toString();
   const { address: injAddress } = useInjectiveContext();
+  const { accountId: nearAccountId } = useNearContext();
   const hasResolvedMetadata = metadata.data || metadata.error;
   useEffect(() => {
     // targetParsedTokenAccount is cleared on setTargetAsset, but we need to clear it on wallet changes too
@@ -494,6 +501,93 @@ function useGetTargetParsedTokenAccounts() {
         }
       }
     }
+    if (targetChain === CHAIN_ID_NEAR && nearAccountId) {
+      try {
+        makeNearAccount(nearAccountId)
+          .then((account) => {
+            if (targetAsset === NATIVE_NEAR_PLACEHOLDER) {
+              account
+                .getAccountBalance()
+                .then((balance) => {
+                  if (!cancelled) {
+                    dispatch(
+                      setTargetParsedTokenAccount(
+                        createParsedTokenAccount(
+                          nearAccountId, //publicKey
+                          NATIVE_NEAR_PLACEHOLDER, //the app doesn't like when this isn't truthy
+                          balance.available, //amount
+                          NATIVE_NEAR_DECIMALS,
+                          parseFloat(
+                            formatUnits(balance.available, NATIVE_NEAR_DECIMALS)
+                          ),
+                          formatUnits(
+                            balance.available,
+                            NATIVE_NEAR_DECIMALS
+                          ).toString(),
+                          "NEAR",
+                          "Near",
+                          undefined, //TODO logo
+                          true
+                        )
+                      )
+                    );
+                  }
+                })
+                .catch(() => {
+                  if (!cancelled) {
+                    // TODO: error state
+                  }
+                });
+            } else {
+              fetchSingleMetadata(targetAsset, account)
+                .then(({ decimals }) => {
+                  account
+                    .viewFunction(targetAsset, "ft_balance_of", {
+                      account_id: nearAccountId,
+                    })
+                    .then((balance) => {
+                      if (!cancelled) {
+                        dispatch(
+                          setTargetParsedTokenAccount(
+                            createParsedTokenAccount(
+                              nearAccountId,
+                              targetAsset,
+                              balance.toString(),
+                              decimals,
+                              Number(formatUnits(balance, decimals)),
+                              formatUnits(balance, decimals),
+                              symbol,
+                              tokenName,
+                              logo
+                            )
+                          )
+                        );
+                      }
+                    })
+                    .catch(() => {
+                      if (!cancelled) {
+                        // TODO: error state
+                      }
+                    });
+                })
+                .catch(() => {
+                  if (!cancelled) {
+                    // TODO: error state
+                  }
+                });
+            }
+          })
+          .catch(() => {
+            if (!cancelled) {
+              // TODO: error state
+            }
+          });
+      } catch (e) {
+        if (!cancelled) {
+          // TODO: error state
+        }
+      }
+    }
     return () => {
       cancelled = true;
     };
@@ -516,6 +610,7 @@ function useGetTargetParsedTokenAccounts() {
     xplaWallet,
     aptosAddress,
     injAddress,
+    nearAccountId,
   ]);
 }
 

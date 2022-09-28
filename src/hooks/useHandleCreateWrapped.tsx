@@ -6,12 +6,14 @@ import {
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_KARURA,
   CHAIN_ID_KLAYTN,
+  CHAIN_ID_NEAR,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
   createWrappedOnAlgorand,
   createWrappedOnAptos,
   createWrappedOnEth,
   createWrappedOnInjective,
+  createWrappedOnNear,
   createWrappedOnSolana,
   createWrappedOnTerra,
   createWrappedOnXpla,
@@ -28,6 +30,7 @@ import {
 } from "@certusone/wormhole-sdk";
 import { WalletStrategy } from "@injectivelabs/wallet-ts";
 import { Alert } from "@material-ui/lab";
+import { Wallet } from "@near-wallet-selector/core";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { Connection } from "@solana/web3.js";
 import {
@@ -48,6 +51,7 @@ import { useAlgorandContext } from "../contexts/AlgorandWalletContext";
 import { useAptosContext } from "../contexts/AptosWalletContext";
 import { useEthereumProvider } from "../contexts/EthereumProviderContext";
 import { useInjectiveContext } from "../contexts/InjectiveWalletContext";
+import { useNearContext } from "../contexts/NearWalletContext";
 import { useSolanaWallet } from "../contexts/SolanaWalletContext";
 import { setCreateTx, setIsCreating } from "../store/attestSlice";
 import {
@@ -65,12 +69,18 @@ import {
   getTokenBridgeAddressForChain,
   KARURA_HOST,
   MAX_VAA_UPLOAD_RETRIES_SOLANA,
+  NEAR_TOKEN_BRIDGE_ACCOUNT,
   SOLANA_HOST,
   SOL_BRIDGE_ADDRESS,
   SOL_TOKEN_BRIDGE_ADDRESS,
 } from "../utils/consts";
 import { broadcastInjectiveTx } from "../utils/injective";
 import { getKaruraGasParams } from "../utils/karura";
+import {
+  makeNearAccount,
+  makeNearProvider,
+  signAndSendTransactions,
+} from "../utils/near";
 import parseError from "../utils/parseError";
 import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees } from "../utils/terra";
@@ -200,6 +210,39 @@ async function evm(
         );
     dispatch(
       setCreateTx({ id: receipt.transactionHash, block: receipt.blockNumber })
+    );
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+  } catch (e) {
+    enqueueSnackbar(null, {
+      content: <Alert severity="error">{parseError(e)}</Alert>,
+    });
+    dispatch(setIsCreating(false));
+  }
+}
+
+async function near(
+  dispatch: any,
+  enqueueSnackbar: any,
+  senderAddr: string,
+  signedVAA: Uint8Array,
+  wallet: Wallet
+) {
+  dispatch(setIsCreating(true));
+  try {
+    const account = await makeNearAccount(senderAddr);
+    const msgs = await createWrappedOnNear(
+      makeNearProvider(),
+      NEAR_TOKEN_BRIDGE_ACCOUNT,
+      signedVAA
+    );
+    const receipt = await signAndSendTransactions(account, wallet, msgs);
+    dispatch(
+      setCreateTx({
+        id: receipt.transaction_outcome.id,
+        block: 0,
+      })
     );
     enqueueSnackbar(null, {
       content: <Alert severity="success">Transaction confirmed</Alert>,
@@ -403,6 +446,7 @@ export function useHandleCreateWrapped(shouldUpdate: boolean) {
   const { account: aptosAccount, signAndSubmitTransaction } = useAptosContext();
   const aptosAddress = aptosAccount?.address?.toString();
   const { wallet: injWallet, address: injAddress } = useInjectiveContext();
+  const { accountId: nearAccountId, wallet } = useNearContext();
   const handleCreateClick = useCallback(() => {
     if (isEVMChain(targetChain) && !!signer && !!signedVAA) {
       evm(
@@ -472,6 +516,13 @@ export function useHandleCreateWrapped(shouldUpdate: boolean) {
         signedVAA,
         shouldUpdate
       );
+    } else if (
+      targetChain === CHAIN_ID_NEAR &&
+      nearAccountId &&
+      wallet &&
+      !!signedVAA
+    ) {
+      near(dispatch, enqueueSnackbar, nearAccountId, signedVAA, wallet);
     } else {
       // enqueueSnackbar(
       //   "Creating wrapped tokens on this chain is not yet supported",
@@ -497,6 +548,8 @@ export function useHandleCreateWrapped(shouldUpdate: boolean) {
     signAndSubmitTransaction,
     injWallet,
     injAddress,
+    nearAccountId,
+    wallet,
   ]);
   return useMemo(
     () => ({

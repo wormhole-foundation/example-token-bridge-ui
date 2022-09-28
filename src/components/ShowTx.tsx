@@ -9,6 +9,7 @@ import {
   CHAIN_ID_FANTOM,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_KARURA,
+  CHAIN_ID_NEAR,
   CHAIN_ID_OASIS,
   CHAIN_ID_POLYGON,
   CHAIN_ID_SOLANA,
@@ -133,6 +134,8 @@ export default function ShowTx({
         }`
       : chainId === CHAIN_ID_INJECTIVE
       ? `https://testnet.explorer.injective.network/transaction/${tx.id}`
+      : chainId === CHAIN_ID_NEAR && CLUSTER === "testnet"
+      ? `https://explorer.testnet.near.org/transactions/${tx?.id}`
       : undefined;
   const explorerName = getExplorerName(chainId);
 

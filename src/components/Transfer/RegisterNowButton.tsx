@@ -19,6 +19,7 @@ import {
   ChainId,
   CHAIN_ID_APTOS,
   CHAIN_ID_INJECTIVE,
+  CHAIN_ID_NEAR,
   CHAIN_ID_TERRA2,
   CHAIN_ID_XPLA,
   hexToNativeAssetString,
@@ -28,10 +29,12 @@ export function RegisterNowButtonCore({
   originChain,
   originAsset,
   targetChain,
+  forceAsset,
 }: {
   originChain: ChainId | undefined;
   originAsset: string | undefined;
   targetChain: ChainId;
+  forceAsset?: string;
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
@@ -44,8 +47,9 @@ export function RegisterNowButtonCore({
       ? originChain === CHAIN_ID_TERRA2 ||
         originChain === CHAIN_ID_XPLA ||
         originChain === CHAIN_ID_APTOS ||
-        originChain === CHAIN_ID_INJECTIVE
-        ? sourceAsset // use the preimage address for terra2
+        originChain === CHAIN_ID_INJECTIVE ||
+        originChain === CHAIN_ID_NEAR
+        ? sourceAsset || forceAsset
         : hexToNativeAssetString(originAsset, originChain)
       : undefined;
     if (originChain && originAsset && nativeAsset && canSwitch) {
@@ -63,6 +67,7 @@ export function RegisterNowButtonCore({
     targetChain,
     history,
     sourceAsset,
+    forceAsset,
   ]);
   if (!canSwitch) return null;
   return (

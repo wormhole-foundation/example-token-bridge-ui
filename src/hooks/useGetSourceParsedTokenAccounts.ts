@@ -12,6 +12,7 @@ import {
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_KARURA,
   CHAIN_ID_KLAYTN,
+  CHAIN_ID_NEAR,
   CHAIN_ID_NEON,
   CHAIN_ID_OASIS,
   CHAIN_ID_POLYGON,
@@ -42,6 +43,7 @@ import {
   Provider,
   useEthereumProvider,
 } from "../contexts/EthereumProviderContext";
+import { useNearContext } from "../contexts/NearWalletContext";
 import { useSolanaWallet } from "../contexts/SolanaWalletContext";
 import acalaIcon from "../icons/acala.svg";
 import auroraIcon from "../icons/aurora.svg";
@@ -91,6 +93,8 @@ import {
   BLOCKSCOUT_GET_TOKENS_URL,
   KAR_ADDRESS,
   KAR_DECIMALS,
+  NATIVE_NEAR_DECIMALS,
+  NATIVE_NEAR_PLACEHOLDER,
   SOLANA_HOST,
   WAVAX_ADDRESS,
   WAVAX_DECIMALS,
@@ -114,6 +118,7 @@ import {
   WROSE_DECIMALS,
   getDefaultNativeCurrencyAddressEvm,
 } from "../utils/consts";
+import { makeNearAccount } from "../utils/near";
 import {
   ExtractedMintInfo,
   extractMintInfo,
@@ -220,6 +225,7 @@ const createNativeSolParsedTokenAccount = async (
   connection: Connection,
   walletAddress: string
 ) => {
+  // const walletAddress = "H69q3Q8E74xm7swmMQpsJLVp2Q9JuBwBbxraAMX5Drzm" // known solana mainnet wallet with tokens
   const fetchAccounts = await getMultipleAccountsRPC(connection, [
     new PublicKey(walletAddress),
   ]);
@@ -795,6 +801,44 @@ const getAlgorandParsedTokenAccounts = async (
   }
 };
 
+const getNearParsedTokenAccounts = async (
+  walletAddress: string,
+  dispatch: Dispatch,
+  nft: boolean
+) => {
+  dispatch(
+    nft ? fetchSourceParsedTokenAccountsNFT() : fetchSourceParsedTokenAccounts()
+  );
+  try {
+    if (nft) {
+      dispatch(receiveSourceParsedTokenAccountsNFT([]));
+      return;
+    }
+    const account = await makeNearAccount(walletAddress);
+    const balance = await account.getAccountBalance();
+    const nativeNear = createParsedTokenAccount(
+      walletAddress, //publicKey
+      NATIVE_NEAR_PLACEHOLDER, //the app doesn't like when this isn't truthy
+      balance.available, //amount
+      NATIVE_NEAR_DECIMALS,
+      parseFloat(formatUnits(balance.available, NATIVE_NEAR_DECIMALS)),
+      formatUnits(balance.available, NATIVE_NEAR_DECIMALS).toString(),
+      "NEAR",
+      "Near",
+      undefined, //TODO logo
+      true
+    );
+    dispatch(receiveSourceParsedTokenAccounts([nativeNear]));
+  } catch (e) {
+    console.error(e);
+    dispatch(
+      nft
+        ? errorSourceParsedTokenAccountsNFT("Failed to load NFT metadata")
+        : errorSourceParsedTokenAccounts("Failed to load token metadata.")
+    );
+  }
+};
+
 /**
  * Fetches the balance of an asset for the connected wallet
  * This should handle every type of chain in the future, but only reads the Transfer state.
@@ -815,6 +859,7 @@ function useGetAvailableTokens(nft: boolean = false) {
   const solPK = solanaWallet?.publicKey;
   const { provider, signerAddress } = useEthereumProvider();
   const { accounts: algoAccounts } = useAlgorandContext();
+  const { accountId: nearAccountId } = useNearContext();
 
   const [covalent, setCovalent] = useState<any>(undefined);
   const [covalentLoading, setCovalentLoading] = useState(false);
@@ -846,6 +891,8 @@ function useGetAvailableTokens(nft: boolean = false) {
     ? solPK?.toString()
     : lookupChain === CHAIN_ID_ALGORAND
     ? algoAccounts[0]?.address
+    : lookupChain === CHAIN_ID_NEAR
+    ? nearAccountId || undefined
     : undefined;
 
   const resetSourceAccounts = useCallback(() => {
@@ -1463,6 +1510,18 @@ function useGetAvailableTokens(nft: boolean = false) {
 
     return () => {};
   }, [dispatch, lookupChain, currentSourceWalletAddress, tokenAccounts, nft]);
+  //Near accounts load
+  useEffect(() => {
+    if (lookupChain === CHAIN_ID_NEAR && currentSourceWalletAddress) {
+      if (
+        !(tokenAccounts.data || tokenAccounts.isFetching || tokenAccounts.error)
+      ) {
+        getNearParsedTokenAccounts(currentSourceWalletAddress, dispatch, nft);
+      }
+    }
+
+    return () => {};
+  }, [dispatch, lookupChain, currentSourceWalletAddress, tokenAccounts, nft]);
 
   const ethAccounts = useMemo(() => {
     const output = { ...tokenAccounts };
@@ -1519,6 +1578,11 @@ function useGetAvailableTokens(nft: boolean = false) {
       }
     : lookupChain === CHAIN_ID_INJECTIVE
     ? {
+        resetAccounts: resetSourceAccounts,
+      }
+    : lookupChain === CHAIN_ID_NEAR
+    ? {
+        tokenAccounts,
         resetAccounts: resetSourceAccounts,
       }
     : undefined;
