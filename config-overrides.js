@@ -11,6 +11,9 @@ module.exports = function override(config, env) {
           test: /\.js$/,
           enforce: "pre",
           use: ["source-map-loader"],
+          resolve: {
+            fullySpecified: false,
+          }
         },
         {
           test: /\.wasm$/,
