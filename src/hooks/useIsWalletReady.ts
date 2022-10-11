@@ -2,6 +2,7 @@ import {
   ChainId,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_XPLA,
   isEVMChain,
   isTerraChain,
 } from "@certusone/wormhole-sdk";
@@ -19,6 +20,7 @@ import {
   EVM_RPC_MAP,
   METAMASK_CHAIN_PARAMETERS,
 } from "../utils/metaMaskChainParameters";
+import { useConnectedWallet as useXplaConnectedWallet } from "@xpla/wallet-provider";
 
 const createWalletStatus = (
   isReady: boolean,
@@ -58,6 +60,8 @@ function useIsWalletReady(
   const hasCorrectEvmNetwork = evmChainId === correctEvmNetwork;
   const { accounts: algorandAccounts } = useAlgorandContext();
   const algoPK = algorandAccounts[0]?.address;
+  const xplaWallet = useXplaConnectedWallet();
+  const hasXplaWallet = !!xplaWallet;
 
   const forceNetworkSwitch = useCallback(async () => {
     if (provider && correctEvmNetwork) {
@@ -118,6 +122,18 @@ function useIsWalletReady(
     if (chainId === CHAIN_ID_ALGORAND && algoPK) {
       return createWalletStatus(true, undefined, forceNetworkSwitch, algoPK);
     }
+    if (
+      chainId === CHAIN_ID_XPLA &&
+      hasXplaWallet &&
+      xplaWallet?.walletAddress
+    ) {
+      return createWalletStatus(
+        true,
+        undefined,
+        forceNetworkSwitch,
+        xplaWallet.walletAddress
+      );
+    }
     if (isEVMChain(chainId) && hasEthInfo && signerAddress) {
       if (hasCorrectEvmNetwork) {
         return createWalletStatus(
@@ -158,6 +174,8 @@ function useIsWalletReady(
     signerAddress,
     terraWallet,
     algoPK,
+    xplaWallet,
+    hasXplaWallet,
   ]);
 }
 

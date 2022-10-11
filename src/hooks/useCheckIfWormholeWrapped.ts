@@ -2,6 +2,7 @@ import {
   ChainId,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_XPLA,
   getOriginalAssetAlgorand,
   getOriginalAssetCosmWasm,
   getOriginalAssetEth,
@@ -41,7 +42,9 @@ import {
   SOLANA_HOST,
   SOL_NFT_BRIDGE_ADDRESS,
   SOL_TOKEN_BRIDGE_ADDRESS,
+  XPLA_LCD_CLIENT_CONFIG,
 } from "../utils/consts";
+import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
 
 export interface StateSafeWormholeWrappedInfo {
   isWrapped: boolean;
@@ -131,6 +134,17 @@ function useCheckIfWormholeWrapped(nft?: boolean) {
       if (isTerraChain(sourceChain) && sourceAsset) {
         try {
           const lcd = new LCDClient(getTerraConfig(sourceChain));
+          const wrappedInfo = makeStateSafe(
+            await getOriginalAssetCosmWasm(lcd, sourceAsset, sourceChain)
+          );
+          if (!cancelled) {
+            dispatch(setSourceWormholeWrappedInfo(wrappedInfo));
+          }
+        } catch (e) {}
+      }
+      if (sourceChain === CHAIN_ID_XPLA && sourceAsset) {
+        try {
+          const lcd = new XplaLCDClient(XPLA_LCD_CLIENT_CONFIG);
           const wrappedInfo = makeStateSafe(
             await getOriginalAssetCosmWasm(lcd, sourceAsset, sourceChain)
           );

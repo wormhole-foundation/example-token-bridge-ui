@@ -9,6 +9,7 @@ import { AlgorandContextProvider } from "./contexts/AlgorandWalletContext";
 import { EthereumProviderProvider } from "./contexts/EthereumProviderContext";
 import { SolanaWalletProvider } from "./contexts/SolanaWalletContext.tsx";
 import { TerraWalletProvider } from "./contexts/TerraWalletContext.tsx";
+import XplaWalletProvider from "./contexts/XplaWalletContext";
 import ErrorBoundary from "./ErrorBoundary";
 import { theme } from "./muiTheme";
 import { store } from "./store";
@@ -20,17 +21,19 @@ ReactDOM.render(
         <CssBaseline />
         <ErrorBoundary>
           <SnackbarProvider maxSnack={3}>
-              <SolanaWalletProvider>
-                <EthereumProviderProvider>
-                  <TerraWalletProvider>
-                    <AlgorandContextProvider>
+            <SolanaWalletProvider>
+              <EthereumProviderProvider>
+                <TerraWalletProvider>
+                  <AlgorandContextProvider>
+                    <XplaWalletProvider>
                       <HashRouter>
                         <App />
                       </HashRouter>
-                    </AlgorandContextProvider>
-                  </TerraWalletProvider>
-                </EthereumProviderProvider>
-              </SolanaWalletProvider>
+                    </XplaWalletProvider>
+                  </AlgorandContextProvider>
+                </TerraWalletProvider>
+              </EthereumProviderProvider>
+            </SolanaWalletProvider>
           </SnackbarProvider>
         </ErrorBoundary>
       </ThemeProvider>

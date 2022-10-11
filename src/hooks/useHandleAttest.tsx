@@ -3,14 +3,17 @@ import {
   attestFromEth,
   attestFromSolana,
   attestFromTerra,
+  attestFromXpla,
   ChainId,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_XPLA,
   getEmitterAddressAlgorand,
   getEmitterAddressEth,
   getEmitterAddressSolana,
   getEmitterAddressTerra,
+  getEmitterAddressXpla,
   getSignedVAAWithRetry,
   isEVMChain,
   isTerraChain,
@@ -18,6 +21,7 @@ import {
   parseSequenceFromLogEth,
   parseSequenceFromLogSolana,
   parseSequenceFromLogTerra,
+  parseSequenceFromLogXpla,
   TerraChainId,
   uint8ArrayToHex,
 } from "@certusone/wormhole-sdk";
@@ -64,6 +68,11 @@ import {
 import parseError from "../utils/parseError";
 import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees, waitForTerraExecution } from "../utils/terra";
+import {
+  useConnectedWallet as useXplaConnectedWallet,
+  ConnectedWallet as XplaConnectedWallet,
+} from "@xpla/wallet-provider";
+import { postWithFeesXpla, waitForXplaExecution } from "../utils/xpla";
 
 async function algo(
   dispatch: any,
@@ -283,6 +292,49 @@ async function terra(
   }
 }
 
+async function xpla(
+  dispatch: any,
+  enqueueSnackbar: any,
+  wallet: XplaConnectedWallet,
+  asset: string
+) {
+  dispatch(setIsSending(true));
+  try {
+    const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_XPLA);
+    const msg = attestFromXpla(tokenBridgeAddress, wallet.xplaAddress, asset);
+    const result = await postWithFeesXpla(wallet, [msg], "Create Wrapped");
+    const info = await waitForXplaExecution(result);
+    dispatch(setAttestTx({ id: info.txhash, block: info.height }));
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+    const sequence = parseSequenceFromLogXpla(info);
+    if (!sequence) {
+      throw new Error("Sequence not found");
+    }
+    const emitterAddress = await getEmitterAddressXpla(tokenBridgeAddress);
+    enqueueSnackbar(null, {
+      content: <Alert severity="info">Fetching VAA</Alert>,
+    });
+    const { vaaBytes } = await getSignedVAAWithRetry(
+      WORMHOLE_RPC_HOSTS,
+      CHAIN_ID_XPLA,
+      emitterAddress,
+      sequence
+    );
+    dispatch(setSignedVAAHex(uint8ArrayToHex(vaaBytes)));
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Fetched Signed VAA</Alert>,
+    });
+  } catch (e) {
+    console.error(e);
+    enqueueSnackbar(null, {
+      content: <Alert severity="error">{parseError(e)}</Alert>,
+    });
+    dispatch(setIsSending(false));
+  }
+}
+
 export function useHandleAttest() {
   const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
@@ -295,6 +347,7 @@ export function useHandleAttest() {
   const solanaWallet = useSolanaWallet();
   const solPK = solanaWallet?.publicKey;
   const terraWallet = useConnectedWallet();
+  const xplaWallet = useXplaConnectedWallet();
   const terraFeeDenom = useSelector(selectTerraFeeDenom);
   const { accounts: algoAccounts } = useAlgorandContext();
   const disabled = !isTargetComplete || isSending || isSendComplete;
@@ -312,6 +365,8 @@ export function useHandleAttest() {
         terraFeeDenom,
         sourceChain
       );
+    } else if (sourceChain === CHAIN_ID_XPLA && !!xplaWallet) {
+      xpla(dispatch, enqueueSnackbar, xplaWallet, sourceAsset);
     } else if (sourceChain === CHAIN_ID_ALGORAND && algoAccounts[0]) {
       algo(dispatch, enqueueSnackbar, algoAccounts[0].address, sourceAsset);
     } else {
@@ -327,6 +382,7 @@ export function useHandleAttest() {
     sourceAsset,
     terraFeeDenom,
     algoAccounts,
+    xplaWallet,
   ]);
   return useMemo(
     () => ({

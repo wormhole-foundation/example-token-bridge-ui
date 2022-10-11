@@ -3,6 +3,7 @@ import {
   CHAIN_ID_ALGORAND,
   CHAIN_ID_SOLANA,
   CHAIN_ID_TERRA2,
+  CHAIN_ID_XPLA,
   isEVMChain,
   isTerraChain,
   TerraChainId,
@@ -17,6 +18,7 @@ import useMetaplexData from "./useMetaplexData";
 import useSolanaTokenMap from "./useSolanaTokenMap";
 import useTerraMetadata, { TerraMetadata } from "./useTerraMetadata";
 import useTerraTokenMap, { TerraTokenMap } from "./useTerraTokenMap";
+import useXplaMetadata, { XplaMetadata } from "./useXplaMetadata";
 
 export type GenericMetadata = {
   symbol?: string;
@@ -79,6 +81,33 @@ const constructTerraMetadata = (
       logo: tokenInfo?.icon || metadata?.logo || undefined,
       tokenName: tokenInfo?.name || metadata?.tokenName || undefined,
       decimals: metadata?.decimals || undefined,
+    };
+    data.set(address, obj);
+  });
+
+  return {
+    isFetching,
+    error,
+    receivedAt,
+    data,
+  };
+};
+
+const constructXplaMetadata = (
+  addresses: string[],
+  metadataMap: DataWrapper<Map<string, XplaMetadata>>
+) => {
+  const isFetching = metadataMap.isFetching;
+  const error = metadataMap.error;
+  const receivedAt = metadataMap.receivedAt;
+  const data = new Map<string, GenericMetadata>();
+  addresses.forEach((address) => {
+    const meta = metadataMap.data?.get(address);
+    const obj = {
+      symbol: meta?.symbol || undefined,
+      logo: undefined,
+      tokenName: meta?.tokenName || undefined,
+      decimals: meta?.decimals,
     };
     data.set(address, obj);
   });
@@ -158,6 +187,9 @@ export default function useMetadata(
   const terraAddresses = useMemo(() => {
     return isTerraChain(chainId) ? addresses : [];
   }, [chainId, addresses]);
+  const xplaAddresses = useMemo(() => {
+    return chainId === CHAIN_ID_XPLA ? addresses : [];
+  }, [chainId, addresses]);
   const ethereumAddresses = useMemo(() => {
     return isEVMChain(chainId) ? addresses : [];
   }, [chainId, addresses]);
@@ -170,6 +202,7 @@ export default function useMetadata(
     terraAddresses,
     chainId as TerraChainId
   );
+  const xplaMetadata = useXplaMetadata(xplaAddresses);
   const ethMetadata = useEvmMetadata(ethereumAddresses, chainId);
   const algoMetadata = useAlgoMetadata(algoAddresses);
 
@@ -186,6 +219,8 @@ export default function useMetadata(
             terraMetadata,
             chainId
           )
+        : chainId === CHAIN_ID_XPLA
+        ? constructXplaMetadata(xplaAddresses, xplaMetadata)
         : chainId === CHAIN_ID_ALGORAND
         ? constructAlgoMetadata(algoAddresses, algoMetadata)
         : getEmptyDataWrapper(),
@@ -197,8 +232,10 @@ export default function useMetadata(
       ethereumAddresses,
       ethMetadata,
       terraAddresses,
-      terraMetadata,
       terraTokenMap,
+      terraMetadata,
+      xplaAddresses,
+      xplaMetadata,
       algoAddresses,
       algoMetadata,
     ]

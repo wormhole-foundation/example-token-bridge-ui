@@ -3,6 +3,7 @@ import {
   CHAIN_ID_ALGORAND,
   CHAIN_ID_SOLANA,
   CHAIN_ID_TERRA2,
+  CHAIN_ID_XPLA,
   getOriginalAssetAlgorand,
   getOriginalAssetCosmWasm,
   getOriginalAssetEth,
@@ -10,6 +11,7 @@ import {
   hexToNativeAssetString,
   isEVMChain,
   isTerraChain,
+  queryExternalId,
   uint8ArrayToHex,
   uint8ArrayToNative,
 } from "@certusone/wormhole-sdk";
@@ -39,9 +41,10 @@ import {
   SOLANA_SYSTEM_PROGRAM_ADDRESS,
   SOL_NFT_BRIDGE_ADDRESS,
   SOL_TOKEN_BRIDGE_ADDRESS,
+  XPLA_LCD_CLIENT_CONFIG,
 } from "../utils/consts";
-import { queryExternalId } from "../utils/terra";
 import useIsWalletReady from "./useIsWalletReady";
+import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
 
 export type OriginalAssetInfo = {
   originChain: ChainId | null;
@@ -230,10 +233,22 @@ function useOriginalAsset(
         if (!cancelled) {
           setIsLoading(false);
           setArgs();
-          if (result.chainId === CHAIN_ID_TERRA2) {
-            queryExternalId(uint8ArrayToHex(result.assetAddress)).then(
-              (tokenId) => setOriginAddress(tokenId || null)
+          if (
+            result.chainId === CHAIN_ID_TERRA2 ||
+            result.chainId === CHAIN_ID_XPLA
+          ) {
+            const lcd =
+              result.chainId === CHAIN_ID_TERRA2
+                ? new LCDClient(getTerraConfig(CHAIN_ID_TERRA2))
+                : new XplaLCDClient(XPLA_LCD_CLIENT_CONFIG);
+            const tokenBridgeAddress = getTokenBridgeAddressForChain(
+              result.chainId
             );
+            queryExternalId(
+              lcd,
+              tokenBridgeAddress,
+              uint8ArrayToHex(result.assetAddress)
+            ).then((tokenId) => setOriginAddress(tokenId || null));
           } else {
             setOriginAddress(
               hexToNativeAssetString(

@@ -2,6 +2,7 @@ import {
   canonicalAddress,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_XPLA,
   isEVMChain,
   isTerraChain,
   uint8ArrayToHex,
@@ -29,6 +30,7 @@ import {
 } from "../store/selectors";
 import { setTargetAddressHex as setTransferTargetAddressHex } from "../store/transferSlice";
 import { decodeAddress } from "algosdk";
+import { useConnectedWallet as useXplaConnectedWallet } from "@xpla/wallet-provider";
 
 function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
   const dispatch = useDispatch();
@@ -46,6 +48,7 @@ function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
   );
   const targetTokenAccountPublicKey = targetParsedTokenAccount?.publicKey;
   const terraWallet = useConnectedWallet();
+  const xplaWallet = useXplaConnectedWallet();
   const { accounts: algoAccounts } = useAlgorandContext();
   const setTargetAddressHex = nft
     ? setNFTTargetAddressHex
@@ -110,6 +113,18 @@ function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
             )
           )
         );
+      } else if (
+        targetChain === CHAIN_ID_XPLA &&
+        xplaWallet &&
+        xplaWallet.walletAddress
+      ) {
+        dispatch(
+          setTargetAddressHex(
+            uint8ArrayToHex(
+              zeroPad(canonicalAddress(xplaWallet.walletAddress), 32)
+            )
+          )
+        );
       } else if (targetChain === CHAIN_ID_ALGORAND && algoAccounts[0]) {
         dispatch(
           setTargetAddressHex(
@@ -135,6 +150,7 @@ function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
     nft,
     setTargetAddressHex,
     algoAccounts,
+    xplaWallet,
   ]);
 }
 
