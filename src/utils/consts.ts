@@ -17,6 +17,7 @@ import {
   CHAIN_ID_SOLANA,
   CHAIN_ID_TERRA,
   CHAIN_ID_TERRA2,
+  CHAIN_ID_XPLA,
   coalesceChainName,
   CONTRACTS,
   isEVMChain,
@@ -42,6 +43,7 @@ import polygonIcon from "../icons/polygon.svg";
 import solanaIcon from "../icons/solana.svg";
 import terraIcon from "../icons/terra.svg";
 import terra2Icon from "../icons/terra2.svg";
+import xplaIcon from "../icons/xpla.svg";
 
 export type Cluster = "devnet" | "testnet";
 const urlParams = new URLSearchParams(window.location.search);
@@ -141,6 +143,11 @@ export const CHAINS: ChainInfo[] =
           name: "Terra",
           logo: terra2Icon,
         },
+        {
+          id: CHAIN_ID_XPLA,
+          name: "XPLA",
+          logo: xplaIcon,
+        },
       ]
     : [
         {
@@ -231,6 +238,8 @@ export const getDefaultNativeCurrencySymbol = (chainId: ChainId) =>
     ? "CELO"
     : chainId === CHAIN_ID_NEON
     ? "NEON"
+    : chainId === CHAIN_ID_XPLA
+    ? "XPLA"
     : "";
 
 export const getDefaultNativeCurrencyAddressEvm = (chainId: ChainId) => {
@@ -282,6 +291,8 @@ export const getExplorerName = (chainId: ChainId) =>
     ? "Klaytnscope"
     : chainId === CHAIN_ID_SOLANA
     ? "Solscan"
+    : chainId === CHAIN_ID_XPLA
+    ? "XPLA Explorer"
     : "Explorer";
 export const WORMHOLE_RPC_HOSTS =
   CLUSTER === "testnet"
@@ -357,6 +368,14 @@ export const getTerraConfig = (chainId: TerraChainId) => {
         isClassic,
       };
 };
+
+export const XPLA_LCD_CLIENT_CONFIG = {
+  URL: "https://cube-lcd.xpla.dev",
+  chainID: "cube_47-5",
+};
+
+export const XPLA_GAS_PRICES_URL =
+  "https://cube-fcd.xpla.dev/v1/txs/gas_prices";
 
 export const ALGORAND_HOST =
   CLUSTER === "testnet"
@@ -618,6 +637,8 @@ export const MIGRATION_PROGRAM_ADDRESS =
 export const SUPPORTED_TERRA_TOKENS = ["uluna", "uusd"];
 export const TERRA_DEFAULT_FEE_DENOM = SUPPORTED_TERRA_TOKENS[0];
 
+export const XPLA_NATIVE_DENOM = "axpla";
+
 export const getTerraFCDBaseUrl = (chainId: TerraChainId) =>
   CLUSTER === "testnet"
     ? chainId === CHAIN_ID_TERRA2
@@ -709,20 +730,6 @@ export const ACALA_SHOULD_RELAY_URL = `${ACALA_RELAYER_URL}/shouldRelay`;
 
 export const getChainShortName = (chainId: ChainId) => {
   return chainId === CHAIN_ID_BSC ? "BSC" : CHAINS_BY_ID[chainId]?.name;
-};
-
-export const COLOR_BY_CHAIN_ID: { [key in ChainId]?: string } = {
-  [CHAIN_ID_SOLANA]: "#31D7BB",
-  [CHAIN_ID_ETH]: "#8A92B2",
-  [CHAIN_ID_TERRA]: "#5493F7",
-  [CHAIN_ID_BSC]: "#F0B90B",
-  [CHAIN_ID_POLYGON]: "#8247E5",
-  [CHAIN_ID_AVAX]: "#E84142",
-  [CHAIN_ID_OASIS]: "#0092F6",
-  [CHAIN_ID_AURORA]: "#23685A",
-  [CHAIN_ID_FANTOM]: "#1969FF",
-  [CHAIN_ID_KARURA]: "#FF4B3B",
-  [CHAIN_ID_ACALA]: "#E00F51",
 };
 
 export const DISABLED_TOKEN_TRANSFERS: {

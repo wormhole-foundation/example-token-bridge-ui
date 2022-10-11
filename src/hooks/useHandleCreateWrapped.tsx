@@ -5,16 +5,19 @@ import {
   CHAIN_ID_KARURA,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_XPLA,
   createWrappedOnAlgorand,
   createWrappedOnEth,
   createWrappedOnSolana,
   createWrappedOnTerra,
+  createWrappedOnXpla,
   isEVMChain,
   isTerraChain,
   TerraChainId,
   updateWrappedOnEth,
   updateWrappedOnSolana,
   updateWrappedOnTerra,
+  updateWrappedOnXpla,
 } from "@certusone/wormhole-sdk";
 import { Alert } from "@material-ui/lab";
 import { WalletContextState } from "@solana/wallet-adapter-react";
@@ -55,7 +58,12 @@ import parseError from "../utils/parseError";
 import { postVaaWithRetry } from "../utils/postVaa";
 import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees } from "../utils/terra";
+import { postWithFeesXpla } from "../utils/xpla";
 import useAttestSignedVAA from "./useAttestSignedVAA";
+import {
+  useConnectedWallet as useXplaConnectedWallet,
+  ConnectedWallet as XplaConnectedWallet,
+} from "@xpla/wallet-provider";
 
 async function algo(
   dispatch: any,
@@ -237,6 +245,47 @@ async function terra(
   }
 }
 
+async function xpla(
+  dispatch: any,
+  enqueueSnackbar: any,
+  wallet: XplaConnectedWallet,
+  signedVAA: Uint8Array,
+  shouldUpdate: boolean
+) {
+  dispatch(setIsCreating(true));
+  const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_XPLA);
+  try {
+    const msg = shouldUpdate
+      ? await updateWrappedOnXpla(
+          tokenBridgeAddress,
+          wallet.xplaAddress,
+          signedVAA
+        )
+      : await createWrappedOnXpla(
+          tokenBridgeAddress,
+          wallet.xplaAddress,
+          signedVAA
+        );
+    console.log("createWrapped", msg);
+    const result = await postWithFeesXpla(
+      wallet,
+      [msg],
+      "Wormhole - Create Wrapped"
+    );
+    dispatch(
+      setCreateTx({ id: result.result.txhash, block: result.result.height })
+    );
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+  } catch (e) {
+    enqueueSnackbar(null, {
+      content: <Alert severity="error">{parseError(e)}</Alert>,
+    });
+    dispatch(setIsCreating(false));
+  }
+}
+
 export function useHandleCreateWrapped(shouldUpdate: boolean) {
   const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
@@ -248,6 +297,7 @@ export function useHandleCreateWrapped(shouldUpdate: boolean) {
   const { signer } = useEthereumProvider();
   const terraWallet = useConnectedWallet();
   const terraFeeDenom = useSelector(selectTerraFeeDenom);
+  const xplaWallet = useXplaConnectedWallet();
   const { accounts: algoAccounts } = useAlgorandContext();
   const handleCreateClick = useCallback(() => {
     if (isEVMChain(targetChain) && !!signer && !!signedVAA) {
@@ -283,6 +333,8 @@ export function useHandleCreateWrapped(shouldUpdate: boolean) {
         terraFeeDenom,
         targetChain
       );
+    } else if (targetChain === CHAIN_ID_XPLA && !!xplaWallet && !!signedVAA) {
+      xpla(dispatch, enqueueSnackbar, xplaWallet, signedVAA, shouldUpdate);
     } else if (
       targetChain === CHAIN_ID_ALGORAND &&
       algoAccounts[0] &&
@@ -309,6 +361,7 @@ export function useHandleCreateWrapped(shouldUpdate: boolean) {
     shouldUpdate,
     terraFeeDenom,
     algoAccounts,
+    xplaWallet,
   ]);
   return useMemo(
     () => ({

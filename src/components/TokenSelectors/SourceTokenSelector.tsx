@@ -2,6 +2,7 @@
 import {
   CHAIN_ID_ALGORAND,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_XPLA,
   isEVMChain,
   isTerraChain,
 } from "@certusone/wormhole-sdk";
@@ -30,6 +31,7 @@ import EvmTokenPicker from "./EvmTokenPicker";
 import RefreshButtonWrapper from "./RefreshButtonWrapper";
 import SolanaTokenPicker from "./SolanaTokenPicker";
 import TerraTokenPicker from "./TerraTokenPicker";
+import XplaTokenPicker from "./XplaTokenPicker";
 
 type TokenSelectorProps = {
   disabled: boolean;
@@ -116,6 +118,14 @@ export const TokenSelector = (props: TokenSelectorProps) => {
       resetAccounts={maps?.resetAccounts}
       tokenAccounts={maps?.tokenAccounts}
       chainId={lookupChain}
+    />
+  ) : lookupChain === CHAIN_ID_XPLA ? (
+    <XplaTokenPicker
+      value={sourceParsedTokenAccount || null}
+      disabled={disabled}
+      onChange={handleOnChange}
+      resetAccounts={maps?.resetAccounts}
+      tokenAccounts={maps?.tokenAccounts}
     />
   ) : lookupChain === CHAIN_ID_ALGORAND ? (
     <AlgoTokenPicker

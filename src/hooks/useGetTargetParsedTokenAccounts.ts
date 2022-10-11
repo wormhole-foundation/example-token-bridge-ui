@@ -1,8 +1,10 @@
 import {
   CHAIN_ID_ALGORAND,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_XPLA,
   isEVMChain,
   isNativeDenom,
+  isNativeDenomXpla,
   isTerraChain,
   TokenImplementation__factory,
 } from "@certusone/wormhole-sdk";
@@ -25,11 +27,15 @@ import {
   getEvmChainId,
   SOLANA_HOST,
   getTerraConfig,
+  XPLA_LCD_CLIENT_CONFIG,
 } from "../utils/consts";
 import { NATIVE_TERRA_DECIMALS } from "../utils/terra";
 import { createParsedTokenAccount } from "./useGetSourceParsedTokenAccounts";
 import useMetadata from "./useMetadata";
 import { Algodv2 } from "algosdk";
+import { useConnectedWallet as useXplaConnectedWallet } from "@xpla/wallet-provider";
+import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
+import { NATIVE_XPLA_DECIMALS } from "../utils/xpla";
 
 function useGetTargetParsedTokenAccounts() {
   const dispatch = useDispatch();
@@ -56,6 +62,7 @@ function useGetTargetParsedTokenAccounts() {
     signerAddress,
     chainId: evmChainId,
   } = useEthereumProvider();
+  const xplaWallet = useXplaConnectedWallet();
   const hasCorrectEvmNetwork = evmChainId === getEvmChainId(targetChain);
   const { accounts: algoAccounts } = useAlgorandContext();
   const hasResolvedMetadata = metadata.data || metadata.error;
@@ -136,6 +143,77 @@ function useGetTargetParsedTokenAccounts() {
           });
       }
     }
+
+    if (targetChain === CHAIN_ID_XPLA && xplaWallet) {
+      const lcd = new XplaLCDClient(XPLA_LCD_CLIENT_CONFIG);
+      if (isNativeDenomXpla(targetAsset)) {
+        lcd.bank
+          .balance(xplaWallet.walletAddress)
+          .then(([coins]) => {
+            const balance = coins.get(targetAsset)?.amount?.toString();
+            if (balance && !cancelled) {
+              dispatch(
+                setTargetParsedTokenAccount(
+                  createParsedTokenAccount(
+                    "",
+                    "",
+                    balance,
+                    NATIVE_XPLA_DECIMALS,
+                    Number(formatUnits(balance, NATIVE_XPLA_DECIMALS)),
+                    formatUnits(balance, NATIVE_XPLA_DECIMALS),
+                    symbol,
+                    tokenName,
+                    logo
+                  )
+                )
+              );
+            }
+          })
+          .catch(() => {
+            if (!cancelled) {
+              // TODO: error state
+            }
+          });
+      } else {
+        lcd.wasm
+          .contractQuery(targetAsset, {
+            token_info: {},
+          })
+          .then((info: any) =>
+            lcd.wasm
+              .contractQuery(targetAsset, {
+                balance: {
+                  address: xplaWallet.xplaAddress,
+                },
+              })
+              .then((balance: any) => {
+                if (balance && info && !cancelled) {
+                  dispatch(
+                    setTargetParsedTokenAccount(
+                      createParsedTokenAccount(
+                        "",
+                        "",
+                        balance.balance.toString(),
+                        info.decimals,
+                        Number(formatUnits(balance.balance, info.decimals)),
+                        formatUnits(balance.balance, info.decimals),
+                        symbol,
+                        tokenName,
+                        logo
+                      )
+                    )
+                  );
+                }
+              })
+          )
+          .catch(() => {
+            if (!cancelled) {
+              // TODO: error state
+            }
+          });
+      }
+    }
+
     if (targetChain === CHAIN_ID_SOLANA && solPK) {
       let mint;
       try {
@@ -289,6 +367,7 @@ function useGetTargetParsedTokenAccounts() {
     logo,
     algoAccounts,
     decimals,
+    xplaWallet,
   ]);
 }
 

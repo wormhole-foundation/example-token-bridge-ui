@@ -16,6 +16,7 @@ import {
   CHAIN_ID_ACALA,
   isTerraChain,
   CHAIN_ID_TERRA2,
+  CHAIN_ID_XPLA,
 } from "@certusone/wormhole-sdk";
 import { Button, makeStyles, Typography } from "@material-ui/core";
 import { Transaction } from "../store/transferSlice";
@@ -118,6 +119,10 @@ export default function ShowTx({
       ? `https://${CLUSTER === "testnet" ? "testnet." : ""}algoexplorer.io/tx/${
           tx?.id
         }`
+      : chainId === CHAIN_ID_XPLA
+      ? `https://explorer.xpla.io/${
+          CLUSTER === "testnet" ? "testnet/" : ""
+        }tx/${tx?.id}`
       : undefined;
   const explorerName = getExplorerName(chainId);
 

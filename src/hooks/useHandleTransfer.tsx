@@ -3,10 +3,12 @@ import {
   CHAIN_ID_ALGORAND,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_XPLA,
   getEmitterAddressAlgorand,
   getEmitterAddressEth,
   getEmitterAddressSolana,
   getEmitterAddressTerra,
+  getEmitterAddressXpla,
   hexToUint8Array,
   isEVMChain,
   isTerraChain,
@@ -14,12 +16,14 @@ import {
   parseSequenceFromLogEth,
   parseSequenceFromLogSolana,
   parseSequenceFromLogTerra,
+  parseSequenceFromLogXpla,
   TerraChainId,
   transferFromAlgorand,
   transferFromEth,
   transferFromEthNative,
   transferFromSolana,
   transferFromTerra,
+  transferFromXpla,
   transferNativeSol,
   uint8ArrayToHex,
 } from "@certusone/wormhole-sdk";
@@ -75,6 +79,11 @@ import parseError from "../utils/parseError";
 import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees, waitForTerraExecution } from "../utils/terra";
 import useTransferTargetAddressHex from "./useTransferTargetAddress";
+import {
+  useConnectedWallet as useXplaConnectedWallet,
+  ConnectedWallet as XplaConnectedWallet,
+} from "@xpla/wallet-provider";
+import { postWithFeesXpla, waitForXplaExecution } from "../utils/xpla";
 
 async function fetchSignedVAA(
   chainId: ChainId,
@@ -385,6 +394,61 @@ async function terra(
   }
 }
 
+async function xpla(
+  dispatch: any,
+  enqueueSnackbar: any,
+  wallet: XplaConnectedWallet,
+  asset: string,
+  amount: string,
+  decimals: number,
+  targetChain: ChainId,
+  targetAddress: Uint8Array,
+  relayerFee?: string
+) {
+  dispatch(setIsSending(true));
+  try {
+    const baseAmountParsed = parseUnits(amount, decimals);
+    const feeParsed = parseUnits(relayerFee || "0", decimals);
+    const transferAmountParsed = baseAmountParsed.add(feeParsed);
+    const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_XPLA);
+    const msgs = await transferFromXpla(
+      wallet.xplaAddress,
+      tokenBridgeAddress,
+      asset,
+      transferAmountParsed.toString(),
+      targetChain,
+      targetAddress,
+      feeParsed.toString()
+    );
+
+    const result = await postWithFeesXpla(
+      wallet,
+      msgs,
+      "Wormhole - Initiate Transfer"
+    );
+
+    const info = await waitForXplaExecution(result);
+    dispatch(setTransferTx({ id: info.txhash, block: info.height }));
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+    const sequence = parseSequenceFromLogXpla(info);
+    if (!sequence) {
+      throw new Error("Sequence not found");
+    }
+    const emitterAddress = await getEmitterAddressXpla(tokenBridgeAddress);
+    await fetchSignedVAA(
+      CHAIN_ID_XPLA,
+      emitterAddress,
+      sequence,
+      enqueueSnackbar,
+      dispatch
+    );
+  } catch (e) {
+    handleError(e, enqueueSnackbar, dispatch);
+  }
+}
+
 export function useHandleTransfer() {
   const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
@@ -403,6 +467,7 @@ export function useHandleTransfer() {
   const solPK = solanaWallet?.publicKey;
   const terraWallet = useConnectedWallet();
   const terraFeeDenom = useSelector(selectTerraFeeDenom);
+  const xplaWallet = useXplaConnectedWallet();
   const { accounts: algoAccounts } = useAlgorandContext();
   const sourceParsedTokenAccount = useSelector(
     selectTransferSourceParsedTokenAccount
@@ -483,6 +548,24 @@ export function useHandleTransfer() {
         relayerFee
       );
     } else if (
+      sourceChain === CHAIN_ID_XPLA &&
+      !!xplaWallet &&
+      !!sourceAsset &&
+      decimals !== undefined &&
+      !!targetAddress
+    ) {
+      xpla(
+        dispatch,
+        enqueueSnackbar,
+        xplaWallet,
+        sourceAsset,
+        amount,
+        decimals,
+        targetChain,
+        targetAddress,
+        relayerFee
+      );
+    } else if (
       sourceChain === CHAIN_ID_ALGORAND &&
       algoAccounts[0] &&
       !!sourceAsset &&
@@ -523,6 +606,7 @@ export function useHandleTransfer() {
     isNative,
     terraFeeDenom,
     algoAccounts,
+    xplaWallet,
   ]);
   return useMemo(
     () => ({
