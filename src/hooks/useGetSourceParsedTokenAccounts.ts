@@ -2,6 +2,7 @@ import {
   ChainId,
   CHAIN_ID_ACALA,
   CHAIN_ID_ALGORAND,
+  CHAIN_ID_APTOS,
   CHAIN_ID_AURORA,
   CHAIN_ID_AVAX,
   CHAIN_ID_BSC,
@@ -1554,6 +1555,10 @@ function useGetAvailableTokens(nft: boolean = false) {
         resetAccounts: resetSourceAccounts,
       }
     : lookupChain === CHAIN_ID_XPLA
+    ? {
+        resetAccounts: resetSourceAccounts,
+      }
+    : lookupChain === CHAIN_ID_APTOS
     ? {
         resetAccounts: resetSourceAccounts,
       }

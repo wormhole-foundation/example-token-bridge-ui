@@ -6,6 +6,7 @@ import { Provider } from "react-redux";
 import { HashRouter } from "react-router-dom";
 import App from "./App";
 import { AlgorandContextProvider } from "./contexts/AlgorandWalletContext";
+import AptosWalletProvider from "./contexts/AptosWalletContext";
 import { EthereumProviderProvider } from "./contexts/EthereumProviderContext";
 import { SolanaWalletProvider } from "./contexts/SolanaWalletContext.tsx";
 import { TerraWalletProvider } from "./contexts/TerraWalletContext.tsx";
@@ -26,9 +27,11 @@ ReactDOM.render(
                 <TerraWalletProvider>
                   <AlgorandContextProvider>
                     <XplaWalletProvider>
-                      <HashRouter>
-                        <App />
-                      </HashRouter>
+                      <AptosWalletProvider>
+                        <HashRouter>
+                          <App />
+                        </HashRouter>
+                      </AptosWalletProvider>
                     </XplaWalletProvider>
                   </AlgorandContextProvider>
                 </TerraWalletProvider>

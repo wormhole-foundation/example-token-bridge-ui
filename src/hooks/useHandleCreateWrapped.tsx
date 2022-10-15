@@ -2,15 +2,18 @@ import {
   ChainId,
   CHAIN_ID_ACALA,
   CHAIN_ID_ALGORAND,
+  CHAIN_ID_APTOS,
   CHAIN_ID_KARURA,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
+  coalesceChainId,
   createWrappedOnAlgorand,
   createWrappedOnEth,
   createWrappedOnSolana,
   createWrappedOnTerra,
   createWrappedOnXpla,
+  getAssetFullyQualifiedType,
   isEVMChain,
   isTerraChain,
   TerraChainId,
@@ -19,6 +22,7 @@ import {
   updateWrappedOnTerra,
   updateWrappedOnXpla,
 } from "@certusone/wormhole-sdk";
+import { _parseVAAAlgorand } from "@certusone/wormhole-sdk/lib/esm/algorand";
 import { Alert } from "@material-ui/lab";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { Connection } from "@solana/web3.js";
@@ -26,12 +30,17 @@ import {
   ConnectedWallet,
   useConnectedWallet,
 } from "@terra-money/wallet-provider";
+import {
+  ConnectedWallet as XplaConnectedWallet,
+  useConnectedWallet as useXplaConnectedWallet,
+} from "@xpla/wallet-provider";
 import algosdk from "algosdk";
 import { Signer } from "ethers";
 import { useSnackbar } from "notistack";
 import { useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useAlgorandContext } from "../contexts/AlgorandWalletContext";
+import { useAptosContext } from "../contexts/AptosWalletContext";
 import { useEthereumProvider } from "../contexts/EthereumProviderContext";
 import { useSolanaWallet } from "../contexts/SolanaWalletContext";
 import { setCreateTx, setIsCreating } from "../store/attestSlice";
@@ -41,6 +50,7 @@ import {
   selectTerraFeeDenom,
 } from "../store/selectors";
 import { signSendAndConfirmAlgorand } from "../utils/algorand";
+import { waitForSignAndSubmitTransaction } from "../utils/aptos";
 import {
   ACALA_HOST,
   ALGORAND_BRIDGE_ID,
@@ -60,10 +70,6 @@ import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees } from "../utils/terra";
 import { postWithFeesXpla } from "../utils/xpla";
 import useAttestSignedVAA from "./useAttestSignedVAA";
-import {
-  useConnectedWallet as useXplaConnectedWallet,
-  ConnectedWallet as XplaConnectedWallet,
-} from "@xpla/wallet-provider";
 
 async function algo(
   dispatch: any,
@@ -92,6 +98,74 @@ async function algo(
         block: result["confirmed-round"],
       })
     );
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+  } catch (e) {
+    enqueueSnackbar(null, {
+      content: <Alert severity="error">{parseError(e)}</Alert>,
+    });
+    dispatch(setIsCreating(false));
+  }
+}
+
+async function aptos(
+  dispatch: any,
+  enqueueSnackbar: any,
+  senderAddr: string,
+  signedVAA: Uint8Array,
+  shouldUpdate: boolean
+) {
+  dispatch(setIsCreating(true));
+  const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_APTOS);
+  // const client = getAptosClient();
+  try {
+    const parsedAttest = _parseVAAAlgorand(signedVAA);
+    console.log(parsedAttest.FromChain, parsedAttest.Contract);
+    if (!parsedAttest.FromChain || !parsedAttest.Contract) {
+      throw new Error("Unable to parse payload");
+    }
+    // const msg = shouldUpdate
+    //   ? await updateWrappedOnAptos(
+    //       client,
+    //       senderAddr,
+    //       tokenBridgeAddress,
+    //       parsedAttest.FromChain as ChainId,
+    //       `0x${parsedAttest.Contract}`,
+    //       signedVAA
+    //     )
+    //   : await createWrappedOnAptos(
+    //       client,
+    //       senderAddr,
+    //       tokenBridgeAddress,
+    //       parsedAttest.FromChain as ChainId,
+    //       `0x${parsedAttest.Contract}`,
+    //       signedVAA
+    //     );
+    // console.log("createWrapped", msg);
+    const assetType = getAssetFullyQualifiedType(
+      tokenBridgeAddress,
+      coalesceChainId(parsedAttest.FromChain as ChainId),
+      `0x${parsedAttest.Contract}`
+    );
+    if (!assetType) throw new Error("Invalid asset address.");
+    // create coin type
+    const createWrappedCoinTypePayload = {
+      function: `${tokenBridgeAddress}::wrapped::create_wrapped_coin_type`,
+      type_arguments: [],
+      arguments: [signedVAA],
+    };
+    await waitForSignAndSubmitTransaction(createWrappedCoinTypePayload);
+    // create coin
+    const createWrappedCoinPayload = {
+      function: `${tokenBridgeAddress}::wrapped::create_wrapped_coin`,
+      type_arguments: [assetType],
+      arguments: [signedVAA],
+    };
+    const result = await waitForSignAndSubmitTransaction(
+      createWrappedCoinPayload
+    );
+    dispatch(setCreateTx({ id: result, block: 1 }));
     enqueueSnackbar(null, {
       content: <Alert severity="success">Transaction confirmed</Alert>,
     });
@@ -299,6 +373,7 @@ export function useHandleCreateWrapped(shouldUpdate: boolean) {
   const terraFeeDenom = useSelector(selectTerraFeeDenom);
   const xplaWallet = useXplaConnectedWallet();
   const { accounts: algoAccounts } = useAlgorandContext();
+  const { address: aptosAddress } = useAptosContext();
   const handleCreateClick = useCallback(() => {
     if (isEVMChain(targetChain) && !!signer && !!signedVAA) {
       evm(
@@ -336,6 +411,12 @@ export function useHandleCreateWrapped(shouldUpdate: boolean) {
     } else if (targetChain === CHAIN_ID_XPLA && !!xplaWallet && !!signedVAA) {
       xpla(dispatch, enqueueSnackbar, xplaWallet, signedVAA, shouldUpdate);
     } else if (
+      targetChain === CHAIN_ID_APTOS &&
+      !!aptosAddress &&
+      !!signedVAA
+    ) {
+      aptos(dispatch, enqueueSnackbar, aptosAddress, signedVAA, shouldUpdate);
+    } else if (
       targetChain === CHAIN_ID_ALGORAND &&
       algoAccounts[0] &&
       !!signedVAA
@@ -362,6 +443,7 @@ export function useHandleCreateWrapped(shouldUpdate: boolean) {
     terraFeeDenom,
     algoAccounts,
     xplaWallet,
+    aptosAddress,
   ]);
   return useMemo(
     () => ({

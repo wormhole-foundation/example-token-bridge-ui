@@ -1,6 +1,7 @@
 import {
   ChainId,
   CHAIN_ID_ALGORAND,
+  CHAIN_ID_APTOS,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
   isEVMChain,
@@ -15,12 +16,13 @@ import {
   useEthereumProvider,
 } from "../contexts/EthereumProviderContext";
 import { useSolanaWallet } from "../contexts/SolanaWalletContext";
-import { CLUSTER, getEvmChainId } from "../utils/consts";
+import { APTOS_NETWORK, CLUSTER, getEvmChainId } from "../utils/consts";
 import {
   EVM_RPC_MAP,
   METAMASK_CHAIN_PARAMETERS,
 } from "../utils/metaMaskChainParameters";
 import { useConnectedWallet as useXplaConnectedWallet } from "@xpla/wallet-provider";
+import { useAptosContext } from "../contexts/AptosWalletContext";
 
 const createWalletStatus = (
   isReady: boolean,
@@ -62,6 +64,9 @@ function useIsWalletReady(
   const algoPK = algorandAccounts[0]?.address;
   const xplaWallet = useXplaConnectedWallet();
   const hasXplaWallet = !!xplaWallet;
+  const { address: aptosAddress, network: aptosNetwork } = useAptosContext();
+  const hasAptosWallet = !!aptosAddress;
+  const hasCorrectAptosNetwork = aptosNetwork === APTOS_NETWORK;
 
   const forceNetworkSwitch = useCallback(async () => {
     if (provider && correctEvmNetwork) {
@@ -134,6 +139,23 @@ function useIsWalletReady(
         xplaWallet.walletAddress
       );
     }
+    if (chainId === CHAIN_ID_APTOS && hasAptosWallet && aptosAddress) {
+      if (hasCorrectAptosNetwork) {
+        return createWalletStatus(
+          true,
+          undefined,
+          forceNetworkSwitch,
+          aptosAddress
+        );
+      } else {
+        return createWalletStatus(
+          false,
+          `Wallet is not connected to ${APTOS_NETWORK}.`,
+          forceNetworkSwitch,
+          undefined
+        );
+      }
+    }
     if (isEVMChain(chainId) && hasEthInfo && signerAddress) {
       if (hasCorrectEvmNetwork) {
         return createWalletStatus(
@@ -176,6 +198,9 @@ function useIsWalletReady(
     algoPK,
     xplaWallet,
     hasXplaWallet,
+    hasAptosWallet,
+    aptosAddress,
+    hasCorrectAptosNetwork,
   ]);
 }
 

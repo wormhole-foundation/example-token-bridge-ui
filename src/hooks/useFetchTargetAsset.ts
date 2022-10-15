@@ -1,10 +1,12 @@
 import {
   ChainId,
   CHAIN_ID_ALGORAND,
+  CHAIN_ID_APTOS,
   CHAIN_ID_SOLANA,
   CHAIN_ID_TERRA2,
   CHAIN_ID_XPLA,
   getForeignAssetAlgorand,
+  getForeignAssetAptos,
   getForeignAssetEth,
   getForeignAssetSolana,
   getForeignAssetTerra,
@@ -59,6 +61,7 @@ import {
   XPLA_LCD_CLIENT_CONFIG,
 } from "../utils/consts";
 import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
+import { getAptosClient } from "../utils/aptos";
 
 function useFetchTargetAsset(nft?: boolean) {
   const dispatch = useDispatch();
@@ -313,6 +316,36 @@ function useFetchTargetAsset(nft?: boolean) {
             setArgs();
           }
         } catch (e) {
+          if (!cancelled) {
+            dispatch(
+              setTargetAsset(
+                errorDataWrapper(
+                  "Unable to determine existence of wrapped asset"
+                )
+              )
+            );
+          }
+        }
+      }
+      if (targetChain === CHAIN_ID_APTOS && originChain && originAsset) {
+        dispatch(setTargetAsset(fetchDataWrapper()));
+        try {
+          const asset = await getForeignAssetAptos(
+            getAptosClient(),
+            getTokenBridgeAddressForChain(targetChain),
+            originChain,
+            `0x${originAsset}`
+          );
+          if (!cancelled) {
+            dispatch(
+              setTargetAsset(
+                receiveDataWrapper({ doesExist: !!asset, address: asset })
+              )
+            );
+            setArgs();
+          }
+        } catch (e) {
+          console.error(e);
           if (!cancelled) {
             dispatch(
               setTargetAsset(
