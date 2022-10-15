@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@certusone/wormhole-sdk": "^0.7.2",
+    "@certusone/wormhole-sdk": "^0.7.3",
     "@material-ui/core": "^4.12.2",
     "@material-ui/icons": "^4.11.2",
     "@material-ui/lab": "^4.0.0-alpha.60",
@@ -23,6 +23,7 @@
     "@xpla/wallet-provider": "^0.3.4",
     "@xpla/xpla.js": "^0.2.1",
     "algosdk": "^1.15.0",
+    "aptos": "^1.3.16",
     "axios": "^0.21.1",
     "bech32": "^1.1.4",
     "bn.js": "^5.1.3",
