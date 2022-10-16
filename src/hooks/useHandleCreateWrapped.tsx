@@ -7,13 +7,13 @@ import {
   CHAIN_ID_KLAYTN,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
-  coalesceChainId,
   createWrappedOnAlgorand,
+  createWrappedOnAptos,
   createWrappedOnEth,
   createWrappedOnSolana,
   createWrappedOnTerra,
   createWrappedOnXpla,
-  getAssetFullyQualifiedType,
+  createWrappedTypeOnAptos,
   isEVMChain,
   isTerraChain,
   TerraChainId,
@@ -22,7 +22,6 @@ import {
   updateWrappedOnTerra,
   updateWrappedOnXpla,
 } from "@certusone/wormhole-sdk";
-import { _parseVAAAlgorand } from "@certusone/wormhole-sdk/lib/esm/algorand";
 import { Alert } from "@material-ui/lab";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { Connection } from "@solana/web3.js";
@@ -120,48 +119,26 @@ async function aptos(
   const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_APTOS);
   // const client = getAptosClient();
   try {
-    const parsedAttest = _parseVAAAlgorand(signedVAA);
-    console.log(parsedAttest.FromChain, parsedAttest.Contract);
-    if (!parsedAttest.FromChain || !parsedAttest.Contract) {
-      throw new Error("Unable to parse payload");
-    }
-    // const msg = shouldUpdate
-    //   ? await updateWrappedOnAptos(
-    //       client,
-    //       senderAddr,
-    //       tokenBridgeAddress,
-    //       parsedAttest.FromChain as ChainId,
-    //       `0x${parsedAttest.Contract}`,
-    //       signedVAA
-    //     )
-    //   : await createWrappedOnAptos(
-    //       client,
-    //       senderAddr,
-    //       tokenBridgeAddress,
-    //       parsedAttest.FromChain as ChainId,
-    //       `0x${parsedAttest.Contract}`,
-    //       signedVAA
-    //     );
-    // console.log("createWrapped", msg);
-    const assetType = getAssetFullyQualifiedType(
-      tokenBridgeAddress,
-      coalesceChainId(parsedAttest.FromChain as ChainId),
-      `0x${parsedAttest.Contract}`
-    );
-    if (!assetType) throw new Error("Invalid asset address.");
-    // create coin type
-    const createWrappedCoinTypePayload = {
-      function: `${tokenBridgeAddress}::wrapped::create_wrapped_coin_type`,
-      type_arguments: [],
-      arguments: [signedVAA],
-    };
-    await waitForSignAndSubmitTransaction(createWrappedCoinTypePayload);
+    // create coin type (it's possible this was already done)
+    // TODO: can this be detected? otherwise the user has to click cancel twice
+    try {
+      const createWrappedCoinTypePayload = createWrappedTypeOnAptos(
+        tokenBridgeAddress,
+        signedVAA
+      );
+      createWrappedCoinTypePayload.arguments[0] = Array.from(
+        createWrappedCoinTypePayload.arguments[0]
+      );
+      await waitForSignAndSubmitTransaction(createWrappedCoinTypePayload);
+    } catch (e) {}
     // create coin
-    const createWrappedCoinPayload = {
-      function: `${tokenBridgeAddress}::wrapped::create_wrapped_coin`,
-      type_arguments: [assetType],
-      arguments: [signedVAA],
-    };
+    const createWrappedCoinPayload = createWrappedOnAptos(
+      tokenBridgeAddress,
+      signedVAA
+    );
+    createWrappedCoinPayload.arguments[0] = Array.from(
+      createWrappedCoinPayload.arguments[0]
+    );
     const result = await waitForSignAndSubmitTransaction(
       createWrappedCoinPayload
     );

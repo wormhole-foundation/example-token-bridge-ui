@@ -1,7 +1,9 @@
 import {
   CHAIN_ID_ALGORAND,
+  CHAIN_ID_APTOS,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
+  ensureHexPrefix,
   isEVMChain,
   isNativeDenom,
   isNativeDenomXpla,
@@ -36,6 +38,9 @@ import { Algodv2 } from "algosdk";
 import { useConnectedWallet as useXplaConnectedWallet } from "@xpla/wallet-provider";
 import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
 import { NATIVE_XPLA_DECIMALS } from "../utils/xpla";
+import { useAptosContext } from "../contexts/AptosWalletContext";
+import { AptosAccount, CoinClient } from "aptos";
+import { getAptosClient } from "../utils/aptos";
 
 function useGetTargetParsedTokenAccounts() {
   const dispatch = useDispatch();
@@ -65,6 +70,7 @@ function useGetTargetParsedTokenAccounts() {
   const xplaWallet = useXplaConnectedWallet();
   const hasCorrectEvmNetwork = evmChainId === getEvmChainId(targetChain);
   const { accounts: algoAccounts } = useAlgorandContext();
+  const { address: aptosAddress } = useAptosContext();
   const hasResolvedMetadata = metadata.data || metadata.error;
   useEffect(() => {
     // targetParsedTokenAccount is cleared on setTargetAsset, but we need to clear it on wallet changes too
@@ -212,6 +218,50 @@ function useGetTargetParsedTokenAccounts() {
             }
           });
       }
+    }
+
+    if (
+      targetChain === CHAIN_ID_APTOS &&
+      aptosAddress &&
+      decimals !== undefined
+    ) {
+      (async () => {
+        try {
+          const account = new AptosAccount(undefined, aptosAddress);
+          const client = getAptosClient();
+          const coinType = `0x1::coin::CoinInfo<${ensureHexPrefix(
+            targetAsset
+          )}::coin::T>`;
+          const coinClient = new CoinClient(client);
+          let value = BigInt(0);
+          try {
+            // This throws if the user never registered for the token
+            value = await coinClient.checkBalance(account, { coinType });
+          } catch (e) {}
+          if (!cancelled) {
+            dispatch(
+              setTargetParsedTokenAccount(
+                createParsedTokenAccount(
+                  "",
+                  "",
+                  value.toString(),
+                  decimals,
+                  Number(formatUnits(value, decimals)),
+                  formatUnits(value, decimals),
+                  symbol,
+                  tokenName,
+                  logo
+                )
+              )
+            );
+          }
+        } catch (e) {
+          if (!cancelled) {
+            console.error(e);
+            // TODO: error state
+          }
+        }
+      })();
     }
 
     if (targetChain === CHAIN_ID_SOLANA && solPK) {
@@ -368,6 +418,7 @@ function useGetTargetParsedTokenAccounts() {
     algoAccounts,
     decimals,
     xplaWallet,
+    aptosAddress,
   ]);
 }
 

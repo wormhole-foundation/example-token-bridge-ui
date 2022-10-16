@@ -1,12 +1,14 @@
 import {
   ChainId,
   CHAIN_ID_ALGORAND,
+  CHAIN_ID_APTOS,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
   isEVMChain,
   isTerraChain,
   redeemAndUnwrapOnSolana,
+  redeemFromAptos,
   redeemOnAlgorand,
   redeemOnEth,
   redeemOnEthNative,
@@ -23,6 +25,10 @@ import {
   ConnectedWallet,
   useConnectedWallet,
 } from "@terra-money/wallet-provider";
+import {
+  ConnectedWallet as XplaConnectedWallet,
+  useConnectedWallet as useXplaConnectedWallet,
+} from "@xpla/wallet-provider";
 import algosdk from "algosdk";
 import axios from "axios";
 import { Signer } from "ethers";
@@ -30,6 +36,7 @@ import { useSnackbar } from "notistack";
 import { useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useAlgorandContext } from "../contexts/AlgorandWalletContext";
+import { useAptosContext } from "../contexts/AptosWalletContext";
 import { useEthereumProvider } from "../contexts/EthereumProviderContext";
 import { useSolanaWallet } from "../contexts/SolanaWalletContext";
 import {
@@ -39,6 +46,7 @@ import {
 } from "../store/selectors";
 import { setIsRedeeming, setRedeemTx } from "../store/transferSlice";
 import { signSendAndConfirmAlgorand } from "../utils/algorand";
+import { waitForSignAndSubmitTransaction } from "../utils/aptos";
 import {
   ACALA_RELAY_URL,
   ALGORAND_BRIDGE_ID,
@@ -54,12 +62,8 @@ import parseError from "../utils/parseError";
 import { postVaaWithRetry } from "../utils/postVaa";
 import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees } from "../utils/terra";
-import useTransferSignedVAA from "./useTransferSignedVAA";
-import {
-  useConnectedWallet as useXplaConnectedWallet,
-  ConnectedWallet as XplaConnectedWallet,
-} from "@xpla/wallet-provider";
 import { postWithFeesXpla } from "../utils/xpla";
+import useTransferSignedVAA from "./useTransferSignedVAA";
 
 async function algo(
   dispatch: any,
@@ -89,6 +93,34 @@ async function algo(
         block: result["confirmed-round"],
       })
     );
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+  } catch (e) {
+    enqueueSnackbar(null, {
+      content: <Alert severity="error">{parseError(e)}</Alert>,
+    });
+    dispatch(setIsRedeeming(false));
+  }
+}
+
+async function aptos(
+  dispatch: any,
+  enqueueSnackbar: any,
+  senderAddr: string,
+  signedVAA: Uint8Array
+) {
+  dispatch(setIsRedeeming(true));
+  const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_APTOS);
+  try {
+    const msg = redeemFromAptos(tokenBridgeAddress, signedVAA, senderAddr);
+    msg.arguments = [Array.from(msg.arguments[0])];
+    msg.function = msg.function.replace(
+      "submit_vaa",
+      "submit_vaa_and_register_entry_2"
+    );
+    const result = await waitForSignAndSubmitTransaction(msg);
+    dispatch(setRedeemTx({ id: result, block: 1 }));
     enqueueSnackbar(null, {
       content: <Alert severity="success">Transaction confirmed</Alert>,
     });
@@ -273,6 +305,7 @@ export function useHandleRedeem() {
   const terraFeeDenom = useSelector(selectTerraFeeDenom);
   const xplaWallet = useXplaConnectedWallet();
   const { accounts: algoAccounts } = useAlgorandContext();
+  const { address: aptosAddress } = useAptosContext();
   const signedVAA = useTransferSignedVAA();
   const isRedeeming = useSelector(selectTransferIsRedeeming);
   const handleRedeemClick = useCallback(() => {
@@ -303,6 +336,8 @@ export function useHandleRedeem() {
       );
     } else if (targetChain === CHAIN_ID_XPLA && !!xplaWallet && signedVAA) {
       xpla(dispatch, enqueueSnackbar, xplaWallet, signedVAA);
+    } else if (targetChain === CHAIN_ID_APTOS && !!aptosAddress && signedVAA) {
+      aptos(dispatch, enqueueSnackbar, aptosAddress, signedVAA);
     } else if (
       targetChain === CHAIN_ID_ALGORAND &&
       algoAccounts[0] &&
@@ -323,6 +358,7 @@ export function useHandleRedeem() {
     terraFeeDenom,
     algoAccounts,
     xplaWallet,
+    aptosAddress,
   ]);
 
   const handleRedeemNativeClick = useCallback(() => {

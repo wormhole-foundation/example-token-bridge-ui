@@ -1,9 +1,11 @@
 import {
   ChainId,
   CHAIN_ID_ALGORAND,
+  CHAIN_ID_APTOS,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
   getForeignAssetAlgorand,
+  getForeignAssetAptos,
   getForeignAssetEth,
   getForeignAssetSolana,
   getForeignAssetTerra,
@@ -32,6 +34,7 @@ import {
 import useIsWalletReady from "./useIsWalletReady";
 import { Algodv2 } from "algosdk";
 import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
+import { getAptosClient } from "../utils/aptos";
 
 export type ForeignAssetInfo = {
   doesExist: boolean;
@@ -136,6 +139,15 @@ function useFetchForeignAsset(
               lcd,
               originChain,
               hexToUint8Array(originAssetHex)
+            );
+          }
+        : foreignChain === CHAIN_ID_APTOS
+        ? () => {
+            return getForeignAssetAptos(
+              getAptosClient(),
+              getTokenBridgeAddressForChain(foreignChain),
+              originChain,
+              originAssetHex
             );
           }
         : foreignChain === CHAIN_ID_SOLANA

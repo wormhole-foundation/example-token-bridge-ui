@@ -17,6 +17,7 @@ import {
   isTerraChain,
   CHAIN_ID_TERRA2,
   CHAIN_ID_XPLA,
+  CHAIN_ID_APTOS,
 } from "@certusone/wormhole-sdk";
 import { Button, makeStyles, Typography } from "@material-ui/core";
 import { Transaction } from "../store/transferSlice";
@@ -123,6 +124,14 @@ export default function ShowTx({
       ? `https://explorer.xpla.io/${
           CLUSTER === "testnet" ? "testnet/" : ""
         }tx/${tx?.id}`
+      : chainId === CHAIN_ID_APTOS
+      ? `https://explorer.aptoslabs.com/txn/${tx?.id}${
+          CLUSTER === "testnet"
+            ? "?network=testnet"
+            : CLUSTER === "devnet"
+            ? "?network=local"
+            : ""
+        }`
       : undefined;
   const explorerName = getExplorerName(chainId);
 
