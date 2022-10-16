@@ -19,6 +19,7 @@ import {
   CHAIN_ID_TERRA2,
   TerraChainId,
   CHAIN_ID_XPLA,
+  CHAIN_ID_APTOS,
 } from "@certusone/wormhole-sdk";
 import { Button, makeStyles, Tooltip, Typography } from "@material-ui/core";
 import { FileCopy, OpenInNew } from "@material-ui/icons";
@@ -188,6 +189,14 @@ export default function SmartAddress({
     ? `https://explorer.xpla.io/${
         CLUSTER === "testnet" ? "testnet/" : ""
       }address/${useableAddress}`
+    : chainId === CHAIN_ID_APTOS
+    ? `https://explorer.aptoslabs.com/account/${useableAddress}${
+        CLUSTER === "testnet"
+          ? "?network=testnet"
+          : CLUSTER === "devnet"
+          ? "?network=local"
+          : ""
+      }`
     : undefined;
   const explorerName = getExplorerName(chainId);
 

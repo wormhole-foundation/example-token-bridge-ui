@@ -45,15 +45,19 @@ export const AptosWalletProvider = ({
         wallet.onNetworkChange((newNetwork: any) => {
           setNetwork(newNetwork.networkName);
         });
-        wallet.onDisconnect(() => {
-          setAddress(undefined);
-          setNetwork(undefined);
-        });
+        // martian doesn't support this
+        try {
+          wallet.onDisconnect(() => {
+            setAddress(undefined);
+            setNetwork(undefined);
+          });
+        } catch (e) {}
         if (!cancelled) {
           setAddress(account.address);
           setNetwork(network);
         }
       } catch (e) {
+        console.error(e);
         // { code: 4001, message: "User rejected the request" }
       }
     })();

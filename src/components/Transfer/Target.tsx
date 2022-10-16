@@ -1,4 +1,5 @@
 import {
+  CHAIN_ID_APTOS,
   CHAIN_ID_SOLANA,
   hexToNativeString,
   isEVMChain,
@@ -57,7 +58,10 @@ export const useTargetInfo = () => {
   const symbol = targetParsedTokenAccount?.symbol;
   const logo = targetParsedTokenAccount?.logo;
   const readableTargetAddress =
-    hexToNativeString(targetAddressHex, targetChain) || "";
+    targetChain === CHAIN_ID_APTOS
+      ? targetAddressHex || ""
+      : hexToNativeString(targetAddressHex, targetChain) || "";
+  console.log(readableTargetAddress);
   return useMemo(
     () => ({
       targetChain,
