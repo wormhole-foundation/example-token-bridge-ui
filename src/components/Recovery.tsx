@@ -2,6 +2,7 @@ import {
   ChainId,
   CHAIN_ID_ACALA,
   CHAIN_ID_ALGORAND,
+  CHAIN_ID_APTOS,
   CHAIN_ID_KARURA,
   CHAIN_ID_SOLANA,
   CHAIN_ID_TERRA2,
@@ -84,6 +85,8 @@ import KeyAndBalance from "./KeyAndBalance";
 import RelaySelector from "./RelaySelector";
 import PendingVAAWarning from "./Transfer/PendingVAAWarning";
 import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
+import { getAptosClient } from "../utils/aptos";
+import { Types } from "aptos";
 
 const useStyles = makeStyles((theme) => ({
   mainCard: {
@@ -157,6 +160,34 @@ async function algo(tx: string, enqueueSnackbar: any) {
     }
     const emitterAddress = getEmitterAddressAlgorand(ALGORAND_TOKEN_BRIDGE_ID);
     return await fetchSignedVAA(CHAIN_ID_ALGORAND, emitterAddress, sequence);
+  } catch (e) {
+    return handleError(e, enqueueSnackbar);
+  }
+}
+
+async function aptos(tx: string, enqueueSnackbar: any) {
+  try {
+    const result = (await getAptosClient().waitForTransactionWithResult(
+      tx
+    )) as Types.UserTransaction;
+    if (!result) {
+      throw new Error("Transaction not found");
+    }
+    // TODO: fix this
+    // const sequence = parseSequenceFromLogAptos(result);
+    const sequence = result.events.find(
+      (e) =>
+        e.type ===
+        `${getBridgeAddressForChain(CHAIN_ID_APTOS)}::state::WormholeMessage`
+    )?.data.sequence;
+    if (!sequence) {
+      throw new Error("Sequence not found");
+    }
+    return await fetchSignedVAA(
+      CHAIN_ID_APTOS,
+      "0000000000000000000000000000000000000000000000000000000000000001", // TODO: look this up
+      sequence
+    );
   } catch (e) {
     return handleError(e, enqueueSnackbar);
   }
@@ -556,6 +587,25 @@ export default function Recovery() {
         setRecoverySourceTxIsLoading(true);
         (async () => {
           const { vaa, isPending, error } = await algo(
+            recoverySourceTx,
+            enqueueSnackbar
+          );
+          if (!cancelled) {
+            setRecoverySourceTxIsLoading(false);
+            if (vaa) {
+              setRecoverySignedVAA(vaa);
+            }
+            if (error) {
+              setRecoverySourceTxError(error);
+            }
+            setIsVAAPending(isPending);
+          }
+        })();
+      } else if (recoverySourceChain === CHAIN_ID_APTOS) {
+        setRecoverySourceTxError("");
+        setRecoverySourceTxIsLoading(true);
+        (async () => {
+          const { vaa, isPending, error } = await aptos(
             recoverySourceTx,
             enqueueSnackbar
           );
