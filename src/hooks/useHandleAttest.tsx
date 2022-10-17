@@ -154,7 +154,6 @@ async function aptos(dispatch: any, enqueueSnackbar: any, sourceAsset: string) {
     const result = (await getAptosClient().waitForTransactionWithResult(
       hash
     )) as Types.UserTransaction;
-    console.log(result);
     // TODO: fix this
     // const sequence = parseSequenceFromLogAptos(result);
     const sequence = result.events.find(

@@ -28,6 +28,7 @@ import clsx from "clsx";
 import { ReactChild } from "react";
 import useCopyToClipboard from "../hooks/useCopyToClipboard";
 import { ParsedTokenAccount } from "../store/transferSlice";
+import { isValidAptosType } from "../utils/aptos";
 import { CLUSTER, getExplorerName } from "../utils/consts";
 import { shortenAddress } from "../utils/solana";
 import { formatNativeDenom } from "../utils/terra";
@@ -188,7 +189,11 @@ export default function SmartAddress({
         CLUSTER === "testnet" ? "testnet/" : ""
       }address/${useableAddress}`
     : chainId === CHAIN_ID_APTOS
-    ? `https://explorer.aptoslabs.com/account/${useableAddress}${
+    ? `https://explorer.aptoslabs.com/account/${
+        isValidAptosType(useableAddress)
+          ? useableAddress.split("::")[0]
+          : useableAddress
+      }${
         CLUSTER === "testnet"
           ? "?network=testnet"
           : CLUSTER === "devnet"

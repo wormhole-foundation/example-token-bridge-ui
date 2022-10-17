@@ -317,7 +317,6 @@ async function xpla(
           wallet.xplaAddress,
           signedVAA
         );
-    console.log("createWrapped", msg);
     const result = await postWithFeesXpla(
       wallet,
       [msg],
