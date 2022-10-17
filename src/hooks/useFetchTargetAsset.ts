@@ -5,6 +5,7 @@ import {
   CHAIN_ID_SOLANA,
   CHAIN_ID_TERRA2,
   CHAIN_ID_XPLA,
+  ensureHexPrefix,
   getForeignAssetAlgorand,
   getForeignAssetAptos,
   getForeignAssetEth,
@@ -173,7 +174,6 @@ function useFetchTargetAsset(nft?: boolean) {
             getTokenBridgeAddressForChain(CHAIN_ID_APTOS),
             originAsset || ""
           );
-          console.log("QUERIED TOKEN ID", tokenId);
           if (!cancelled) {
             dispatch(
               setTargetAsset(
@@ -356,7 +356,10 @@ function useFetchTargetAsset(nft?: boolean) {
           if (!cancelled) {
             dispatch(
               setTargetAsset(
-                receiveDataWrapper({ doesExist: !!asset, address: asset })
+                receiveDataWrapper({
+                  doesExist: !!asset,
+                  address: asset ? `${ensureHexPrefix(asset)}::coin::T` : null,
+                })
               )
             );
             setArgs();

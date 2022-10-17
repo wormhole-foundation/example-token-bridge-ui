@@ -234,7 +234,6 @@ async function aptos(
     const result = (await getAptosClient().waitForTransactionWithResult(
       hash
     )) as Types.UserTransaction;
-    console.log(result);
     // TODO: fix this
     // const sequence = parseSequenceFromLogAptos(result);
     const sequence = result.events.find(
@@ -275,14 +274,6 @@ async function evm(
     const baseAmountParsed = parseUnits(amount, decimals);
     const feeParsed = parseUnits(relayerFee || "0", decimals);
     const transferAmountParsed = baseAmountParsed.add(feeParsed);
-    console.log(
-      "base",
-      baseAmountParsed,
-      "fee",
-      feeParsed,
-      "total",
-      transferAmountParsed
-    );
     // Klaytn requires specifying gasPrice
     const overrides =
       chainId === CHAIN_ID_KLAYTN
@@ -549,8 +540,6 @@ export function useHandleTransfer() {
     selectTransferSourceParsedTokenAccount
   );
   const relayerFee = useSelector(selectTransferRelayerFee);
-  console.log("relayerFee", relayerFee);
-
   const sourceTokenPublicKey = sourceParsedTokenAccount?.publicKey;
   const decimals = sourceParsedTokenAccount?.decimals;
   const isNative = sourceParsedTokenAccount?.isNativeAsset || false;

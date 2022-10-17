@@ -55,7 +55,6 @@ export async function getOriginalAssetAptos(
       )
     ).data as OriginInfo;
   } catch (e) {
-    console.log("hash", sha3_256(fullyQualifiedType));
     return {
       isWrapped: false,
       chainId: CHAIN_ID_APTOS,
@@ -100,7 +99,6 @@ export async function queryExternalIdAptos(
     )
   ).data as State;
   const handle = state.native_infos.handle;
-  console.log("handle", handle);
   try {
     // when accessing Set<T>, key is type T and value is 0
     const typeInfo = await client.getTableItem(handle, {

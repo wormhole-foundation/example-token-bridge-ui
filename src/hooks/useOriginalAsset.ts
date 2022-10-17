@@ -94,11 +94,6 @@ export async function getOriginalAssetToken(
         BigInt(foreignNativeStringAddress)
       );
     } else if (foreignChain === CHAIN_ID_APTOS) {
-      console.log(
-        "GET ORIGINAL ASSET TOKEN",
-        foreignChain,
-        foreignNativeStringAddress
-      );
       promise = await getOriginalAssetAptos(
         getAptosClient(),
         getTokenBridgeAddressForChain(CHAIN_ID_APTOS),
@@ -263,13 +258,6 @@ function useOriginalAsset(
               uint8ArrayToHex(result.assetAddress)
             ).then((tokenId) => setOriginAddress(tokenId || null));
           } else {
-            console.log(
-              "result",
-              hexToNativeAssetString(
-                uint8ArrayToHex(result.assetAddress),
-                result.chainId
-              ) || null
-            );
             setOriginAddress(
               hexToNativeAssetString(
                 uint8ArrayToHex(result.assetAddress),

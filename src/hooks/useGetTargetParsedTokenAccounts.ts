@@ -13,10 +13,14 @@ import {
 import { Connection, PublicKey } from "@solana/web3.js";
 import { LCDClient } from "@terra-money/terra.js";
 import { useConnectedWallet } from "@terra-money/wallet-provider";
+import { useConnectedWallet as useXplaConnectedWallet } from "@xpla/wallet-provider";
+import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
+import { Algodv2 } from "algosdk";
 import { formatUnits } from "ethers/lib/utils";
 import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useAlgorandContext } from "../contexts/AlgorandWalletContext";
+import { useAptosContext } from "../contexts/AptosWalletContext";
 import { useEthereumProvider } from "../contexts/EthereumProviderContext";
 import { useSolanaWallet } from "../contexts/SolanaWalletContext";
 import {
@@ -24,23 +28,18 @@ import {
   selectTransferTargetChain,
 } from "../store/selectors";
 import { setTargetParsedTokenAccount } from "../store/transferSlice";
+import { getAptosClient } from "../utils/aptos";
 import {
   ALGORAND_HOST,
   getEvmChainId,
-  SOLANA_HOST,
   getTerraConfig,
+  SOLANA_HOST,
   XPLA_LCD_CLIENT_CONFIG,
 } from "../utils/consts";
 import { NATIVE_TERRA_DECIMALS } from "../utils/terra";
+import { NATIVE_XPLA_DECIMALS } from "../utils/xpla";
 import { createParsedTokenAccount } from "./useGetSourceParsedTokenAccounts";
 import useMetadata from "./useMetadata";
-import { Algodv2 } from "algosdk";
-import { useConnectedWallet as useXplaConnectedWallet } from "@xpla/wallet-provider";
-import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
-import { NATIVE_XPLA_DECIMALS } from "../utils/xpla";
-import { useAptosContext } from "../contexts/AptosWalletContext";
-import { AptosAccount, CoinClient } from "aptos";
-import { getAptosClient } from "../utils/aptos";
 
 function useGetTargetParsedTokenAccounts() {
   const dispatch = useDispatch();
@@ -227,16 +226,17 @@ function useGetTargetParsedTokenAccounts() {
     ) {
       (async () => {
         try {
-          const account = new AptosAccount(undefined, aptosAddress);
           const client = getAptosClient();
-          const coinType = `0x1::coin::CoinInfo<${ensureHexPrefix(
-            targetAsset
-          )}::coin::T>`;
-          const coinClient = new CoinClient(client);
           let value = BigInt(0);
           try {
             // This throws if the user never registered for the token
-            value = await coinClient.checkBalance(account, { coinType });
+            const coinStore = `0x1::coin::CoinStore<${ensureHexPrefix(
+              targetAsset
+            )}>`;
+            value = (
+              (await client.getAccountResource(aptosAddress, coinStore))
+                .data as any
+            ).coin.value;
           } catch (e) {}
           if (!cancelled) {
             dispatch(

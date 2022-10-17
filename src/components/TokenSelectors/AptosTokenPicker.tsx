@@ -81,7 +81,6 @@ export default function AptosTokenPicker(props: AptosTokenPickerProps) {
         return Promise.reject("Wallet not connected");
       }
       const client = getAptosClient();
-      console.log("looking up", lookupAsset);
       return (async () => {
         try {
           const coinType = `0x1::coin::CoinInfo<${lookupAsset}>`;
@@ -90,14 +89,12 @@ export default function AptosTokenPicker(props: AptosTokenPickerProps) {
             (await client.getAccountResource(walletAddress, coinStore))
               .data as any
           ).coin.value;
-          console.log("value", value);
           const assetInfo = (
             await client.getAccountResource(
               lookupAsset.split("::")[0],
               coinType
             )
           ).data as AptosCoinResourceReturn;
-          console.log("assetInfo", assetInfo);
           if (value && assetInfo) {
             return createParsedTokenAccount(
               walletAddress,

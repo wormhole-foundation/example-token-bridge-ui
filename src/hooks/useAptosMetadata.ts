@@ -21,9 +21,10 @@ export const fetchSingleMetadata = async (
   address: string,
   client: AptosClient
 ): Promise<AptosMetadata> => {
-  const coinType = `0x1::coin::CoinInfo<${ensureHexPrefix(address)}::coin::T>`;
-  const assetInfo = (await client.getAccountResource(address, coinType))
-    .data as AptosCoinResourceReturn;
+  const coinType = `0x1::coin::CoinInfo<${ensureHexPrefix(address)}>`;
+  const assetInfo = (
+    await client.getAccountResource(address.split("::")[0], coinType)
+  ).data as AptosCoinResourceReturn;
   return {
     tokenName: assetInfo.name,
     symbol: assetInfo.symbol,

@@ -156,7 +156,6 @@ function useCheckIfWormholeWrapped(nft?: boolean) {
         } catch (e) {}
       }
       if (sourceChain === CHAIN_ID_APTOS && sourceAsset) {
-        console.log("CHECK IF WORMHOLE WRAPPED", sourceAsset);
         try {
           const wrappedInfo = makeStateSafe(
             await getOriginalAssetAptos(
