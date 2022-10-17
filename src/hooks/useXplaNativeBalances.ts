@@ -29,7 +29,6 @@ export default function useXplaNativeBalances(
       lcd.bank
         .balance(walletAddress)
         .then(([coins]) => {
-          console.log(coins);
           // coins doesn't support reduce
           const balancePairs = coins.map(({ amount, denom }) => [
             denom,

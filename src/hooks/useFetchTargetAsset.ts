@@ -6,6 +6,7 @@ import {
   CHAIN_ID_TERRA2,
   CHAIN_ID_XPLA,
   getForeignAssetAlgorand,
+  getForeignAssetAptos,
   getForeignAssetEth,
   getForeignAssetSolana,
   getForeignAssetTerra,
@@ -60,7 +61,7 @@ import {
   XPLA_LCD_CLIENT_CONFIG,
 } from "../utils/consts";
 import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
-import { getAptosClient, getForeignAssetAptos } from "../utils/aptos";
+import { getAptosClient } from "../utils/aptos";
 
 function useFetchTargetAsset(nft?: boolean) {
   const dispatch = useDispatch();
