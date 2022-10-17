@@ -1,6 +1,6 @@
 {
   "files": {
-    "main.js": "/example-token-bridge-ui/static/js/main.43e1685a.js",
+    "main.js": "/example-token-bridge-ui/static/js/main.c277b240.js",
     "static/js/893.3258da0d.chunk.js": "/example-token-bridge-ui/static/js/893.3258da0d.chunk.js",
     "static/js/673.1bd9879d.chunk.js": "/example-token-bridge-ui/static/js/673.1bd9879d.chunk.js",
     "static/js/546.e31bd919.chunk.js": "/example-token-bridge-ui/static/js/546.e31bd919.chunk.js",
@@ -28,6 +28,7 @@
     "static/media/klaytn.svg": "/example-token-bridge-ui/static/media/klaytn.5c570c72fc1acba8b9c7bf49e4b838c0.svg",
     "static/media/celo.svg": "/example-token-bridge-ui/static/media/celo.4c9aaaf49dc42d67179ebd8cbc6bf21a.svg",
     "static/media/karura.svg": "/example-token-bridge-ui/static/media/karura.0bf5aee4c43aaa67489224bedb70609b.svg",
+    "static/media/aptos.svg": "/example-token-bridge-ui/static/media/aptos.19d0eda7068d07106473e6218dc2ae3e.svg",
     "static/media/solana.svg": "/example-token-bridge-ui/static/media/solana.61403bc0a0fa16f39ea8b67f1dce06fe.svg",
     "static/media/oasis-network-rose-logo.svg": "/example-token-bridge-ui/static/media/oasis-network-rose-logo.8f04dadd5b02ff48b835e789ad1c6dea.svg",
     "static/media/walletconnect.svg": "/example-token-bridge-ui/static/media/walletconnect.0105fde9a45ec17ab49ce31623bc4373.svg",
@@ -41,7 +42,7 @@
     "static/media/xpla.svg": "/example-token-bridge-ui/static/media/xpla.39d25b51bf8a5b7f6aeb01cd57c5ec61.svg",
     "static/media/algorand.svg": "/example-token-bridge-ui/static/media/algorand.699bf008d7073523b8edd75d8f3b38ac.svg",
     "static/media/eth.svg": "/example-token-bridge-ui/static/media/eth.5a5de20bf3808241fc61ed9ad7680ab5.svg",
-    "main.43e1685a.js.map": "/example-token-bridge-ui/static/js/main.43e1685a.js.map",
+    "main.c277b240.js.map": "/example-token-bridge-ui/static/js/main.c277b240.js.map",
     "893.3258da0d.chunk.js.map": "/example-token-bridge-ui/static/js/893.3258da0d.chunk.js.map",
     "546.e31bd919.chunk.js.map": "/example-token-bridge-ui/static/js/546.e31bd919.chunk.js.map",
     "319.66bfd126.chunk.js.map": "/example-token-bridge-ui/static/js/319.66bfd126.chunk.js.map",
@@ -57,6 +58,6 @@
     "535.583bbca7.chunk.js.map": "/example-token-bridge-ui/static/js/535.583bbca7.chunk.js.map"
   },
   "entrypoints": [
-    "static/js/main.43e1685a.js"
+    "static/js/main.c277b240.js"
   ]
 }
