@@ -1,11 +1,13 @@
 import {
   attestFromAlgorand,
+  attestFromAptos,
   attestFromEth,
   attestFromSolana,
   attestFromTerra,
   attestFromXpla,
   ChainId,
   CHAIN_ID_ALGORAND,
+  CHAIN_ID_APTOS,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
@@ -32,12 +34,18 @@ import {
   ConnectedWallet,
   useConnectedWallet,
 } from "@terra-money/wallet-provider";
+import {
+  ConnectedWallet as XplaConnectedWallet,
+  useConnectedWallet as useXplaConnectedWallet,
+} from "@xpla/wallet-provider";
 import algosdk from "algosdk";
+import { Types } from "aptos";
 import { Signer } from "ethers";
 import { useSnackbar } from "notistack";
 import { useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useAlgorandContext } from "../contexts/AlgorandWalletContext";
+import { useAptosContext } from "../contexts/AptosWalletContext";
 import { useEthereumProvider } from "../contexts/EthereumProviderContext";
 import { useSolanaWallet } from "../contexts/SolanaWalletContext";
 import {
@@ -55,6 +63,10 @@ import {
 } from "../store/selectors";
 import { signSendAndConfirmAlgorand } from "../utils/algorand";
 import {
+  getAptosClient,
+  waitForSignAndSubmitTransaction,
+} from "../utils/aptos";
+import {
   ALGORAND_BRIDGE_ID,
   ALGORAND_HOST,
   ALGORAND_TOKEN_BRIDGE_ID,
@@ -68,10 +80,6 @@ import {
 import parseError from "../utils/parseError";
 import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees, waitForTerraExecution } from "../utils/terra";
-import {
-  useConnectedWallet as useXplaConnectedWallet,
-  ConnectedWallet as XplaConnectedWallet,
-} from "@xpla/wallet-provider";
 import { postWithFeesXpla, waitForXplaExecution } from "../utils/xpla";
 
 async function algo(
@@ -122,6 +130,52 @@ async function algo(
     });
   } catch (e) {
     console.error(e);
+    enqueueSnackbar(null, {
+      content: <Alert severity="error">{parseError(e)}</Alert>,
+    });
+    dispatch(setIsSending(false));
+  }
+}
+
+async function aptos(dispatch: any, enqueueSnackbar: any, sourceAsset: string) {
+  dispatch(setIsSending(true));
+  const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_APTOS);
+  try {
+    const attestPayload = attestFromAptos(
+      tokenBridgeAddress,
+      CHAIN_ID_APTOS,
+      sourceAsset
+    );
+    const hash = await waitForSignAndSubmitTransaction(attestPayload);
+    dispatch(setAttestTx({ id: hash, block: 1 }));
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+    const result = (await getAptosClient().waitForTransactionWithResult(
+      hash
+    )) as Types.UserTransaction;
+    console.log(result);
+    // TODO: fix this
+    // const sequence = parseSequenceFromLogAptos(result);
+    const sequence = result.events.find(
+      (e) =>
+        e.type ===
+        `${getBridgeAddressForChain(CHAIN_ID_APTOS)}::state::WormholeMessage`
+    )?.data.sequence;
+    enqueueSnackbar(null, {
+      content: <Alert severity="info">Fetching VAA</Alert>,
+    });
+    const { vaaBytes } = await getSignedVAAWithRetry(
+      WORMHOLE_RPC_HOSTS,
+      CHAIN_ID_APTOS,
+      "0000000000000000000000000000000000000000000000000000000000000001", // TODO: look this up
+      sequence
+    );
+    dispatch(setSignedVAAHex(uint8ArrayToHex(vaaBytes)));
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Fetched Signed VAA</Alert>,
+    });
+  } catch (e) {
     enqueueSnackbar(null, {
       content: <Alert severity="error">{parseError(e)}</Alert>,
     });
@@ -350,6 +404,7 @@ export function useHandleAttest() {
   const xplaWallet = useXplaConnectedWallet();
   const terraFeeDenom = useSelector(selectTerraFeeDenom);
   const { accounts: algoAccounts } = useAlgorandContext();
+  const { address: aptosAddress } = useAptosContext();
   const disabled = !isTargetComplete || isSending || isSendComplete;
   const handleAttestClick = useCallback(() => {
     if (isEVMChain(sourceChain) && !!signer) {
@@ -369,6 +424,8 @@ export function useHandleAttest() {
       xpla(dispatch, enqueueSnackbar, xplaWallet, sourceAsset);
     } else if (sourceChain === CHAIN_ID_ALGORAND && algoAccounts[0]) {
       algo(dispatch, enqueueSnackbar, algoAccounts[0].address, sourceAsset);
+    } else if (sourceChain === CHAIN_ID_APTOS && aptosAddress) {
+      aptos(dispatch, enqueueSnackbar, sourceAsset);
     } else {
     }
   }, [
@@ -383,6 +440,7 @@ export function useHandleAttest() {
     terraFeeDenom,
     algoAccounts,
     xplaWallet,
+    aptosAddress,
   ]);
   return useMemo(
     () => ({

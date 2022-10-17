@@ -1,6 +1,7 @@
 import {
   ChainId,
   CHAIN_ID_ALGORAND,
+  CHAIN_ID_APTOS,
   CHAIN_ID_SOLANA,
   CHAIN_ID_TERRA2,
   CHAIN_ID_XPLA,
@@ -45,6 +46,7 @@ import {
 } from "../utils/consts";
 import useIsWalletReady from "./useIsWalletReady";
 import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
+import { getAptosClient, getOriginalAssetAptos } from "../utils/aptos";
 
 export type OriginalAssetInfo = {
   originChain: ChainId | null;
@@ -90,6 +92,17 @@ export async function getOriginalAssetToken(
         algodClient,
         ALGORAND_TOKEN_BRIDGE_ID,
         BigInt(foreignNativeStringAddress)
+      );
+    } else if (foreignChain === CHAIN_ID_APTOS) {
+      console.log(
+        "GET ORIGINAL ASSET TOKEN",
+        foreignChain,
+        foreignNativeStringAddress
+      );
+      promise = await getOriginalAssetAptos(
+        getAptosClient(),
+        getTokenBridgeAddressForChain(CHAIN_ID_APTOS),
+        foreignNativeStringAddress
       );
     }
   } catch (e) {
@@ -250,6 +263,13 @@ function useOriginalAsset(
               uint8ArrayToHex(result.assetAddress)
             ).then((tokenId) => setOriginAddress(tokenId || null));
           } else {
+            console.log(
+              "result",
+              hexToNativeAssetString(
+                uint8ArrayToHex(result.assetAddress),
+                result.chainId
+              ) || null
+            );
             setOriginAddress(
               hexToNativeAssetString(
                 uint8ArrayToHex(result.assetAddress),

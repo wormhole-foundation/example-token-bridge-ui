@@ -149,9 +149,7 @@ export default function SmartAddress({
       }/${useableAddress}`
     : chainId === CHAIN_ID_CELO
     ? `https://${
-        CLUSTER === "testnet"
-          ? "alfajores-blockscout.celo-testnet.org"
-          : "explorer.celo.org"
+        CLUSTER === "testnet" ? "alfajores.celoscan.io" : "explorer.celo.org"
       }/address/${useableAddress}`
     : chainId === CHAIN_ID_KARURA
     ? `https://${

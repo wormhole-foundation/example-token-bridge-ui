@@ -1,9 +1,11 @@
 import {
   ChainId,
   CHAIN_ID_ALGORAND,
+  CHAIN_ID_APTOS,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
+  createNonce,
   getEmitterAddressAlgorand,
   getEmitterAddressEth,
   getEmitterAddressSolana,
@@ -34,13 +36,19 @@ import {
   ConnectedWallet,
   useConnectedWallet,
 } from "@terra-money/wallet-provider";
+import {
+  ConnectedWallet as XplaConnectedWallet,
+  useConnectedWallet as useXplaConnectedWallet,
+} from "@xpla/wallet-provider";
 import algosdk from "algosdk";
+import { Types } from "aptos";
 import { Signer } from "ethers";
 import { parseUnits, zeroPad } from "ethers/lib/utils";
 import { useSnackbar } from "notistack";
 import { useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useAlgorandContext } from "../contexts/AlgorandWalletContext";
+import { useAptosContext } from "../contexts/AptosWalletContext";
 import { useEthereumProvider } from "../contexts/EthereumProviderContext";
 import { useSolanaWallet } from "../contexts/SolanaWalletContext";
 import {
@@ -58,12 +66,16 @@ import {
   selectTransferTargetChain,
 } from "../store/selectors";
 import {
-  setIsVAAPending,
   setIsSending,
+  setIsVAAPending,
   setSignedVAAHex,
   setTransferTx,
 } from "../store/transferSlice";
 import { signSendAndConfirmAlgorand } from "../utils/algorand";
+import {
+  getAptosClient,
+  waitForSignAndSubmitTransaction,
+} from "../utils/aptos";
 import {
   ALGORAND_BRIDGE_ID,
   ALGORAND_HOST,
@@ -78,12 +90,8 @@ import { getSignedVAAWithRetry } from "../utils/getSignedVAAWithRetry";
 import parseError from "../utils/parseError";
 import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees, waitForTerraExecution } from "../utils/terra";
-import useTransferTargetAddressHex from "./useTransferTargetAddress";
-import {
-  useConnectedWallet as useXplaConnectedWallet,
-  ConnectedWallet as XplaConnectedWallet,
-} from "@xpla/wallet-provider";
 import { postWithFeesXpla, waitForXplaExecution } from "../utils/xpla";
+import useTransferTargetAddressHex from "./useTransferTargetAddress";
 
 async function fetchSignedVAA(
   chainId: ChainId,
@@ -179,6 +187,73 @@ async function algo(
     );
   } catch (e) {
     handleError(e, enqueueSnackbar, dispatch);
+  }
+}
+
+async function aptos(
+  dispatch: any,
+  enqueueSnackbar: any,
+  tokenAddress: string,
+  decimals: number,
+  amount: string,
+  recipientChain: ChainId,
+  recipientAddress: Uint8Array,
+  chainId: ChainId,
+  relayerFee?: string
+) {
+  dispatch(setIsSending(true));
+  const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_APTOS);
+  try {
+    const baseAmountParsed = parseUnits(amount, decimals);
+    const feeParsed = parseUnits(relayerFee || "0", decimals);
+    const transferAmountParsed = baseAmountParsed.add(feeParsed);
+    // TODO: fix this to take fully qualified type
+    // const transferPayload = transferFromAptos(
+    //   tokenBridgeAddress,
+    //   CHAIN_ID_APTOS, // TODO: should be originChain
+
+    //   sourceAsset
+    // );
+    const transferPayload = {
+      function: `${tokenBridgeAddress}::transfer_tokens::transfer_tokens_entry`,
+      type_arguments: [tokenAddress],
+      arguments: [
+        transferAmountParsed.toString(),
+        recipientChain,
+        Array.from(recipientAddress),
+        feeParsed.toString(),
+        0,
+        createNonce().readUInt32LE(0),
+      ],
+    };
+    const hash = await waitForSignAndSubmitTransaction(transferPayload);
+    dispatch(setTransferTx({ id: hash, block: 1 }));
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+    const result = (await getAptosClient().waitForTransactionWithResult(
+      hash
+    )) as Types.UserTransaction;
+    console.log(result);
+    // TODO: fix this
+    // const sequence = parseSequenceFromLogAptos(result);
+    const sequence = result.events.find(
+      (e) =>
+        e.type ===
+        `${getBridgeAddressForChain(CHAIN_ID_APTOS)}::state::WormholeMessage`
+    )?.data.sequence;
+    await fetchSignedVAA(
+      chainId,
+      "0000000000000000000000000000000000000000000000000000000000000001", // TODO: look this up
+      sequence,
+      enqueueSnackbar,
+      dispatch
+    );
+  } catch (e) {
+    enqueueSnackbar(null, {
+      content: <Alert severity="error">{parseError(e)}</Alert>,
+    });
+    dispatch(setIsSending(false));
   }
 }
 
@@ -469,6 +544,7 @@ export function useHandleTransfer() {
   const terraFeeDenom = useSelector(selectTerraFeeDenom);
   const xplaWallet = useXplaConnectedWallet();
   const { accounts: algoAccounts } = useAlgorandContext();
+  const { address: aptosAddress } = useAptosContext();
   const sourceParsedTokenAccount = useSelector(
     selectTransferSourceParsedTokenAccount
   );
@@ -584,6 +660,24 @@ export function useHandleTransfer() {
         sourceChain,
         relayerFee
       );
+    } else if (
+      sourceChain === CHAIN_ID_APTOS &&
+      aptosAddress &&
+      !!sourceAsset &&
+      decimals !== undefined &&
+      !!targetAddress
+    ) {
+      aptos(
+        dispatch,
+        enqueueSnackbar,
+        sourceAsset,
+        decimals,
+        amount,
+        targetChain,
+        targetAddress,
+        sourceChain,
+        relayerFee
+      );
     } else {
     }
   }, [
@@ -607,6 +701,7 @@ export function useHandleTransfer() {
     terraFeeDenom,
     algoAccounts,
     xplaWallet,
+    aptosAddress,
   ]);
   return useMemo(
     () => ({

@@ -10,7 +10,7 @@ export type AptosMetadata = {
   decimals: number;
 };
 
-type AptosCoinResourceReturn = {
+export type AptosCoinResourceReturn = {
   decimals: number;
   name: string;
   supply: any;
