@@ -1,8 +1,10 @@
 import {
   CHAIN_ID_ALGORAND,
+  CHAIN_ID_APTOS,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
   getIsTransferCompletedAlgorand,
+  getIsTransferCompletedAptos,
   getIsTransferCompletedEth,
   getIsTransferCompletedSolana,
   getIsTransferCompletedTerra,
@@ -34,6 +36,7 @@ import {
 import useIsWalletReady from "./useIsWalletReady";
 import useTransferSignedVAA from "./useTransferSignedVAA";
 import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
+import { getAptosClient } from "../utils/aptos";
 
 /**
  * @param recoveryOnly Only fire when in recovery mode
@@ -151,6 +154,23 @@ export default function useGetIsTransferCompleted(
               getTokenBridgeAddressForChain(targetChain),
               signedVAA,
               lcdClient
+            );
+          } catch (error) {
+            console.error(error);
+          }
+          if (!cancelled) {
+            setIsTransferCompleted(transferCompleted);
+            setIsLoading(false);
+          }
+        })();
+      } else if (targetChain === CHAIN_ID_APTOS) {
+        setIsLoading(true);
+        (async () => {
+          try {
+            transferCompleted = await getIsTransferCompletedAptos(
+              getAptosClient(),
+              getTokenBridgeAddressForChain(targetChain),
+              signedVAA
             );
           } catch (error) {
             console.error(error);

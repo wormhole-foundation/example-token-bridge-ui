@@ -1,18 +1,20 @@
 import { CHAIN_ID_APTOS } from "@certusone/wormhole-sdk";
 import { formatUnits } from "@ethersproject/units";
 import { useCallback, useMemo, useRef } from "react";
+import { AptosCoinResourceReturn } from "../../hooks/useAptosMetadata";
 import useAptosNativeBalance from "../../hooks/useAptosNativeBalance";
 import { createParsedTokenAccount } from "../../hooks/useGetSourceParsedTokenAccounts";
 import useIsWalletReady from "../../hooks/useIsWalletReady";
+import aptosIcon from "../../icons/aptos.svg";
 import { DataWrapper } from "../../store/helpers";
 import { NFTParsedTokenAccount } from "../../store/nftSlice";
 import { ParsedTokenAccount } from "../../store/transferSlice";
+import { getAptosClient, isValidAptosType } from "../../utils/aptos";
 import {
   APTOS_NATIVE_DECIMALS,
   APTOS_NATIVE_TOKEN_KEY,
 } from "../../utils/consts";
 import TokenPicker, { BasicAccountRender } from "./TokenPicker";
-import aptosIcon from "../../icons/aptos.svg";
 
 type AptosTokenPickerProps = {
   value: ParsedTokenAccount | null;
@@ -78,45 +80,49 @@ export default function AptosTokenPicker(props: AptosTokenPickerProps) {
       if (!walletAddress) {
         return Promise.reject("Wallet not connected");
       }
-      throw new Error("Failed to retrieve Aptos account.");
-      //   const lcd = new LCDClient(APTOS_LCD_CLIENT_CONFIG);
-      //   return lcd.wasm
-      //     .contractQuery(lookupAsset, {
-      //       token_info: {},
-      //     })
-      //     .then((info: any) =>
-      //       lcd.wasm
-      //         .contractQuery(lookupAsset, {
-      //           balance: {
-      //             address: walletAddress,
-      //           },
-      //         })
-      //         .then((balance: any) => {
-      //           if (balance && info) {
-      //             return createParsedTokenAccount(
-      //               walletAddress,
-      //               lookupAsset,
-      //               balance.balance.toString(),
-      //               info.decimals,
-      //               Number(formatUnits(balance.balance, info.decimals)),
-      //               formatUnits(balance.balance, info.decimals),
-      //               info.symbol,
-      //               info.name
-      //             );
-      //           } else {
-      //             throw new Error("Failed to retrieve Aptos account.");
-      //           }
-      //         })
-      //     )
-      // .catch(() => {
-      //   return Promise.reject();
-      // });
+      const client = getAptosClient();
+      console.log("looking up", lookupAsset);
+      return (async () => {
+        try {
+          const coinType = `0x1::coin::CoinInfo<${lookupAsset}>`;
+          const coinStore = `0x1::coin::CoinStore<${lookupAsset}>`;
+          const value = (
+            (await client.getAccountResource(walletAddress, coinStore))
+              .data as any
+          ).coin.value;
+          console.log("value", value);
+          const assetInfo = (
+            await client.getAccountResource(
+              lookupAsset.split("::")[0],
+              coinType
+            )
+          ).data as AptosCoinResourceReturn;
+          console.log("assetInfo", assetInfo);
+          if (value && assetInfo) {
+            return createParsedTokenAccount(
+              walletAddress,
+              lookupAsset,
+              value.toString(),
+              assetInfo.decimals,
+              Number(formatUnits(value, assetInfo.decimals)),
+              formatUnits(value, assetInfo.decimals),
+              assetInfo.symbol,
+              assetInfo.name
+            );
+          } else {
+            throw new Error("Failed to retrieve Aptos account.");
+          }
+        } catch (e) {
+          console.log(e);
+          return Promise.reject();
+        }
+      })();
     },
     [walletAddress]
   );
 
   const isSearchableAddress = useCallback((address: string) => {
-    return false; // isValidAptosAddress(address) && !isNativeDenom(address);
+    return isValidAptosType(address);
   }, []);
 
   const RenderComp = useCallback(

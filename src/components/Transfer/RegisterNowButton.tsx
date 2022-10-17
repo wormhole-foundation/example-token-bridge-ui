@@ -17,6 +17,7 @@ import {
 } from "../../store/selectors";
 import {
   ChainId,
+  CHAIN_ID_APTOS,
   CHAIN_ID_TERRA2,
   CHAIN_ID_XPLA,
   hexToNativeAssetString,
@@ -39,7 +40,9 @@ export function RegisterNowButtonCore({
   const canSwitch = originChain && originAsset && !signedVAAHex;
   const handleClick = useCallback(() => {
     const nativeAsset = originChain
-      ? originChain === CHAIN_ID_TERRA2 || originChain === CHAIN_ID_XPLA
+      ? originChain === CHAIN_ID_TERRA2 ||
+        originChain === CHAIN_ID_XPLA ||
+        originChain === CHAIN_ID_APTOS
         ? sourceAsset // use the preimage address for terra2
         : hexToNativeAssetString(originAsset, originChain)
       : undefined;

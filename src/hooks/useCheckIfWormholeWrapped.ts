@@ -1,6 +1,7 @@
 import {
   ChainId,
   CHAIN_ID_ALGORAND,
+  CHAIN_ID_APTOS,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
   getOriginalAssetAlgorand,
@@ -45,6 +46,7 @@ import {
   XPLA_LCD_CLIENT_CONFIG,
 } from "../utils/consts";
 import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
+import { getAptosClient, getOriginalAssetAptos } from "../utils/aptos";
 
 export interface StateSafeWormholeWrappedInfo {
   isWrapped: boolean;
@@ -152,6 +154,23 @@ function useCheckIfWormholeWrapped(nft?: boolean) {
             dispatch(setSourceWormholeWrappedInfo(wrappedInfo));
           }
         } catch (e) {}
+      }
+      if (sourceChain === CHAIN_ID_APTOS && sourceAsset) {
+        console.log("CHECK IF WORMHOLE WRAPPED", sourceAsset);
+        try {
+          const wrappedInfo = makeStateSafe(
+            await getOriginalAssetAptos(
+              getAptosClient(),
+              getTokenBridgeAddressForChain(CHAIN_ID_APTOS),
+              sourceAsset
+            )
+          );
+          if (!cancelled) {
+            dispatch(setSourceWormholeWrappedInfo(wrappedInfo));
+          }
+        } catch (e) {
+          console.error(e);
+        }
       }
       if (sourceChain === CHAIN_ID_ALGORAND && sourceAsset) {
         try {

@@ -61,7 +61,7 @@ import {
   XPLA_LCD_CLIENT_CONFIG,
 } from "../utils/consts";
 import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
-import { getAptosClient } from "../utils/aptos";
+import { getAptosClient, queryExternalIdAptos } from "../utils/aptos";
 
 function useFetchTargetAsset(nft?: boolean) {
   const dispatch = useDispatch();
@@ -157,6 +157,23 @@ function useFetchTargetAsset(nft?: boolean) {
             tokenBridgeAddress,
             originAsset || ""
           );
+          if (!cancelled) {
+            dispatch(
+              setTargetAsset(
+                receiveDataWrapper({
+                  doesExist: true,
+                  address: tokenId || null,
+                })
+              )
+            );
+          }
+        } else if (originChain === CHAIN_ID_APTOS) {
+          const tokenId = await queryExternalIdAptos(
+            getAptosClient(),
+            getTokenBridgeAddressForChain(CHAIN_ID_APTOS),
+            originAsset || ""
+          );
+          console.log("QUERIED TOKEN ID", tokenId);
           if (!cancelled) {
             dispatch(
               setTargetAsset(
