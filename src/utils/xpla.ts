@@ -69,8 +69,6 @@ export async function postWithFeesXpla(
     fee: feeEstimate,
   });
 
-  console.log("fee", feeEstimate);
-
   return result;
 }
 

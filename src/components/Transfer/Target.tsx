@@ -59,9 +59,8 @@ export const useTargetInfo = () => {
   const logo = targetParsedTokenAccount?.logo;
   const readableTargetAddress =
     targetChain === CHAIN_ID_APTOS
-      ? targetAddressHex || ""
+      ? `0x${targetAddressHex}` || ""
       : hexToNativeString(targetAddressHex, targetChain) || "";
-  console.log(readableTargetAddress);
   return useMemo(
     () => ({
       targetChain,

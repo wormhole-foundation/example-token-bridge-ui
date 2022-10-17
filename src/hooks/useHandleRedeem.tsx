@@ -8,7 +8,6 @@ import {
   isEVMChain,
   isTerraChain,
   redeemAndUnwrapOnSolana,
-  redeemFromAptos,
   redeemOnAlgorand,
   redeemOnEth,
   redeemOnEthNative,
@@ -18,6 +17,7 @@ import {
   TerraChainId,
   uint8ArrayToHex,
 } from "@certusone/wormhole-sdk";
+import { completeTransferAndRegister } from "@certusone/wormhole-sdk/lib/esm/aptos/api/tokenBridge";
 import { Alert } from "@material-ui/lab";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { Connection } from "@solana/web3.js";
@@ -113,12 +113,8 @@ async function aptos(
   dispatch(setIsRedeeming(true));
   const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_APTOS);
   try {
-    const msg = redeemFromAptos(tokenBridgeAddress, signedVAA, senderAddr);
-    msg.arguments = [Array.from(msg.arguments[0])];
-    msg.function = msg.function.replace(
-      "submit_vaa",
-      "submit_vaa_and_register_entry_2"
-    );
+    const msg = completeTransferAndRegister(tokenBridgeAddress, signedVAA);
+    msg.arguments[0] = Array.from(msg.arguments[0]);
     const result = await waitForSignAndSubmitTransaction(msg);
     dispatch(setRedeemTx({ id: result, block: 1 }));
     enqueueSnackbar(null, {
