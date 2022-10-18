@@ -63,7 +63,7 @@ export default function AptosTokenPicker(props: AptosTokenPickerProps) {
               APTOS_NATIVE_DECIMALS,
               0, //uiAmount is unused
               formatUnits(balance, APTOS_NATIVE_DECIMALS), //uiAmountString
-              "APTOS", // symbol
+              "APT", // symbol
               "Aptos Coin", //name
               aptosIcon,
               true //is native asset
