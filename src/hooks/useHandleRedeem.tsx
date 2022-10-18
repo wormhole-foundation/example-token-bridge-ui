@@ -17,6 +17,7 @@ import {
   TerraChainId,
   uint8ArrayToHex,
 } from "@certusone/wormhole-sdk";
+import { completeTransferAndRegister } from "@certusone/wormhole-sdk/lib/esm/aptos/api/tokenBridge";
 import { Alert } from "@material-ui/lab";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { Connection } from "@solana/web3.js";
@@ -46,7 +47,7 @@ import {
 import { setIsRedeeming, setRedeemTx } from "../store/transferSlice";
 import { signSendAndConfirmAlgorand } from "../utils/algorand";
 import {
-  completeTransferAndRegister,
+  getAptosClient,
   waitForSignAndSubmitTransaction,
 } from "../utils/aptos";
 import {
@@ -109,17 +110,16 @@ async function algo(
 async function aptos(
   dispatch: any,
   enqueueSnackbar: any,
-  senderAddr: string,
   signedVAA: Uint8Array
 ) {
   dispatch(setIsRedeeming(true));
   const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_APTOS);
   try {
     const msg = await completeTransferAndRegister(
+      getAptosClient(),
       tokenBridgeAddress,
       signedVAA
     );
-    msg.arguments[0] = Array.from(msg.arguments[0]);
     const result = await waitForSignAndSubmitTransaction(msg);
     dispatch(setRedeemTx({ id: result, block: 1 }));
     enqueueSnackbar(null, {
@@ -338,7 +338,7 @@ export function useHandleRedeem() {
     } else if (targetChain === CHAIN_ID_XPLA && !!xplaWallet && signedVAA) {
       xpla(dispatch, enqueueSnackbar, xplaWallet, signedVAA);
     } else if (targetChain === CHAIN_ID_APTOS && !!aptosAddress && signedVAA) {
-      aptos(dispatch, enqueueSnackbar, aptosAddress, signedVAA);
+      aptos(dispatch, enqueueSnackbar, signedVAA);
     } else if (
       targetChain === CHAIN_ID_ALGORAND &&
       algoAccounts[0] &&

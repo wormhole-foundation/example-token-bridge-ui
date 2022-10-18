@@ -64,6 +64,7 @@ import {
 import { signSendAndConfirmAlgorand } from "../utils/algorand";
 import {
   getAptosClient,
+  getEmitterAddressAndSequenceFromResult,
   waitForSignAndSubmitTransaction,
 } from "../utils/aptos";
 import {
@@ -154,20 +155,15 @@ async function aptos(dispatch: any, enqueueSnackbar: any, sourceAsset: string) {
     const result = (await getAptosClient().waitForTransactionWithResult(
       hash
     )) as Types.UserTransaction;
-    // TODO: fix this
-    // const sequence = parseSequenceFromLogAptos(result);
-    const sequence = result.events.find(
-      (e) =>
-        e.type ===
-        `${getBridgeAddressForChain(CHAIN_ID_APTOS)}::state::WormholeMessage`
-    )?.data.sequence;
+    const { emitterAddress, sequence } =
+      getEmitterAddressAndSequenceFromResult(result);
     enqueueSnackbar(null, {
       content: <Alert severity="info">Fetching VAA</Alert>,
     });
     const { vaaBytes } = await getSignedVAAWithRetry(
       WORMHOLE_RPC_HOSTS,
       CHAIN_ID_APTOS,
-      "0000000000000000000000000000000000000000000000000000000000000001", // TODO: look this up
+      emitterAddress,
       sequence
     );
     dispatch(setSignedVAAHex(uint8ArrayToHex(vaaBytes)));

@@ -5,6 +5,7 @@ import {
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
   getOriginalAssetAlgorand,
+  getOriginalAssetAptos,
   getOriginalAssetCosmWasm,
   getOriginalAssetEth,
   getOriginalAssetSol,
@@ -46,7 +47,7 @@ import {
   XPLA_LCD_CLIENT_CONFIG,
 } from "../utils/consts";
 import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
-import { getAptosClient, getOriginalAssetAptos } from "../utils/aptos";
+import { getAptosClient } from "../utils/aptos";
 
 export interface StateSafeWormholeWrappedInfo {
   isWrapped: boolean;

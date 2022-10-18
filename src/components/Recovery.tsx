@@ -47,7 +47,9 @@ import { ExpandMore } from "@material-ui/icons";
 import { Alert } from "@material-ui/lab";
 import { Connection } from "@solana/web3.js";
 import { LCDClient } from "@terra-money/terra.js";
+import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
 import algosdk from "algosdk";
+import { Types } from "aptos";
 import axios from "axios";
 import { ethers } from "ethers";
 import { useSnackbar } from "notistack";
@@ -61,6 +63,10 @@ import useRelayersAvailable, { Relayer } from "../hooks/useRelayersAvailable";
 import { setRecoveryVaa as setRecoveryNFTVaa } from "../store/nftSlice";
 import { setRecoveryVaa } from "../store/transferSlice";
 import {
+  getAptosClient,
+  getEmitterAddressAndSequenceFromResult,
+} from "../utils/aptos";
+import {
   ALGORAND_HOST,
   ALGORAND_TOKEN_BRIDGE_ID,
   CHAINS,
@@ -68,12 +74,12 @@ import {
   CHAINS_WITH_NFT_SUPPORT,
   getBridgeAddressForChain,
   getNFTBridgeAddressForChain,
+  getTerraConfig,
   getTokenBridgeAddressForChain,
   RELAY_URL_EXTENSION,
   SOLANA_HOST,
   SOL_NFT_BRIDGE_ADDRESS,
   SOL_TOKEN_BRIDGE_ADDRESS,
-  getTerraConfig,
   WORMHOLE_RPC_HOSTS,
   XPLA_LCD_CLIENT_CONFIG,
 } from "../utils/consts";
@@ -84,9 +90,6 @@ import ChainSelect from "./ChainSelect";
 import KeyAndBalance from "./KeyAndBalance";
 import RelaySelector from "./RelaySelector";
 import PendingVAAWarning from "./Transfer/PendingVAAWarning";
-import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
-import { getAptosClient } from "../utils/aptos";
-import { Types } from "aptos";
 
 const useStyles = makeStyles((theme) => ({
   mainCard: {
@@ -173,21 +176,12 @@ async function aptos(tx: string, enqueueSnackbar: any) {
     if (!result) {
       throw new Error("Transaction not found");
     }
-    // TODO: fix this
-    // const sequence = parseSequenceFromLogAptos(result);
-    const sequence = result.events.find(
-      (e) =>
-        e.type ===
-        `${getBridgeAddressForChain(CHAIN_ID_APTOS)}::state::WormholeMessage`
-    )?.data.sequence;
+    const { emitterAddress, sequence } =
+      getEmitterAddressAndSequenceFromResult(result);
     if (!sequence) {
       throw new Error("Sequence not found");
     }
-    return await fetchSignedVAA(
-      CHAIN_ID_APTOS,
-      "0000000000000000000000000000000000000000000000000000000000000001", // TODO: look this up
-      sequence
-    );
+    return await fetchSignedVAA(CHAIN_ID_APTOS, emitterAddress, sequence);
   } catch (e) {
     return handleError(e, enqueueSnackbar);
   }

@@ -1,4 +1,4 @@
-import { CHAIN_ID_APTOS } from "@certusone/wormhole-sdk";
+import { CHAIN_ID_APTOS, isValidAptosType } from "@certusone/wormhole-sdk";
 import { formatUnits } from "@ethersproject/units";
 import { useCallback, useMemo, useRef } from "react";
 import { AptosCoinResourceReturn } from "../../hooks/useAptosMetadata";
@@ -9,7 +9,7 @@ import aptosIcon from "../../icons/aptos.svg";
 import { DataWrapper } from "../../store/helpers";
 import { NFTParsedTokenAccount } from "../../store/nftSlice";
 import { ParsedTokenAccount } from "../../store/transferSlice";
-import { getAptosClient, isValidAptosType } from "../../utils/aptos";
+import { getAptosClient } from "../../utils/aptos";
 import {
   APTOS_NATIVE_DECIMALS,
   APTOS_NATIVE_TOKEN_KEY,

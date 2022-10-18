@@ -6,9 +6,11 @@ import {
   CHAIN_ID_TERRA2,
   CHAIN_ID_XPLA,
   getOriginalAssetAlgorand,
+  getOriginalAssetAptos,
   getOriginalAssetCosmWasm,
   getOriginalAssetEth,
   getOriginalAssetSol,
+  getTypeFromExternalAddress,
   hexToNativeAssetString,
   isEVMChain,
   isTerraChain,
@@ -24,6 +26,7 @@ import {
 import { Web3Provider } from "@ethersproject/providers";
 import { Connection } from "@solana/web3.js";
 import { LCDClient } from "@terra-money/terra.js";
+import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
 import { Algodv2 } from "algosdk";
 import { ethers } from "ethers";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -32,6 +35,7 @@ import {
   useEthereumProvider,
 } from "../contexts/EthereumProviderContext";
 import { DataWrapper } from "../store/helpers";
+import { getAptosClient } from "../utils/aptos";
 import {
   ALGORAND_HOST,
   ALGORAND_TOKEN_BRIDGE_ID,
@@ -45,8 +49,6 @@ import {
   XPLA_LCD_CLIENT_CONFIG,
 } from "../utils/consts";
 import useIsWalletReady from "./useIsWalletReady";
-import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
-import { getAptosClient, getOriginalAssetAptos } from "../utils/aptos";
 
 export type OriginalAssetInfo = {
   originChain: ChainId | null;
@@ -255,6 +257,12 @@ function useOriginalAsset(
             queryExternalId(
               lcd,
               tokenBridgeAddress,
+              uint8ArrayToHex(result.assetAddress)
+            ).then((tokenId) => setOriginAddress(tokenId || null));
+          } else if (result.chainId === CHAIN_ID_APTOS) {
+            getTypeFromExternalAddress(
+              getAptosClient(),
+              getTokenBridgeAddressForChain(CHAIN_ID_APTOS),
               uint8ArrayToHex(result.assetAddress)
             ).then((tokenId) => setOriginAddress(tokenId || null));
           } else {
