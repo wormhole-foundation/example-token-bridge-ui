@@ -6,9 +6,10 @@ import {
   CHAIN_ID_SOLANA,
   getClaimAddressSolana,
   hexToUint8Array,
-  importCoreWasm,
   isEVMChain,
   parseNFTPayload,
+  parseVaa,
+  postVaaSolanaWithRetry,
 } from "@certusone/wormhole-sdk";
 import {
   createMetaOnSolana,
@@ -41,7 +42,6 @@ import {
 import { getKaruraGasParams } from "../utils/karura";
 import { getMetadataAddress } from "../utils/metaplex";
 import parseError from "../utils/parseError";
-import { postVaaWithRetry } from "../utils/postVaa";
 import { signSendAndConfirm } from "../utils/solana";
 import useNFTSignedVAA from "./useNFTSignedVAA";
 
@@ -104,7 +104,7 @@ async function solana(
     const claimInfo = await connection.getAccountInfo(claimAddress);
     let txid;
     if (!claimInfo) {
-      await postVaaWithRetry(
+      await postVaaSolanaWithRetry(
         connection,
         wallet.signTransaction,
         SOL_BRIDGE_ADDRESS,
@@ -125,14 +125,13 @@ async function solana(
     }
     const isNative = await isNFTVAASolanaNative(signedVAA);
     if (!isNative) {
-      const { parse_vaa } = await importCoreWasm();
-      const parsedVAA = parse_vaa(signedVAA);
+      const parsedVAA = parseVaa(signedVAA);
       const { originChain, originAddress, tokenId } = parseNFTPayload(
         Buffer.from(new Uint8Array(parsedVAA.payload))
       );
       const mintAddress = await getForeignAssetSol(
         SOL_NFT_BRIDGE_ADDRESS,
-        originChain,
+        originChain as ChainId,
         hexToUint8Array(originAddress),
         arrayify(tokenId)
       );

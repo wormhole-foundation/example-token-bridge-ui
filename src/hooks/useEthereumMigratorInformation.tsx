@@ -1,9 +1,4 @@
-import {
-  Migrator,
-  Migrator__factory,
-  TokenImplementation,
-  TokenImplementation__factory,
-} from "@certusone/wormhole-sdk";
+import { ethers_contracts } from "@certusone/wormhole-sdk";
 import { Signer } from "@ethersproject/abstract-signer";
 import { formatUnits } from "@ethersproject/units";
 import { useEffect, useMemo, useState } from "react";
@@ -18,9 +13,9 @@ export type RequisiteData = {
   poolAddress: string;
   fromAddress: string;
   toAddress: string;
-  fromToken: TokenImplementation;
-  toToken: TokenImplementation;
-  migrator: Migrator;
+  fromToken: ethers_contracts.TokenImplementation;
+  toToken: ethers_contracts.TokenImplementation;
+  migrator: ethers_contracts.Migrator;
   fromSymbol: string;
   toSymbol: string;
   fromDecimals: number;
@@ -34,7 +29,7 @@ export type RequisiteData = {
 };
 
 const getRequisiteData = async (
-  migrator: Migrator,
+  migrator: ethers_contracts.Migrator,
   signer: Signer,
   signerAddress: string
 ): Promise<RequisiteData> => {
@@ -43,8 +38,14 @@ const getRequisiteData = async (
     const fromAddress = await migrator.fromAsset();
     const toAddress = await migrator.toAsset();
 
-    const fromToken = TokenImplementation__factory.connect(fromAddress, signer);
-    const toToken = TokenImplementation__factory.connect(toAddress, signer);
+    const fromToken = ethers_contracts.TokenImplementation__factory.connect(
+      fromAddress,
+      signer
+    );
+    const toToken = ethers_contracts.TokenImplementation__factory.connect(
+      toAddress,
+      signer
+    );
 
     const fromSymbol = await fromToken.symbol();
     const toSymbol = await toToken.symbol();
@@ -109,7 +110,7 @@ function useEthereumMigratorInformation(
     () =>
       migratorAddress &&
       signer &&
-      Migrator__factory.connect(migratorAddress, signer),
+      ethers_contracts.Migrator__factory.connect(migratorAddress, signer),
     [migratorAddress, signer]
   );
   const [data, setData] = useState<any | null>(null);

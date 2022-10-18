@@ -1,5 +1,5 @@
 import {
-  canonicalAddress,
+  cosmos,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
   CHAIN_ID_SOLANA,
@@ -7,6 +7,7 @@ import {
   isEVMChain,
   isTerraChain,
   uint8ArrayToHex,
+  CHAIN_ID_INJECTIVE,
 } from "@certusone/wormhole-sdk";
 import { arrayify, zeroPad } from "@ethersproject/bytes";
 import {
@@ -33,6 +34,7 @@ import { setTargetAddressHex as setTransferTargetAddressHex } from "../store/tra
 import { decodeAddress } from "algosdk";
 import { useConnectedWallet as useXplaConnectedWallet } from "@xpla/wallet-provider";
 import { useAptosContext } from "../contexts/AptosWalletContext";
+import { useInjectiveContext } from "../contexts/InjectiveWalletContext";
 
 function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
   const dispatch = useDispatch();
@@ -54,6 +56,7 @@ function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
   const { accounts: algoAccounts } = useAlgorandContext();
   const { account: aptosAccount } = useAptosContext();
   const aptosAddress = aptosAccount?.address?.toString();
+  const { address: injAddress } = useInjectiveContext();
   const setTargetAddressHex = nft
     ? setNFTTargetAddressHex
     : setTransferTargetAddressHex;
@@ -113,7 +116,7 @@ function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
         dispatch(
           setTargetAddressHex(
             uint8ArrayToHex(
-              zeroPad(canonicalAddress(terraWallet.walletAddress), 32)
+              zeroPad(cosmos.canonicalAddress(terraWallet.walletAddress), 32)
             )
           )
         );
@@ -125,7 +128,7 @@ function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
         dispatch(
           setTargetAddressHex(
             uint8ArrayToHex(
-              zeroPad(canonicalAddress(xplaWallet.walletAddress), 32)
+              zeroPad(cosmos.canonicalAddress(xplaWallet.walletAddress), 32)
             )
           )
         );
@@ -137,6 +140,12 @@ function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
         dispatch(
           setTargetAddressHex(
             uint8ArrayToHex(decodeAddress(algoAccounts[0].address).publicKey)
+          )
+        );
+      } else if (targetChain === CHAIN_ID_INJECTIVE && injAddress) {
+        dispatch(
+          setTargetAddressHex(
+            uint8ArrayToHex(zeroPad(cosmos.canonicalAddress(injAddress), 32))
           )
         );
       } else {
@@ -160,6 +169,7 @@ function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
     algoAccounts,
     xplaWallet,
     aptosAddress,
+    injAddress,
   ]);
 }
 

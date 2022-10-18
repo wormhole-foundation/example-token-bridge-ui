@@ -19,6 +19,7 @@ import {
   CHAIN_ID_XPLA,
   CHAIN_ID_APTOS,
   CHAIN_ID_ARBITRUM,
+  CHAIN_ID_INJECTIVE,
 } from "@certusone/wormhole-sdk";
 import { Button, makeStyles, Typography } from "@material-ui/core";
 import { Transaction } from "../store/transferSlice";
@@ -135,6 +136,8 @@ export default function ShowTx({
             ? "?network=local"
             : ""
         }`
+      : chainId === CHAIN_ID_INJECTIVE
+      ? `https://testnet.explorer.injective.network/transaction/${tx.id}`
       : undefined;
   const explorerName = getExplorerName(chainId);
 

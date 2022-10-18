@@ -2,11 +2,13 @@ import {
   ChainId,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
+  CHAIN_ID_INJECTIVE,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
   getForeignAssetAlgorand,
   getForeignAssetAptos,
   getForeignAssetEth,
+  getForeignAssetInjective,
   getForeignAssetSolana,
   getForeignAssetTerra,
   getForeignAssetXpla,
@@ -35,6 +37,7 @@ import useIsWalletReady from "./useIsWalletReady";
 import { Algodv2 } from "algosdk";
 import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
 import { getAptosClient } from "../utils/aptos";
+import { getInjectiveWasmClient } from "../utils/injective";
 
 export type ForeignAssetInfo = {
   doesExist: boolean;
@@ -172,6 +175,16 @@ function useFetchForeignAsset(
               ALGORAND_TOKEN_BRIDGE_ID,
               originChain,
               originAssetHex
+            );
+          }
+        : foreignChain === CHAIN_ID_INJECTIVE
+        ? () => {
+            const client = getInjectiveWasmClient();
+            return getForeignAssetInjective(
+              getTokenBridgeAddressForChain(foreignChain),
+              client,
+              originChain,
+              hexToUint8Array(originAssetHex)
             );
           }
         : () => Promise.resolve(null);

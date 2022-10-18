@@ -11,6 +11,7 @@ import {
   CHAIN_ID_ETH,
   CHAIN_ID_ETHEREUM_ROPSTEN,
   CHAIN_ID_FANTOM,
+  CHAIN_ID_INJECTIVE,
   CHAIN_ID_KARURA,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_NEON,
@@ -48,7 +49,10 @@ import solanaIcon from "../icons/solana.svg";
 import terraIcon from "../icons/terra.svg";
 import terra2Icon from "../icons/terra2.svg";
 import xplaIcon from "../icons/xpla.svg";
+import injectiveIcon from "../icons/injective.svg";
 import { AptosNetwork } from "./aptos";
+import { getNetworkInfo, Network } from "@injectivelabs/networks";
+import { ChainId as InjectiveChainId } from "@injectivelabs/ts-types";
 
 export type Cluster = "devnet" | "testnet";
 const urlParams = new URLSearchParams(window.location.search);
@@ -117,6 +121,11 @@ export const CHAINS: ChainInfo[] =
           id: CHAIN_ID_FANTOM,
           name: "Fantom",
           logo: fantomIcon,
+        },
+        {
+          id: CHAIN_ID_INJECTIVE,
+          name: "Injective",
+          logo: injectiveIcon,
         },
         {
           id: CHAIN_ID_KARURA,
@@ -417,6 +426,9 @@ export const APTOS_NETWORK =
 
 export const APTOS_NATIVE_DECIMALS = 8;
 export const APTOS_NATIVE_TOKEN_KEY = "0x1::aptos_coin::AptosCoin";
+
+export const INJECTIVE_NETWORK = getNetworkInfo(Network.TestnetK8s);
+export const INJECTIVE_NETWORK_CHAIN_ID = InjectiveChainId.Testnet;
 
 export const ALGORAND_HOST =
   CLUSTER === "testnet"

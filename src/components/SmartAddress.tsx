@@ -13,7 +13,6 @@ import {
   CHAIN_ID_OASIS,
   CHAIN_ID_POLYGON,
   CHAIN_ID_SOLANA,
-  isNativeDenom,
   CHAIN_ID_ACALA,
   isTerraChain,
   CHAIN_ID_TERRA2,
@@ -22,6 +21,8 @@ import {
   CHAIN_ID_APTOS,
   isValidAptosType,
   CHAIN_ID_ARBITRUM,
+  CHAIN_ID_INJECTIVE,
+  terra,
 } from "@certusone/wormhole-sdk";
 import { Button, makeStyles, Tooltip, Typography } from "@material-ui/core";
 import { FileCopy, OpenInNew } from "@material-ui/icons";
@@ -93,7 +94,7 @@ export default function SmartAddress({
   isAsset?: boolean;
 }) {
   const classes = useStyles();
-  const isNativeTerra = isTerraChain(chainId) && isNativeDenom(address);
+  const isNativeTerra = isTerraChain(chainId) && terra.isNativeDenom(address);
   const useableAddress = parsedTokenAccount?.mintKey || address || "";
   const useableSymbol = isNativeTerra
     ? formatNativeDenom(address || "", chainId as TerraChainId)
@@ -205,6 +206,8 @@ export default function SmartAddress({
           ? "?network=local"
           : ""
       }`
+    : chainId === CHAIN_ID_INJECTIVE
+    ? `https://testnet.explorer.injective.network/account/${useableAddress}`
     : undefined;
   const explorerName = getExplorerName(chainId);
 

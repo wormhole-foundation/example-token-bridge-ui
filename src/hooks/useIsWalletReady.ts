@@ -2,6 +2,7 @@ import {
   ChainId,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
+  CHAIN_ID_INJECTIVE,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
   isEVMChain,
@@ -23,6 +24,7 @@ import {
   EVM_RPC_MAP,
   METAMASK_CHAIN_PARAMETERS,
 } from "../utils/metaMaskChainParameters";
+import { useInjectiveContext } from "../contexts/InjectiveWalletContext";
 
 const createWalletStatus = (
   isReady: boolean,
@@ -75,6 +77,8 @@ function useIsWalletReady(
   const hasCorrectAptosNetwork = aptosNetwork?.name
     ?.toLowerCase()
     .includes(APTOS_NETWORK.toLowerCase());
+  const { address: injAddress } = useInjectiveContext();
+  const hasInjWallet = !!injAddress;
 
   const forceNetworkSwitch = useCallback(async () => {
     if (provider && correctEvmNetwork) {
@@ -164,6 +168,14 @@ function useIsWalletReady(
         );
       }
     }
+    if (chainId === CHAIN_ID_INJECTIVE && hasInjWallet && injAddress) {
+      return createWalletStatus(
+        true,
+        undefined,
+        forceNetworkSwitch,
+        injAddress
+      );
+    }
     if (isEVMChain(chainId) && hasEthInfo && signerAddress) {
       if (hasCorrectEvmNetwork) {
         return createWalletStatus(
@@ -209,6 +221,8 @@ function useIsWalletReady(
     hasAptosWallet,
     aptosAddress,
     hasCorrectAptosNetwork,
+    hasInjWallet,
+    injAddress,
   ]);
 }
 

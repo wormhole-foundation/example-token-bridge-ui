@@ -1,4 +1,4 @@
-import { CHAIN_ID_XPLA, isNativeDenom } from "@certusone/wormhole-sdk";
+import { CHAIN_ID_XPLA, isNativeDenomXpla } from "@certusone/wormhole-sdk";
 import { formatUnits } from "@ethersproject/units";
 import { useCallback, useMemo, useRef } from "react";
 import { createParsedTokenAccount } from "../../hooks/useGetSourceParsedTokenAccounts";
@@ -121,7 +121,7 @@ export default function XplaTokenPicker(props: XplaTokenPickerProps) {
   );
 
   const isSearchableAddress = useCallback((address: string) => {
-    return isValidXplaAddress(address) && !isNativeDenom(address);
+    return isValidXplaAddress(address) && !isNativeDenomXpla(address);
   }, []);
 
   const RenderComp = useCallback(

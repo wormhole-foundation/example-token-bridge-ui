@@ -1,9 +1,8 @@
 import {
-  canonicalAddress,
+  cosmos,
   CHAIN_ID_TERRA2,
-  isNativeDenom,
-  isNativeTerra,
   TerraChainId,
+  terra,
 } from "@certusone/wormhole-sdk";
 import { formatUnits } from "@ethersproject/units";
 import { LCDClient, isTxError } from "@terra-money/terra.js";
@@ -30,7 +29,7 @@ export const formatNativeDenom = (
   chainId: TerraChainId
 ): string => {
   const unit = denom.slice(1).toUpperCase();
-  const isValidTerra = isNativeTerra(denom);
+  const isValidTerra = terra.isNativeTerra(denom);
   return denom === "uluna"
     ? chainId === CHAIN_ID_TERRA2
       ? LUNA_SYMBOL
@@ -66,12 +65,12 @@ export async function waitForTerraExecution(
 }
 
 export const isValidTerraAddress = (address: string, chainId: TerraChainId) => {
-  if (isNativeDenom(address)) {
+  if (terra.isNativeDenom(address)) {
     return true;
   }
   try {
     const startsWithTerra = address && address.startsWith("terra");
-    const isParseable = canonicalAddress(address);
+    const isParseable = cosmos.canonicalAddress(address);
     const isLengthOk =
       isParseable.length === (chainId === CHAIN_ID_TERRA2 ? 32 : 20);
     return !!(startsWithTerra && isParseable && isLengthOk);

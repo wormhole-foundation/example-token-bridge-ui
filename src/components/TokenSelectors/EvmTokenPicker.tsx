@@ -1,8 +1,4 @@
-import {
-  ChainId,
-  NFTImplementation,
-  TokenImplementation,
-} from "@certusone/wormhole-sdk";
+import { ChainId, ethers_contracts } from "@certusone/wormhole-sdk";
 import { useCallback } from "react";
 import { useSelector } from "react-redux";
 import { useEthereumProvider } from "../../contexts/EthereumProviderContext";
@@ -88,13 +84,13 @@ export default function EvmTokenPicker(
             return Promise.reject("Token ID is required.");
           } else if (nft && tokenId) {
             return ethNFTToNFTParsedTokenAccount(
-              tokenAccount as NFTImplementation,
+              tokenAccount as ethers_contracts.NFTImplementation,
               tokenId,
               signerAddress
             );
           } else {
             return ethTokenToParsedTokenAccount(
-              tokenAccount as TokenImplementation,
+              tokenAccount as ethers_contracts.TokenImplementation,
               signerAddress
             );
           }

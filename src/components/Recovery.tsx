@@ -3,29 +3,33 @@ import {
   CHAIN_ID_ACALA,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
+  CHAIN_ID_INJECTIVE,
   CHAIN_ID_KARURA,
   CHAIN_ID_SOLANA,
   CHAIN_ID_TERRA2,
   CHAIN_ID_XPLA,
   getEmitterAddressAlgorand,
   getEmitterAddressEth,
+  getEmitterAddressInjective,
   getEmitterAddressSolana,
   getEmitterAddressTerra,
   getEmitterAddressXpla,
   hexToNativeAssetString,
   hexToNativeString,
   hexToUint8Array,
-  importCoreWasm,
   isEVMChain,
   isTerraChain,
   parseNFTPayload,
   parseSequenceFromLogAlgorand,
   parseSequenceFromLogEth,
+  parseSequenceFromLogInjective,
   parseSequenceFromLogSolana,
   parseSequenceFromLogTerra,
   parseSequenceFromLogXpla,
   parseTransferPayload,
+  parseVaa,
   queryExternalId,
+  queryExternalIdInjective,
   TerraChainId,
   uint8ArrayToHex,
 } from "@certusone/wormhole-sdk";
@@ -90,6 +94,10 @@ import ChainSelect from "./ChainSelect";
 import KeyAndBalance from "./KeyAndBalance";
 import RelaySelector from "./RelaySelector";
 import PendingVAAWarning from "./Transfer/PendingVAAWarning";
+import {
+  getInjectiveTxClient,
+  getInjectiveWasmClient,
+} from "../utils/injective";
 
 const useStyles = makeStyles((theme) => ({
   mainCard: {
@@ -257,6 +265,26 @@ async function xpla(tx: string, enqueueSnackbar: any) {
       getTokenBridgeAddressForChain(CHAIN_ID_XPLA)
     );
     return await fetchSignedVAA(CHAIN_ID_XPLA, emitterAddress, sequence);
+  } catch (e) {
+    return handleError(e, enqueueSnackbar);
+  }
+}
+
+async function injective(txHash: string, enqueueSnackbar: any) {
+  try {
+    const client = getInjectiveTxClient();
+    const tx = await client.fetchTx(txHash);
+    if (!tx) {
+      throw new Error("Unable to fetch transaction");
+    }
+    const sequence = parseSequenceFromLogInjective(tx);
+    if (!sequence) {
+      throw new Error("Sequence not found");
+    }
+    const emitterAddress = await getEmitterAddressInjective(
+      getTokenBridgeAddressForChain(CHAIN_ID_INJECTIVE)
+    );
+    return await fetchSignedVAA(CHAIN_ID_INJECTIVE, emitterAddress, sequence);
   } catch (e) {
     return handleError(e, enqueueSnackbar);
   }
@@ -447,10 +475,25 @@ export default function Recovery() {
             ? new LCDClient(getTerraConfig(CHAIN_ID_TERRA2))
             : new XplaLCDClient(XPLA_LCD_CLIENT_CONFIG);
         const tokenBridgeAddress = getTokenBridgeAddressForChain(
-          parsedPayload.targetChain
+          parsedPayload.targetChain as ChainId
         );
         const tokenId = await queryExternalId(
           lcd,
+          tokenBridgeAddress,
+          parsedPayload.originAddress
+        );
+        if (!cancelled) {
+          setTokenId(tokenId || "");
+        }
+      })();
+    }
+    if (parsedPayload && parsedPayload.targetChain === CHAIN_ID_INJECTIVE) {
+      (async () => {
+        const client = getInjectiveWasmClient();
+        const tokenBridgeAddress =
+          getTokenBridgeAddressForChain(CHAIN_ID_INJECTIVE);
+        const tokenId = await queryExternalIdInjective(
+          client,
           tokenBridgeAddress,
           parsedPayload.originAddress
         );
@@ -614,6 +657,26 @@ export default function Recovery() {
             setIsVAAPending(isPending);
           }
         })();
+      } else if (recoverySourceChain === CHAIN_ID_INJECTIVE) {
+        setRecoverySourceTxError("");
+        setRecoverySourceTxIsLoading(true);
+        setTokenId("");
+        (async () => {
+          const { vaa, isPending, error } = await injective(
+            recoverySourceTx,
+            enqueueSnackbar
+          );
+          if (!cancelled) {
+            setRecoverySourceTxIsLoading(false);
+            if (vaa) {
+              setRecoverySignedVAA(vaa);
+            }
+            if (error) {
+              setRecoverySourceTxError(error);
+            }
+            setIsVAAPending(isPending);
+          }
+        })();
       }
       return () => {
         cancelled = true;
@@ -651,8 +714,7 @@ export default function Recovery() {
     if (recoverySignedVAA) {
       (async () => {
         try {
-          const { parse_vaa } = await importCoreWasm();
-          const parsedVAA = parse_vaa(hexToUint8Array(recoverySignedVAA));
+          const parsedVAA = parseVaa(hexToUint8Array(recoverySignedVAA));
           if (!cancelled) {
             setRecoveryParsedVAA(parsedVAA);
           }
@@ -680,9 +742,9 @@ export default function Recovery() {
             setRecoveryNFTVaa({
               vaa: recoverySignedVAA,
               parsedPayload: {
-                targetChain: parsedPayload.targetChain,
+                targetChain: parsedPayload.targetChain as ChainId,
                 targetAddress: parsedPayload.targetAddress,
-                originChain: parsedPayload.originChain,
+                originChain: parsedPayload.originChain as ChainId,
                 originAddress: parsedPayload.originAddress,
               },
             })
@@ -694,9 +756,9 @@ export default function Recovery() {
               vaa: recoverySignedVAA,
               useRelayer,
               parsedPayload: {
-                targetChain: parsedPayload.targetChain,
+                targetChain: parsedPayload.targetChain as ChainId,
                 targetAddress: parsedPayload.targetAddress,
-                originChain: parsedPayload.originChain,
+                originChain: parsedPayload.originChain as ChainId,
                 originAddress: parsedPayload.originAddress,
                 amount:
                   "amount" in parsedPayload
@@ -907,11 +969,12 @@ export default function Recovery() {
                   value={
                     parsedPayload
                       ? parsedPayload.targetChain === CHAIN_ID_TERRA2 ||
-                        parsedPayload.targetChain === CHAIN_ID_XPLA
+                        parsedPayload.targetChain === CHAIN_ID_XPLA ||
+                        parsedPayload.targetChain === CHAIN_ID_INJECTIVE
                         ? tokenId
                         : hexToNativeAssetString(
                             parsedPayload.originAddress,
-                            parsedPayload.originChain
+                            parsedPayload.originChain as ChainId
                           ) || ""
                       : ""
                   }
@@ -945,7 +1008,7 @@ export default function Recovery() {
                     (parsedPayload &&
                       hexToNativeString(
                         parsedPayload.targetAddress,
-                        parsedPayload.targetChain
+                        parsedPayload.targetChain as ChainId
                       )) ||
                     ""
                   }
@@ -971,9 +1034,10 @@ export default function Recovery() {
                       label="Relayer Fee"
                       disabled
                       value={
-                        parsedPayload && "fee" in parsedPayload
-                          ? parsedPayload.fee.toString()
-                          : ""
+                        (parsedPayload &&
+                          "fee" in parsedPayload &&
+                          parsedPayload?.fee?.toString()) ||
+                        ""
                       }
                       fullWidth
                       margin="normal"

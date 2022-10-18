@@ -3,6 +3,7 @@ import {
   CHAIN_ID_ACALA,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
+  CHAIN_ID_INJECTIVE,
   CHAIN_ID_KARURA,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_SOLANA,
@@ -10,18 +11,22 @@ import {
   createWrappedOnAlgorand,
   createWrappedOnAptos,
   createWrappedOnEth,
+  createWrappedOnInjective,
   createWrappedOnSolana,
   createWrappedOnTerra,
   createWrappedOnXpla,
   createWrappedTypeOnAptos,
   isEVMChain,
   isTerraChain,
+  postVaaSolanaWithRetry,
   TerraChainId,
   updateWrappedOnEth,
+  updateWrappedOnInjective,
   updateWrappedOnSolana,
   updateWrappedOnTerra,
   updateWrappedOnXpla,
 } from "@certusone/wormhole-sdk";
+import { WalletStrategy } from "@injectivelabs/wallet-ts";
 import { Alert } from "@material-ui/lab";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { Connection } from "@solana/web3.js";
@@ -42,6 +47,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useAlgorandContext } from "../contexts/AlgorandWalletContext";
 import { useAptosContext } from "../contexts/AptosWalletContext";
 import { useEthereumProvider } from "../contexts/EthereumProviderContext";
+import { useInjectiveContext } from "../contexts/InjectiveWalletContext";
 import { useSolanaWallet } from "../contexts/SolanaWalletContext";
 import { setCreateTx, setIsCreating } from "../store/attestSlice";
 import {
@@ -63,9 +69,9 @@ import {
   SOL_BRIDGE_ADDRESS,
   SOL_TOKEN_BRIDGE_ADDRESS,
 } from "../utils/consts";
+import { broadcastInjectiveTx } from "../utils/injective";
 import { getKaruraGasParams } from "../utils/karura";
 import parseError from "../utils/parseError";
-import { postVaaWithRetry } from "../utils/postVaa";
 import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees } from "../utils/terra";
 import { postWithFeesXpla } from "../utils/xpla";
@@ -220,7 +226,7 @@ async function solana(
       throw new Error("wallet.signTransaction is undefined");
     }
     const connection = new Connection(SOLANA_HOST, "confirmed");
-    await postVaaWithRetry(
+    await postVaaSolanaWithRetry(
       connection,
       wallet.signTransaction,
       SOL_BRIDGE_ADDRESS,
@@ -341,6 +347,46 @@ async function xpla(
   }
 }
 
+async function injective(
+  dispatch: any,
+  enqueueSnackbar: any,
+  wallet: WalletStrategy,
+  walletAddress: string,
+  signedVAA: Uint8Array,
+  shouldUpdate: boolean
+) {
+  dispatch(setIsCreating(true));
+  const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_INJECTIVE);
+  try {
+    const msg = shouldUpdate
+      ? await updateWrappedOnInjective(
+          tokenBridgeAddress,
+          walletAddress,
+          signedVAA
+        )
+      : await createWrappedOnInjective(
+          tokenBridgeAddress,
+          walletAddress,
+          signedVAA
+        );
+    const tx = await broadcastInjectiveTx(
+      wallet,
+      walletAddress,
+      msg,
+      "Wormhole - Create Wrapped"
+    );
+    dispatch(setCreateTx({ id: tx.txhash, block: tx.height }));
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+  } catch (e) {
+    enqueueSnackbar(null, {
+      content: <Alert severity="error">{parseError(e)}</Alert>,
+    });
+    dispatch(setIsCreating(false));
+  }
+}
+
 export function useHandleCreateWrapped(shouldUpdate: boolean) {
   const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
@@ -356,6 +402,7 @@ export function useHandleCreateWrapped(shouldUpdate: boolean) {
   const { accounts: algoAccounts } = useAlgorandContext();
   const { account: aptosAccount, signAndSubmitTransaction } = useAptosContext();
   const aptosAddress = aptosAccount?.address?.toString();
+  const { wallet: injWallet, address: injAddress } = useInjectiveContext();
   const handleCreateClick = useCallback(() => {
     if (isEVMChain(targetChain) && !!signer && !!signedVAA) {
       evm(
@@ -411,6 +458,20 @@ export function useHandleCreateWrapped(shouldUpdate: boolean) {
       !!signedVAA
     ) {
       algo(dispatch, enqueueSnackbar, algoAccounts[0]?.address, signedVAA);
+    } else if (
+      targetChain === CHAIN_ID_INJECTIVE &&
+      injWallet &&
+      injAddress &&
+      !!signedVAA
+    ) {
+      injective(
+        dispatch,
+        enqueueSnackbar,
+        injWallet,
+        injAddress,
+        signedVAA,
+        shouldUpdate
+      );
     } else {
       // enqueueSnackbar(
       //   "Creating wrapped tokens on this chain is not yet supported",
@@ -434,6 +495,8 @@ export function useHandleCreateWrapped(shouldUpdate: boolean) {
     xplaWallet,
     aptosAddress,
     signAndSubmitTransaction,
+    injWallet,
+    injAddress,
   ]);
   return useMemo(
     () => ({

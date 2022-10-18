@@ -1,37 +1,39 @@
-import { LCDClient } from "@xpla/xpla.js";
+import { parseSmartContractStateResponse } from "@certusone/wormhole-sdk";
+import { ChainGrpcWasmApi } from "@injectivelabs/sdk-ts";
 import { useLayoutEffect, useMemo, useState } from "react";
 import { DataWrapper } from "../store/helpers";
-import { XPLA_LCD_CLIENT_CONFIG } from "../utils/consts";
+import { getInjectiveWasmClient } from "../utils/injective";
 
-export type XplaMetadata = {
+export type InjectiveMetadata = {
   symbol?: string;
   logo?: string;
   tokenName?: string;
   decimals?: number;
 };
 
-const fetchSingleMetadata = async (address: string, lcd: LCDClient) =>
-  lcd.wasm
-    .contractQuery(address, {
-      token_info: {},
-    })
-    .then(
-      ({ symbol, name: tokenName, decimals }: any) =>
-        ({
-          symbol,
-          tokenName,
-          decimals,
-        } as XplaMetadata)
-    );
+const fetchSingleMetadata = async (address: string, client: ChainGrpcWasmApi) =>
+  client
+    .fetchSmartContractState(
+      address,
+      Buffer.from(JSON.stringify({ token_info: {} })).toString("base64")
+    )
+    .then((data) => {
+      const parsed = parseSmartContractStateResponse(data);
+      return {
+        symbol: parsed.symbol,
+        tokenName: parsed.name,
+        decimals: parsed.decimals,
+      } as InjectiveMetadata;
+    });
 
-const fetchXplaMetadata = async (addresses: string[]) => {
-  const lcd = new LCDClient(XPLA_LCD_CLIENT_CONFIG);
-  const promises: Promise<XplaMetadata>[] = [];
+const fetchInjectiveMetadata = async (addresses: string[]) => {
+  const client = getInjectiveWasmClient();
+  const promises: Promise<InjectiveMetadata>[] = [];
   addresses.forEach((address) => {
-    promises.push(fetchSingleMetadata(address, lcd));
+    promises.push(fetchSingleMetadata(address, client));
   });
   const resultsArray = await Promise.all(promises);
-  const output = new Map<string, XplaMetadata>();
+  const output = new Map<string, InjectiveMetadata>();
   addresses.forEach((address, index) => {
     output.set(address, resultsArray[index]);
   });
@@ -39,12 +41,12 @@ const fetchXplaMetadata = async (addresses: string[]) => {
   return output;
 };
 
-const useXplaMetadata = (
+const useInjectiveMetadata = (
   addresses: string[]
-): DataWrapper<Map<string, XplaMetadata>> => {
+): DataWrapper<Map<string, InjectiveMetadata>> => {
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState("");
-  const [data, setData] = useState<Map<string, XplaMetadata> | null>(null);
+  const [data, setData] = useState<Map<string, InjectiveMetadata> | null>(null);
 
   useLayoutEffect(() => {
     let cancelled = false;
@@ -52,7 +54,7 @@ const useXplaMetadata = (
       setIsFetching(true);
       setError("");
       setData(null);
-      fetchXplaMetadata(addresses).then(
+      fetchInjectiveMetadata(addresses).then(
         (results) => {
           if (!cancelled) {
             setData(results);
@@ -83,4 +85,4 @@ const useXplaMetadata = (
   );
 };
 
-export default useXplaMetadata;
+export default useInjectiveMetadata;

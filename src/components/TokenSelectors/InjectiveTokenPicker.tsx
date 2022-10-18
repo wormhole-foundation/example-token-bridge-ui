@@ -1,37 +1,39 @@
-import { ChainId, terra, TerraChainId } from "@certusone/wormhole-sdk";
+import {
+  CHAIN_ID_INJECTIVE,
+  isNativeDenomInjective,
+  parseSmartContractStateResponse,
+} from "@certusone/wormhole-sdk";
 import { formatUnits } from "@ethersproject/units";
-import { LCDClient } from "@terra-money/terra.js";
 import { useCallback, useMemo, useRef } from "react";
 import { createParsedTokenAccount } from "../../hooks/useGetSourceParsedTokenAccounts";
 import useIsWalletReady from "../../hooks/useIsWalletReady";
-import useTerraNativeBalances from "../../hooks/useTerraNativeBalances";
+import useInjectiveNativeBalances from "../../hooks/useInjectiveNativeBalances";
 import { DataWrapper } from "../../store/helpers";
 import { NFTParsedTokenAccount } from "../../store/nftSlice";
 import { ParsedTokenAccount } from "../../store/transferSlice";
-import { SUPPORTED_TERRA_TOKENS, getTerraConfig } from "../../utils/consts";
+import TokenPicker, { BasicAccountRender } from "./TokenPicker";
 import {
   formatNativeDenom,
-  getNativeTerraIcon,
-  isValidTerraAddress,
-  NATIVE_TERRA_DECIMALS,
-} from "../../utils/terra";
-import TokenPicker, { BasicAccountRender } from "./TokenPicker";
+  getInjectiveWasmClient,
+  INJECTIVE_NATIVE_DENOM,
+  isValidInjectiveAddress,
+  NATIVE_INJECTIVE_DECIMALS,
+} from "../../utils/injective";
+import injectiveIcon from "../../icons/injective.svg";
 
-type TerraTokenPickerProps = {
+type InjectiveTokenPickerProps = {
   value: ParsedTokenAccount | null;
   onChange: (newValue: ParsedTokenAccount | null) => void;
   tokenAccounts: DataWrapper<ParsedTokenAccount[]> | undefined;
   disabled: boolean;
   resetAccounts: (() => void) | undefined;
-  chainId: TerraChainId;
 };
 
-export default function TerraTokenPicker(props: TerraTokenPickerProps) {
-  const { value, onChange, disabled, chainId } = props;
-  const { walletAddress } = useIsWalletReady(chainId);
+export default function InjectiveTokenPicker(props: InjectiveTokenPickerProps) {
+  const { value, onChange, disabled } = props;
+  const { walletAddress } = useIsWalletReady(CHAIN_ID_INJECTIVE);
   const nativeRefresh = useRef<() => void>(() => {});
-  const { balances, isLoading: nativeIsLoading } = useTerraNativeBalances(
-    chainId,
+  const { balances, isLoading: nativeIsLoading } = useInjectiveNativeBalances(
     walletAddress,
     nativeRefresh
   );
@@ -55,60 +57,63 @@ export default function TerraTokenPicker(props: TerraTokenPickerProps) {
     [onChange]
   );
 
-  const terraTokenArray = useMemo(() => {
+  const injTokenArray = useMemo(() => {
     const balancesItems =
       balances && walletAddress
         ? Object.keys(balances).map((denom) =>
-            // ({
-            //   protocol: "native",
-            //   symbol: formatNativeDenom(denom),
-            //   token: denom,
-            //   icon: getNativeTerraIcon(formatNativeDenom(denom)),
-            //   balance: balances[denom],
-            // } as TerraTokenMetadata)
-
-            //TODO support non-natives in the SUPPORTED_TERRA_TOKENS
             //This token account makes a lot of assumptions
             createParsedTokenAccount(
               walletAddress,
               denom,
               balances[denom], //amount
-              NATIVE_TERRA_DECIMALS, //TODO actually get decimals rather than hardcode
+              NATIVE_INJECTIVE_DECIMALS, //TODO actually get decimals rather than hardcode
               0, //uiAmount is unused
-              formatUnits(balances[denom], NATIVE_TERRA_DECIMALS), //uiAmountString
-              formatNativeDenom(denom, props.chainId), // symbol
+              formatUnits(balances[denom], NATIVE_INJECTIVE_DECIMALS), //uiAmountString
+              formatNativeDenom(denom), // symbol
               undefined, //name
-              getNativeTerraIcon(formatNativeDenom(denom, props.chainId)), //logo
+              injectiveIcon,
               true //is native asset
             )
           )
         : [];
-    return balancesItems.filter((metadata) =>
-      SUPPORTED_TERRA_TOKENS.includes(metadata.mintKey)
+    return balancesItems.filter(
+      (metadata) => metadata.mintKey === INJECTIVE_NATIVE_DENOM
     );
-  }, [walletAddress, balances, props.chainId]);
+  }, [walletAddress, balances]);
 
   //TODO this only supports non-native assets. Native assets come from the hook.
   //TODO correlate against token list to get metadata
-  const lookupTerraAddress = useCallback(
+  const lookupInjectiveAddress = useCallback(
     (lookupAsset: string) => {
       if (!walletAddress) {
         return Promise.reject("Wallet not connected");
       }
-      const lcd = new LCDClient(getTerraConfig(chainId));
-      return lcd.wasm
-        .contractQuery(lookupAsset, {
-          token_info: {},
-        })
-        .then((info: any) =>
-          lcd.wasm
-            .contractQuery(lookupAsset, {
-              balance: {
-                address: walletAddress,
-              },
+      const client = getInjectiveWasmClient();
+      return client
+        .fetchSmartContractState(
+          lookupAsset,
+          Buffer.from(
+            JSON.stringify({
+              token_info: {},
             })
-            .then((balance: any) => {
-              if (balance && info) {
+          ).toString("base64")
+        )
+        .then((infoData) =>
+          client
+            .fetchSmartContractState(
+              lookupAsset,
+              Buffer.from(
+                JSON.stringify({
+                  balance: {
+                    address: walletAddress,
+                  },
+                })
+              ).toString("base64")
+            )
+            .then((balanceData) => {
+              if (infoData && balanceData) {
+                const balance = parseSmartContractStateResponse(balanceData);
+                const info = parseSmartContractStateResponse(infoData);
                 return createParsedTokenAccount(
                   walletAddress,
                   lookupAsset,
@@ -120,26 +125,20 @@ export default function TerraTokenPicker(props: TerraTokenPickerProps) {
                   info.name
                 );
               } else {
-                throw new Error("Failed to retrieve Terra account.");
+                throw new Error("Failed to retrieve Injective account.");
               }
             })
         )
-        .catch(() => {
-          return Promise.reject();
+        .catch((e) => {
+          return Promise.reject(e);
         });
     },
-    [walletAddress, chainId]
+    [walletAddress]
   );
 
-  const isSearchableAddress = useCallback(
-    (address: string, chainId: ChainId) => {
-      return (
-        isValidTerraAddress(address, chainId as TerraChainId) &&
-        !terra.isNativeDenom(address)
-      );
-    },
-    []
-  );
+  const isSearchableAddress = useCallback((address: string) => {
+    return isValidInjectiveAddress(address) && !isNativeDenomInjective(address);
+  }, []);
 
   const RenderComp = useCallback(
     ({ account }: { account: NFTParsedTokenAccount }) => {
@@ -151,17 +150,17 @@ export default function TerraTokenPicker(props: TerraTokenPickerProps) {
   return (
     <TokenPicker
       value={value}
-      options={terraTokenArray || []}
+      options={injTokenArray || []}
       RenderOption={RenderComp}
       onChange={onChangeWrapper}
       isValidAddress={isSearchableAddress}
-      getAddress={lookupTerraAddress}
+      getAddress={lookupInjectiveAddress}
       disabled={disabled}
       resetAccounts={resetAccountWrapper}
       error={""}
       showLoader={isLoading}
       nft={false}
-      chainId={chainId}
+      chainId={CHAIN_ID_INJECTIVE}
     />
   );
 }
