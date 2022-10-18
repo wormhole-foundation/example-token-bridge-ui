@@ -29,6 +29,7 @@ import {
   transferNativeSol,
   uint8ArrayToHex,
 } from "@certusone/wormhole-sdk";
+import { transferTokens } from "@certusone/wormhole-sdk/lib/esm/aptos/api/tokenBridge";
 import { Alert } from "@material-ui/lab";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { Connection } from "@solana/web3.js";
@@ -74,6 +75,7 @@ import {
 import { signSendAndConfirmAlgorand } from "../utils/algorand";
 import {
   getAptosClient,
+  getEmitterAddressAndSequenceFromResult,
   waitForSignAndSubmitTransaction,
 } from "../utils/aptos";
 import {
@@ -207,25 +209,15 @@ async function aptos(
     const baseAmountParsed = parseUnits(amount, decimals);
     const feeParsed = parseUnits(relayerFee || "0", decimals);
     const transferAmountParsed = baseAmountParsed.add(feeParsed);
-    // TODO: fix this to take fully qualified type
-    // const transferPayload = transferFromAptos(
-    //   tokenBridgeAddress,
-    //   CHAIN_ID_APTOS, // TODO: should be originChain
-
-    //   sourceAsset
-    // );
-    const transferPayload = {
-      function: `${tokenBridgeAddress}::transfer_tokens::transfer_tokens_entry`,
-      type_arguments: [tokenAddress],
-      arguments: [
-        transferAmountParsed.toString(),
-        recipientChain,
-        Array.from(recipientAddress),
-        feeParsed.toString(),
-        0,
-        createNonce().readUInt32LE(0),
-      ],
-    };
+    const transferPayload = transferTokens(
+      tokenBridgeAddress,
+      tokenAddress,
+      transferAmountParsed.toString(),
+      recipientChain,
+      recipientAddress,
+      feeParsed.toString(),
+      createNonce().readUInt32LE(0)
+    );
     const hash = await waitForSignAndSubmitTransaction(transferPayload);
     dispatch(setTransferTx({ id: hash, block: 1 }));
     enqueueSnackbar(null, {
@@ -234,16 +226,11 @@ async function aptos(
     const result = (await getAptosClient().waitForTransactionWithResult(
       hash
     )) as Types.UserTransaction;
-    // TODO: fix this
-    // const sequence = parseSequenceFromLogAptos(result);
-    const sequence = result.events.find(
-      (e) =>
-        e.type ===
-        `${getBridgeAddressForChain(CHAIN_ID_APTOS)}::state::WormholeMessage`
-    )?.data.sequence;
+    const { emitterAddress, sequence } =
+      getEmitterAddressAndSequenceFromResult(result);
     await fetchSignedVAA(
       chainId,
-      "0000000000000000000000000000000000000000000000000000000000000001", // TODO: look this up
+      emitterAddress,
       sequence,
       enqueueSnackbar,
       dispatch

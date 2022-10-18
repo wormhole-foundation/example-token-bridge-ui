@@ -126,18 +126,12 @@ async function aptos(
         tokenBridgeAddress,
         signedVAA
       );
-      createWrappedCoinTypePayload.arguments[0] = Array.from(
-        createWrappedCoinTypePayload.arguments[0]
-      );
       await waitForSignAndSubmitTransaction(createWrappedCoinTypePayload);
     } catch (e) {}
     // create coin
     const createWrappedCoinPayload = createWrappedOnAptos(
       tokenBridgeAddress,
       signedVAA
-    );
-    createWrappedCoinPayload.arguments[0] = Array.from(
-      createWrappedCoinPayload.arguments[0]
     );
     const result = await waitForSignAndSubmitTransaction(
       createWrappedCoinPayload

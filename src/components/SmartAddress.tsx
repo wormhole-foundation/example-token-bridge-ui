@@ -20,6 +20,7 @@ import {
   TerraChainId,
   CHAIN_ID_XPLA,
   CHAIN_ID_APTOS,
+  isValidAptosType,
 } from "@certusone/wormhole-sdk";
 import { Button, makeStyles, Tooltip, Typography } from "@material-ui/core";
 import { FileCopy, OpenInNew } from "@material-ui/icons";
@@ -28,7 +29,6 @@ import clsx from "clsx";
 import { ReactChild } from "react";
 import useCopyToClipboard from "../hooks/useCopyToClipboard";
 import { ParsedTokenAccount } from "../store/transferSlice";
-import { isValidAptosType } from "../utils/aptos";
 import { CLUSTER, getExplorerName } from "../utils/consts";
 import { shortenAddress } from "../utils/solana";
 import { formatNativeDenom } from "../utils/terra";

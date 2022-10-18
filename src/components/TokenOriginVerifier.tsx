@@ -69,6 +69,8 @@ function PrimaryAssetInformation({
   const classes = useStyles();
   const tokenArray = useMemo(() => [originAsset], [originAsset]);
   const metadata = useMetadata(originChain, tokenArray);
+  console.log("metadata", metadata, originChain, tokenArray);
+
   const nativeContent = (
     <div>
       <Typography>{`This is not a wrapped asset.`}</Typography>
@@ -117,6 +119,8 @@ function SecondaryAssetInformation({
       : [];
   }, [foreignAssetInfo, originAssetInfo, chainId]);
   const metadata = useMetadata(chainId, tokenArray);
+  console.log("metadata", metadata, chainId, tokenArray);
+
   //TODO when this is the origin chain
   return !originAssetInfo ? null : chainId === originAssetInfo.originChain ? (
     <div>
@@ -212,6 +216,7 @@ export default function TokenOriginVerifier() {
     primaryLookupAsset,
     false
   );
+  console.log("OI", originInfo);
   const foreignAssetInfo = useFetchForeignAsset(
     originInfo.data?.originChain || 1,
     originInfo.data?.originAddress || "",

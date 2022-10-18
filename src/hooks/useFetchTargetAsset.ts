@@ -12,6 +12,7 @@ import {
   getForeignAssetSolana,
   getForeignAssetTerra,
   getForeignAssetXpla,
+  getTypeFromExternalAddress,
   hexToNativeAssetString,
   hexToUint8Array,
   isEVMChain,
@@ -62,7 +63,7 @@ import {
   XPLA_LCD_CLIENT_CONFIG,
 } from "../utils/consts";
 import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
-import { getAptosClient, queryExternalIdAptos } from "../utils/aptos";
+import { getAptosClient } from "../utils/aptos";
 
 function useFetchTargetAsset(nft?: boolean) {
   const dispatch = useDispatch();
@@ -169,7 +170,7 @@ function useFetchTargetAsset(nft?: boolean) {
             );
           }
         } else if (originChain === CHAIN_ID_APTOS) {
-          const tokenId = await queryExternalIdAptos(
+          const tokenId = await getTypeFromExternalAddress(
             getAptosClient(),
             getTokenBridgeAddressForChain(CHAIN_ID_APTOS),
             originAsset || ""
