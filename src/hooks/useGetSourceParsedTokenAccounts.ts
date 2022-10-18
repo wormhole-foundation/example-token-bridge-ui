@@ -10,6 +10,7 @@ import {
   CHAIN_ID_ETH,
   CHAIN_ID_ETHEREUM_ROPSTEN,
   CHAIN_ID_FANTOM,
+  CHAIN_ID_INJECTIVE,
   CHAIN_ID_KARURA,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_NEON,
@@ -17,9 +18,9 @@ import {
   CHAIN_ID_POLYGON,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
+  ethers_contracts,
   isEVMChain,
   isTerraChain,
-  TokenImplementation__factory,
   WSOL_ADDRESS,
   WSOL_DECIMALS,
 } from "@certusone/wormhole-sdk";
@@ -433,7 +434,10 @@ const createNativeKaruraParsedTokenAccount = (
 ) => {
   return !(provider && signerAddress)
     ? Promise.reject()
-    : TokenImplementation__factory.connect(KAR_ADDRESS, provider)
+    : ethers_contracts.TokenImplementation__factory.connect(
+        KAR_ADDRESS,
+        provider
+      )
         .balanceOf(signerAddress)
         .then((balance) => {
           const balanceInEth = ethers.utils.formatUnits(balance, KAR_DECIMALS);
@@ -458,7 +462,10 @@ const createNativeAcalaParsedTokenAccount = (
 ) => {
   return !(provider && signerAddress)
     ? Promise.reject()
-    : TokenImplementation__factory.connect(ACA_ADDRESS, provider)
+    : ethers_contracts.TokenImplementation__factory.connect(
+        ACA_ADDRESS,
+        provider
+      )
         .balanceOf(signerAddress)
         .then((balance) => {
           const balanceInEth = ethers.utils.formatUnits(balance, ACA_DECIMALS);
@@ -508,7 +515,10 @@ const createNativeCeloParsedTokenAccount = (
   // https://docs.celo.org/developer-guide/celo-for-eth-devs
   return !(provider && signerAddress)
     ? Promise.reject()
-    : TokenImplementation__factory.connect(CELO_ADDRESS, provider)
+    : ethers_contracts.TokenImplementation__factory.connect(
+        CELO_ADDRESS,
+        provider
+      )
         .balanceOf(signerAddress)
         .then((balance) => {
           const balanceInEth = ethers.utils.formatUnits(balance, CELO_DECIMALS);
@@ -1565,6 +1575,10 @@ function useGetAvailableTokens(nft: boolean = false) {
     : lookupChain === CHAIN_ID_ALGORAND
     ? {
         tokenAccounts,
+        resetAccounts: resetSourceAccounts,
+      }
+    : lookupChain === CHAIN_ID_INJECTIVE
+    ? {
         resetAccounts: resetSourceAccounts,
       }
     : undefined;

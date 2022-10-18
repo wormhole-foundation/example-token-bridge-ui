@@ -1,9 +1,4 @@
-import {
-  NFTImplementation,
-  NFTImplementation__factory,
-  TokenImplementation,
-  TokenImplementation__factory,
-} from "@certusone/wormhole-sdk";
+import { ethers_contracts } from "@certusone/wormhole-sdk";
 import { ethers } from "ethers";
 import { arrayify, formatUnits } from "ethers/lib/utils";
 import {
@@ -16,12 +11,15 @@ export async function getEthereumToken(
   tokenAddress: string,
   provider: ethers.providers.Web3Provider
 ) {
-  const token = TokenImplementation__factory.connect(tokenAddress, provider);
+  const token = ethers_contracts.TokenImplementation__factory.connect(
+    tokenAddress,
+    provider
+  );
   return token;
 }
 
 export async function ethTokenToParsedTokenAccount(
-  token: TokenImplementation,
+  token: ethers_contracts.TokenImplementation,
   signerAddress: string
 ) {
   const decimals = await token.decimals();
@@ -45,11 +43,14 @@ export async function getEthereumNFT(
   tokenAddress: string,
   provider: ethers.providers.Web3Provider
 ) {
-  const token = NFTImplementation__factory.connect(tokenAddress, provider);
+  const token = ethers_contracts.NFTImplementation__factory.connect(
+    tokenAddress,
+    provider
+  );
   return token;
 }
 
-export async function isNFT(token: NFTImplementation) {
+export async function isNFT(token: ethers_contracts.NFTImplementation) {
   const erc721 = "0x80ac58cd";
   const erc721metadata = "0x5b5e139f";
   const supportsErc721 = await token.supportsInterface(arrayify(erc721));
@@ -60,7 +61,7 @@ export async function isNFT(token: NFTImplementation) {
 }
 
 export async function ethNFTToNFTParsedTokenAccount(
-  token: NFTImplementation,
+  token: ethers_contracts.NFTImplementation,
   tokenId: string,
   signerAddress: string
 ) {

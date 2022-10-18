@@ -8,6 +8,7 @@ import App from "./App";
 import { AlgorandContextProvider } from "./contexts/AlgorandWalletContext";
 import AptosWalletProvider from "./contexts/AptosWalletContext";
 import { EthereumProviderProvider } from "./contexts/EthereumProviderContext";
+import InjectiveWalletProvider from "./contexts/InjectiveWalletContext";
 import { SolanaWalletProvider } from "./contexts/SolanaWalletContext.tsx";
 import { TerraWalletProvider } from "./contexts/TerraWalletContext.tsx";
 import XplaWalletProvider from "./contexts/XplaWalletContext";
@@ -28,9 +29,11 @@ ReactDOM.render(
                   <AlgorandContextProvider>
                     <XplaWalletProvider>
                       <AptosWalletProvider>
-                        <HashRouter>
-                          <App />
-                        </HashRouter>
+                        <InjectiveWalletProvider>
+                          <HashRouter>
+                            <App />
+                          </HashRouter>
+                        </InjectiveWalletProvider>
                       </AptosWalletProvider>
                     </XplaWalletProvider>
                   </AlgorandContextProvider>

@@ -2,6 +2,7 @@ import {
   ChainId,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
+  CHAIN_ID_INJECTIVE,
   CHAIN_ID_SOLANA,
   CHAIN_ID_TERRA2,
   CHAIN_ID_XPLA,
@@ -16,6 +17,9 @@ import { Metadata } from "../utils/metaplex";
 import useAlgoMetadata, { AlgoMetadata } from "./useAlgoMetadata";
 import useAptosMetadata, { AptosMetadata } from "./useAptosMetadata";
 import useEvmMetadata, { EvmMetadata } from "./useEvmMetadata";
+import useInjectiveMetadata, {
+  InjectiveMetadata,
+} from "./useInjectiveMetadata";
 import useMetaplexData from "./useMetaplexData";
 import useSolanaTokenMap from "./useSolanaTokenMap";
 import useTerraMetadata, { TerraMetadata } from "./useTerraMetadata";
@@ -203,6 +207,33 @@ const constructAptosMetadata = (
   };
 };
 
+const constructInjectiveMetadata = (
+  addresses: string[],
+  metadataMap: DataWrapper<Map<string, InjectiveMetadata>>
+) => {
+  const isFetching = metadataMap.isFetching;
+  const error = metadataMap.error;
+  const receivedAt = metadataMap.receivedAt;
+  const data = new Map<string, GenericMetadata>();
+  addresses.forEach((address) => {
+    const meta = metadataMap.data?.get(address);
+    const obj = {
+      symbol: meta?.symbol || undefined,
+      logo: undefined,
+      tokenName: meta?.tokenName || undefined,
+      decimals: meta?.decimals,
+    };
+    data.set(address, obj);
+  });
+
+  return {
+    isFetching,
+    error,
+    receivedAt,
+    data,
+  };
+};
+
 export default function useMetadata(
   chainId: ChainId,
   addresses: string[]
@@ -228,6 +259,9 @@ export default function useMetadata(
   const aptosAddresses = useMemo(() => {
     return chainId === CHAIN_ID_APTOS ? addresses : [];
   }, [chainId, addresses]);
+  const injAddresses = useMemo(() => {
+    return chainId === CHAIN_ID_INJECTIVE ? addresses : [];
+  }, [chainId, addresses]);
 
   const metaplexData = useMetaplexData(solanaAddresses);
   const terraMetadata = useTerraMetadata(
@@ -238,6 +272,7 @@ export default function useMetadata(
   const ethMetadata = useEvmMetadata(ethereumAddresses, chainId);
   const algoMetadata = useAlgoMetadata(algoAddresses);
   const aptosMetadata = useAptosMetadata(aptosAddresses);
+  const injMetadata = useInjectiveMetadata(injAddresses);
 
   const output: DataWrapper<Map<string, GenericMetadata>> = useMemo(
     () =>
@@ -258,6 +293,8 @@ export default function useMetadata(
         ? constructAptosMetadata(aptosAddresses, aptosMetadata)
         : chainId === CHAIN_ID_ALGORAND
         ? constructAlgoMetadata(algoAddresses, algoMetadata)
+        : chainId === CHAIN_ID_INJECTIVE
+        ? constructInjectiveMetadata(injAddresses, injMetadata)
         : getEmptyDataWrapper(),
     [
       chainId,
@@ -275,6 +312,8 @@ export default function useMetadata(
       algoMetadata,
       aptosAddresses,
       aptosMetadata,
+      injAddresses,
+      injMetadata,
     ]
   );
 

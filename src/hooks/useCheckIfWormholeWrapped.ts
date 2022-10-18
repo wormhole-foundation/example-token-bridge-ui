@@ -2,12 +2,14 @@ import {
   ChainId,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
+  CHAIN_ID_INJECTIVE,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
   getOriginalAssetAlgorand,
   getOriginalAssetAptos,
   getOriginalAssetCosmWasm,
   getOriginalAssetEth,
+  getOriginalAssetInjective,
   getOriginalAssetSol,
   isEVMChain,
   isTerraChain,
@@ -47,6 +49,7 @@ import {
   XPLA_LCD_CLIENT_CONFIG,
 } from "../utils/consts";
 import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
+import { getInjectiveWasmClient } from "../utils/injective";
 import { getAptosClient } from "../utils/aptos";
 
 export interface StateSafeWormholeWrappedInfo {
@@ -185,6 +188,17 @@ function useCheckIfWormholeWrapped(nft?: boolean) {
               ALGORAND_TOKEN_BRIDGE_ID,
               BigInt(sourceAsset)
             )
+          );
+          if (!cancelled) {
+            dispatch(setSourceWormholeWrappedInfo(wrappedInfo));
+          }
+        } catch (e) {}
+      }
+      if (sourceChain === CHAIN_ID_INJECTIVE && sourceAsset) {
+        try {
+          const client = getInjectiveWasmClient();
+          const wrappedInfo = makeStateSafe(
+            await getOriginalAssetInjective(sourceAsset, client)
           );
           if (!cancelled) {
             dispatch(setSourceWormholeWrappedInfo(wrappedInfo));

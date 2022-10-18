@@ -2,17 +2,20 @@ import {
   attestFromAlgorand,
   attestFromAptos,
   attestFromEth,
+  attestFromInjective,
   attestFromSolana,
   attestFromTerra,
   attestFromXpla,
   ChainId,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
+  CHAIN_ID_INJECTIVE,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
   getEmitterAddressAlgorand,
   getEmitterAddressEth,
+  getEmitterAddressInjective,
   getEmitterAddressSolana,
   getEmitterAddressTerra,
   getEmitterAddressXpla,
@@ -21,12 +24,14 @@ import {
   isTerraChain,
   parseSequenceFromLogAlgorand,
   parseSequenceFromLogEth,
+  parseSequenceFromLogInjective,
   parseSequenceFromLogSolana,
   parseSequenceFromLogTerra,
   parseSequenceFromLogXpla,
   TerraChainId,
   uint8ArrayToHex,
 } from "@certusone/wormhole-sdk";
+import { WalletStrategy } from "@injectivelabs/wallet-ts";
 import { Alert } from "@material-ui/lab";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { Connection, PublicKey } from "@solana/web3.js";
@@ -47,6 +52,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useAlgorandContext } from "../contexts/AlgorandWalletContext";
 import { useAptosContext } from "../contexts/AptosWalletContext";
 import { useEthereumProvider } from "../contexts/EthereumProviderContext";
+import { useInjectiveContext } from "../contexts/InjectiveWalletContext";
 import { useSolanaWallet } from "../contexts/SolanaWalletContext";
 import {
   setAttestTx,
@@ -82,6 +88,7 @@ import parseError from "../utils/parseError";
 import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees, waitForTerraExecution } from "../utils/terra";
 import { postWithFeesXpla, waitForXplaExecution } from "../utils/xpla";
+import { broadcastInjectiveTx } from "../utils/injective";
 
 async function algo(
   dispatch: any,
@@ -397,6 +404,59 @@ async function xpla(
   }
 }
 
+async function injective(
+  dispatch: any,
+  enqueueSnackbar: any,
+  wallet: WalletStrategy,
+  walletAddress: string,
+  asset: string
+) {
+  dispatch(setIsSending(true));
+  try {
+    const tokenBridgeAddress =
+      getTokenBridgeAddressForChain(CHAIN_ID_INJECTIVE);
+    const msg = await attestFromInjective(
+      tokenBridgeAddress,
+      walletAddress,
+      asset
+    );
+    const tx = await broadcastInjectiveTx(
+      wallet,
+      walletAddress,
+      msg,
+      "Attest Token"
+    );
+    dispatch(setAttestTx({ id: tx.txHash, block: tx.height }));
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+    const sequence = parseSequenceFromLogInjective(tx);
+    if (!sequence) {
+      throw new Error("Sequence not found");
+    }
+    const emitterAddress = await getEmitterAddressInjective(tokenBridgeAddress);
+    enqueueSnackbar(null, {
+      content: <Alert severity="info">Fetching VAA</Alert>,
+    });
+    const { vaaBytes } = await getSignedVAAWithRetry(
+      WORMHOLE_RPC_HOSTS,
+      CHAIN_ID_INJECTIVE,
+      emitterAddress,
+      sequence
+    );
+    dispatch(setSignedVAAHex(uint8ArrayToHex(vaaBytes)));
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Fetched Signed VAA</Alert>,
+    });
+  } catch (e) {
+    console.error(e);
+    enqueueSnackbar(null, {
+      content: <Alert severity="error">{parseError(e)}</Alert>,
+    });
+    dispatch(setIsSending(false));
+  }
+}
+
 export function useHandleAttest() {
   const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
@@ -414,6 +474,7 @@ export function useHandleAttest() {
   const { accounts: algoAccounts } = useAlgorandContext();
   const { account: aptosAccount, signAndSubmitTransaction } = useAptosContext();
   const aptosAddress = aptosAccount?.address?.toString();
+  const { wallet: injWallet, address: injAddress } = useInjectiveContext();
   const disabled = !isTargetComplete || isSending || isSendComplete;
   const handleAttestClick = useCallback(() => {
     if (isEVMChain(sourceChain) && !!signer) {
@@ -435,7 +496,8 @@ export function useHandleAttest() {
       algo(dispatch, enqueueSnackbar, algoAccounts[0].address, sourceAsset);
     } else if (sourceChain === CHAIN_ID_APTOS && aptosAddress) {
       aptos(dispatch, enqueueSnackbar, sourceAsset, signAndSubmitTransaction);
-    } else {
+    } else if (sourceChain === CHAIN_ID_INJECTIVE && injWallet && injAddress) {
+      injective(dispatch, enqueueSnackbar, injWallet, injAddress, sourceAsset);
     }
   }, [
     dispatch,
@@ -451,6 +513,8 @@ export function useHandleAttest() {
     xplaWallet,
     aptosAddress,
     signAndSubmitTransaction,
+    injWallet,
+    injAddress,
   ]);
   return useMemo(
     () => ({

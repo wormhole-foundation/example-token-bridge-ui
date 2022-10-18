@@ -2,6 +2,7 @@ import {
   ChainId,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
+  CHAIN_ID_INJECTIVE,
   CHAIN_ID_SOLANA,
   CHAIN_ID_TERRA2,
   CHAIN_ID_XPLA,
@@ -9,12 +10,14 @@ import {
   getOriginalAssetAptos,
   getOriginalAssetCosmWasm,
   getOriginalAssetEth,
+  getOriginalAssetInjective,
   getOriginalAssetSol,
   getTypeFromExternalAddress,
   hexToNativeAssetString,
   isEVMChain,
   isTerraChain,
   queryExternalId,
+  queryExternalIdInjective,
   uint8ArrayToHex,
   uint8ArrayToNative,
 } from "@certusone/wormhole-sdk";
@@ -48,6 +51,7 @@ import {
   SOL_TOKEN_BRIDGE_ADDRESS,
   XPLA_LCD_CLIENT_CONFIG,
 } from "../utils/consts";
+import { getInjectiveWasmClient } from "../utils/injective";
 import useIsWalletReady from "./useIsWalletReady";
 
 export type OriginalAssetInfo = {
@@ -100,6 +104,11 @@ export async function getOriginalAssetToken(
         getAptosClient(),
         getTokenBridgeAddressForChain(CHAIN_ID_APTOS),
         foreignNativeStringAddress
+      );
+    } else if (foreignChain === CHAIN_ID_INJECTIVE) {
+      promise = await getOriginalAssetInjective(
+        foreignNativeStringAddress,
+        getInjectiveWasmClient()
       );
     }
   } catch (e) {
@@ -265,6 +274,16 @@ function useOriginalAsset(
               getTokenBridgeAddressForChain(CHAIN_ID_APTOS),
               uint8ArrayToHex(result.assetAddress)
             ).then((tokenId) => setOriginAddress(tokenId || null));
+          } else if (result.chainId === CHAIN_ID_INJECTIVE) {
+            const client = getInjectiveWasmClient();
+            const tokenBridgeAddress = getTokenBridgeAddressForChain(
+              result.chainId
+            );
+            queryExternalIdInjective(
+              client,
+              tokenBridgeAddress,
+              uint8ArrayToHex(result.assetAddress)
+            ).then((tokenId) => setOriginAddress(tokenId));
           } else {
             setOriginAddress(
               hexToNativeAssetString(

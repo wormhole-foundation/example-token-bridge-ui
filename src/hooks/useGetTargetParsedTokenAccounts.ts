@@ -1,14 +1,17 @@
 import {
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
+  CHAIN_ID_INJECTIVE,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
   ensureHexPrefix,
+  ethers_contracts,
   isEVMChain,
-  isNativeDenom,
+  isNativeDenomInjective,
   isNativeDenomXpla,
   isTerraChain,
-  TokenImplementation__factory,
+  parseSmartContractStateResponse,
+  terra,
 } from "@certusone/wormhole-sdk";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { LCDClient } from "@terra-money/terra.js";
@@ -22,6 +25,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useAlgorandContext } from "../contexts/AlgorandWalletContext";
 import { useAptosContext } from "../contexts/AptosWalletContext";
 import { useEthereumProvider } from "../contexts/EthereumProviderContext";
+import { useInjectiveContext } from "../contexts/InjectiveWalletContext";
 import { useSolanaWallet } from "../contexts/SolanaWalletContext";
 import {
   selectTransferTargetAsset,
@@ -36,6 +40,11 @@ import {
   SOLANA_HOST,
   XPLA_LCD_CLIENT_CONFIG,
 } from "../utils/consts";
+import {
+  getInjectiveBankClient,
+  getInjectiveWasmClient,
+  NATIVE_INJECTIVE_DECIMALS,
+} from "../utils/injective";
 import { NATIVE_TERRA_DECIMALS } from "../utils/terra";
 import { NATIVE_XPLA_DECIMALS } from "../utils/xpla";
 import { createParsedTokenAccount } from "./useGetSourceParsedTokenAccounts";
@@ -71,6 +80,7 @@ function useGetTargetParsedTokenAccounts() {
   const { accounts: algoAccounts } = useAlgorandContext();
   const { account: aptosAccount } = useAptosContext();
   const aptosAddress = aptosAccount?.address?.toString();
+  const { address: injAddress } = useInjectiveContext();
   const hasResolvedMetadata = metadata.data || metadata.error;
   useEffect(() => {
     // targetParsedTokenAccount is cleared on setTargetAsset, but we need to clear it on wallet changes too
@@ -82,7 +92,7 @@ function useGetTargetParsedTokenAccounts() {
 
     if (isTerraChain(targetChain) && terraWallet) {
       const lcd = new LCDClient(getTerraConfig(targetChain));
-      if (isNativeDenom(targetAsset)) {
+      if (terra.isNativeDenom(targetAsset)) {
         lcd.bank
           .balance(terraWallet.walletAddress)
           .then(([coins]) => {
@@ -265,6 +275,88 @@ function useGetTargetParsedTokenAccounts() {
       })();
     }
 
+    if (targetChain === CHAIN_ID_INJECTIVE && injAddress) {
+      if (isNativeDenomInjective(targetAsset)) {
+        const client = getInjectiveBankClient();
+        client
+          .fetchBalance({ accountAddress: injAddress, denom: targetAsset })
+          .then(({ amount }) => {
+            if (!cancelled) {
+              dispatch(
+                setTargetParsedTokenAccount(
+                  createParsedTokenAccount(
+                    "",
+                    "",
+                    amount,
+                    NATIVE_INJECTIVE_DECIMALS,
+                    Number(formatUnits(amount, NATIVE_INJECTIVE_DECIMALS)),
+                    formatUnits(amount, NATIVE_INJECTIVE_DECIMALS),
+                    symbol,
+                    tokenName,
+                    logo
+                  )
+                )
+              );
+            }
+          })
+          .catch(() => {
+            if (!cancelled) {
+              // TODO: error state
+            }
+          });
+      } else {
+        const client = getInjectiveWasmClient();
+        client
+          .fetchSmartContractState(
+            targetAsset,
+            Buffer.from(
+              JSON.stringify({
+                token_info: {},
+              })
+            ).toString("base64")
+          )
+          .then((infoData) =>
+            client
+              .fetchSmartContractState(
+                targetAsset,
+                Buffer.from(
+                  JSON.stringify({
+                    balance: {
+                      address: injAddress,
+                    },
+                  })
+                ).toString("base64")
+              )
+              .then((balanceData) => {
+                if (infoData && balanceData && !cancelled) {
+                  const balance = parseSmartContractStateResponse(balanceData);
+                  const info = parseSmartContractStateResponse(infoData);
+                  dispatch(
+                    setTargetParsedTokenAccount(
+                      createParsedTokenAccount(
+                        "",
+                        "",
+                        balance.balance.toString(),
+                        info.decimals,
+                        Number(formatUnits(balance.balance, info.decimals)),
+                        formatUnits(balance.balance, info.decimals),
+                        symbol,
+                        tokenName,
+                        logo
+                      )
+                    )
+                  );
+                }
+              })
+          )
+          .catch((e) => {
+            if (!cancelled) {
+              // TODO: error state
+            }
+          });
+      }
+    }
+
     if (targetChain === CHAIN_ID_SOLANA && solPK) {
       let mint;
       try {
@@ -311,7 +403,10 @@ function useGetTargetParsedTokenAccounts() {
       signerAddress &&
       hasCorrectEvmNetwork
     ) {
-      const token = TokenImplementation__factory.connect(targetAsset, provider);
+      const token = ethers_contracts.TokenImplementation__factory.connect(
+        targetAsset,
+        provider
+      );
       token
         .decimals()
         .then((decimals) => {
@@ -420,6 +515,7 @@ function useGetTargetParsedTokenAccounts() {
     decimals,
     xplaWallet,
     aptosAddress,
+    injAddress,
   ]);
 }
 

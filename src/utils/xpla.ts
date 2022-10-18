@@ -6,8 +6,7 @@ import {
   XPLA_LCD_CLIENT_CONFIG,
   XPLA_NATIVE_DENOM,
 } from "./consts";
-import { canonicalAddress, isNativeDenomXpla } from "@certusone/wormhole-sdk";
-//import { getTerraGasPricesUrl, getTerraConfig } from "./consts";
+import { cosmos, isNativeDenomXpla } from "@certusone/wormhole-sdk";
 
 export const NATIVE_XPLA_DECIMALS = 18;
 
@@ -78,7 +77,7 @@ export const isValidXplaAddress = (address: string) => {
   }
   try {
     const startsWithXpla = address && address.startsWith("xpla");
-    const isParseable = canonicalAddress(address);
+    const isParseable = cosmos.canonicalAddress(address);
     const isLengthOk = isParseable.length === 32;
     return !!(startsWithXpla && isParseable && isLengthOk);
   } catch (error) {
