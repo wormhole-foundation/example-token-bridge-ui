@@ -38,12 +38,18 @@ export const AptosWalletProvider = ({
         const account = await wallet.account();
         const network = await wallet.network();
         wallet.onAccountChange((newAccount: any) => {
-          setAddress(
-            newAccount && newAccount.address ? newAccount.address : undefined
-          );
+          const address =
+            (typeof newAccount === "string"
+              ? newAccount
+              : newAccount?.address) || undefined;
+          setAddress(address);
         });
         wallet.onNetworkChange((newNetwork: any) => {
-          setNetwork(newNetwork.networkName);
+          const networkName =
+            typeof newNetwork === "string"
+              ? newNetwork
+              : newNetwork.networkName;
+          setNetwork(networkName);
         });
         // martian doesn't support this
         try {
