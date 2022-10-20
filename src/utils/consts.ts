@@ -600,7 +600,7 @@ export const ACA_DECIMALS = 12;
 
 export const WKLAY_ADDRESS =
   CLUSTER === "testnet"
-    ? "0x762ac6e8183db5a8e912a66fcc1a09f5a7ac96a9"
+    ? "0x0339d5eb6d195ba90b13ed1bceaa97ebd198b106"
     : "0xDDb64fE46a91D46ee29420539FC25FD07c5FEa3E";
 export const WKLAY_DECIMALS = 18;
 
