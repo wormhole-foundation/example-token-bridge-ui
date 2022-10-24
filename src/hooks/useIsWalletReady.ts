@@ -9,8 +9,10 @@ import {
 } from "@certusone/wormhole-sdk";
 import { hexlify, hexStripZeros } from "@ethersproject/bytes";
 import { useConnectedWallet } from "@terra-money/wallet-provider";
+import { useConnectedWallet as useXplaConnectedWallet } from "@xpla/wallet-provider";
 import { useCallback, useMemo } from "react";
 import { useAlgorandContext } from "../contexts/AlgorandWalletContext";
+import { useAptosContext } from "../contexts/AptosWalletContext";
 import {
   ConnectType,
   useEthereumProvider,
@@ -21,8 +23,6 @@ import {
   EVM_RPC_MAP,
   METAMASK_CHAIN_PARAMETERS,
 } from "../utils/metaMaskChainParameters";
-import { useConnectedWallet as useXplaConnectedWallet } from "@xpla/wallet-provider";
-import { useAptosContext } from "../contexts/AptosWalletContext";
 
 const createWalletStatus = (
   isReady: boolean,
@@ -64,9 +64,17 @@ function useIsWalletReady(
   const algoPK = algorandAccounts[0]?.address;
   const xplaWallet = useXplaConnectedWallet();
   const hasXplaWallet = !!xplaWallet;
-  const { address: aptosAddress, network: aptosNetwork } = useAptosContext();
+  const { account: aptosAccount, network: aptosNetwork } = useAptosContext();
+  const aptosAddress = aptosAccount?.address?.toString();
   const hasAptosWallet = !!aptosAddress;
-  const hasCorrectAptosNetwork = aptosNetwork === APTOS_NETWORK;
+  // The wallets do not all match on network names and the adapter doesn't seem to normalize this yet.
+  // Petra = "Testnet"
+  // Martian = "Testnet"
+  // Pontam = "Aptos testnet"
+  // Nightly = undefined... error on NightlyWallet.ts
+  const hasCorrectAptosNetwork = aptosNetwork?.name
+    ?.toLowerCase()
+    .includes(APTOS_NETWORK.toLowerCase());
 
   const forceNetworkSwitch = useCallback(async () => {
     if (provider && correctEvmNetwork) {

@@ -69,7 +69,8 @@ function useGetTargetParsedTokenAccounts() {
   const xplaWallet = useXplaConnectedWallet();
   const hasCorrectEvmNetwork = evmChainId === getEvmChainId(targetChain);
   const { accounts: algoAccounts } = useAlgorandContext();
-  const { address: aptosAddress } = useAptosContext();
+  const { account: aptosAccount } = useAptosContext();
+  const aptosAddress = aptosAccount?.address?.toString();
   const hasResolvedMetadata = metadata.data || metadata.error;
   useEffect(() => {
     // targetParsedTokenAccount is cleared on setTargetAsset, but we need to clear it on wallet changes too
