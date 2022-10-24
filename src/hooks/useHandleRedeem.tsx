@@ -30,6 +30,7 @@ import {
   useConnectedWallet as useXplaConnectedWallet,
 } from "@xpla/wallet-provider";
 import algosdk from "algosdk";
+import { Types } from "aptos";
 import axios from "axios";
 import { Signer } from "ethers";
 import { useSnackbar } from "notistack";
@@ -110,7 +111,13 @@ async function algo(
 async function aptos(
   dispatch: any,
   enqueueSnackbar: any,
-  signedVAA: Uint8Array
+  signedVAA: Uint8Array,
+  signAndSubmitTransaction: (
+    transaction: Types.TransactionPayload,
+    options?: any
+  ) => Promise<{
+    hash: string;
+  }>
 ) {
   dispatch(setIsRedeeming(true));
   const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_APTOS);
@@ -120,7 +127,10 @@ async function aptos(
       tokenBridgeAddress,
       signedVAA
     );
-    const result = await waitForSignAndSubmitTransaction(msg);
+    const result = await waitForSignAndSubmitTransaction(
+      msg,
+      signAndSubmitTransaction
+    );
     dispatch(setRedeemTx({ id: result, block: 1 }));
     enqueueSnackbar(null, {
       content: <Alert severity="success">Transaction confirmed</Alert>,
@@ -306,7 +316,8 @@ export function useHandleRedeem() {
   const terraFeeDenom = useSelector(selectTerraFeeDenom);
   const xplaWallet = useXplaConnectedWallet();
   const { accounts: algoAccounts } = useAlgorandContext();
-  const { address: aptosAddress } = useAptosContext();
+  const { account: aptosAccount, signAndSubmitTransaction } = useAptosContext();
+  const aptosAddress = aptosAccount?.address?.toString();
   const signedVAA = useTransferSignedVAA();
   const isRedeeming = useSelector(selectTransferIsRedeeming);
   const handleRedeemClick = useCallback(() => {
@@ -338,7 +349,7 @@ export function useHandleRedeem() {
     } else if (targetChain === CHAIN_ID_XPLA && !!xplaWallet && signedVAA) {
       xpla(dispatch, enqueueSnackbar, xplaWallet, signedVAA);
     } else if (targetChain === CHAIN_ID_APTOS && !!aptosAddress && signedVAA) {
-      aptos(dispatch, enqueueSnackbar, signedVAA);
+      aptos(dispatch, enqueueSnackbar, signedVAA, signAndSubmitTransaction);
     } else if (
       targetChain === CHAIN_ID_ALGORAND &&
       algoAccounts[0] &&
@@ -360,6 +371,7 @@ export function useHandleRedeem() {
     algoAccounts,
     xplaWallet,
     aptosAddress,
+    signAndSubmitTransaction,
   ]);
 
   const handleRedeemNativeClick = useCallback(() => {

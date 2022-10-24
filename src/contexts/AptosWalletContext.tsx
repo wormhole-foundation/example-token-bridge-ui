@@ -1,100 +1,55 @@
 import {
-  createContext,
-  ReactChildren,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-} from "react";
-import { getAptosWallet } from "../utils/aptos";
+  AptosSnapAdapter,
+  AptosWalletAdapter,
+  BitkeepWalletAdapter,
+  BloctoWalletAdapter,
+  FewchaWalletAdapter,
+  FletchWalletAdapter,
+  MartianWalletAdapter,
+  NightlyWalletAdapter,
+  PontemWalletAdapter,
+  RiseWalletAdapter,
+  SpikaWalletAdapter,
+  TokenPocketWalletAdapter,
+  useWallet,
+  WalletProvider,
+} from "@manahippo/aptos-wallet-adapter";
+import { ReactChildren, useMemo } from "react";
 
-interface IAptosProviderContext {
-  connect(): void;
-  disconnect(): void;
-  address: any;
-  network: any;
-}
-
-const AptosProviderContext = createContext<IAptosProviderContext>({
-  connect: () => {},
-  disconnect: () => {},
-  address: undefined,
-  network: undefined,
-});
+export const useAptosContext = useWallet;
 
 export const AptosWalletProvider = ({
   children,
 }: {
   children: ReactChildren;
 }) => {
-  const [address, setAddress] = useState<any>(undefined);
-  const [network, setNetwork] = useState<any>(undefined);
-  const connect = useCallback(() => {
-    const wallet = getAptosWallet();
-    let cancelled = false;
-    (async () => {
-      try {
-        await wallet.connect();
-        const account = await wallet.account();
-        const network = await wallet.network();
-        wallet.onAccountChange((newAccount: any) => {
-          const address =
-            (typeof newAccount === "string"
-              ? newAccount
-              : newAccount?.address) || undefined;
-          setAddress(address);
-        });
-        wallet.onNetworkChange((newNetwork: any) => {
-          const networkName =
-            typeof newNetwork === "string"
-              ? newNetwork
-              : newNetwork.networkName;
-          setNetwork(networkName);
-        });
-        // martian doesn't support this
-        try {
-          wallet.onDisconnect(() => {
-            setAddress(undefined);
-            setNetwork(undefined);
-          });
-        } catch (e) {}
-        if (!cancelled) {
-          setAddress(account.address);
-          setNetwork(network);
-        }
-      } catch (e) {
-        console.error(e);
-        // { code: 4001, message: "User rejected the request" }
-      }
-    })();
-  }, []);
-  const disconnect = useCallback(() => {
-    const wallet = getAptosWallet();
-    (async () => {
-      try {
-        await wallet.disconnect();
-      } catch (e) {}
-      setAddress(undefined);
-    })();
-  }, []);
-  const contextValue = useMemo(
-    () => ({
-      connect,
-      disconnect,
-      address,
-      network,
-    }),
-    [connect, disconnect, address, network]
+  const wallets = useMemo(
+    () => [
+      new AptosWalletAdapter(),
+      new MartianWalletAdapter(),
+      new RiseWalletAdapter(),
+      new NightlyWalletAdapter(),
+      new PontemWalletAdapter(),
+      new FletchWalletAdapter(),
+      new FewchaWalletAdapter(),
+      new SpikaWalletAdapter(),
+      new AptosSnapAdapter(),
+      new BitkeepWalletAdapter(),
+      new TokenPocketWalletAdapter(),
+      new BloctoWalletAdapter(),
+    ],
+    []
   );
   return (
-    <AptosProviderContext.Provider value={contextValue}>
+    <WalletProvider
+      wallets={wallets}
+      onError={(error: Error) => {
+        console.log("wallet errors: ", error);
+      }}
+    >
       {children}
-    </AptosProviderContext.Provider>
+    </WalletProvider>
   );
 };
 
 export default AptosWalletProvider;
-
-export const useAptosContext = () => {
-  return useContext(AptosProviderContext);
-};

@@ -10,17 +10,6 @@ export enum AptosNetwork {
   Localhost = "Localhost",
 }
 
-export const getAptosWallet = () => {
-  if ("aptos" in window) {
-    return (window as any).aptos;
-  } else if ("martian" in window) {
-    return (window as any).martian;
-  } else {
-    window.open("https://petra.app/", "_blank", "noopener noreferrer");
-    return undefined;
-  }
-};
-
 export const getAptosClient = () => new AptosClient(APTOS_URL);
 
 export const getEmitterAddressAndSequenceFromResult = (
@@ -43,27 +32,23 @@ export const getEmitterAddressAndSequenceFromResult = (
 };
 
 export async function waitForSignAndSubmitTransaction(
-  transaction: any
+  payload: any,
+  signAndSubmitTransaction: (
+    transaction: Types.TransactionPayload,
+    options?: any
+  ) => Promise<{
+    hash: string;
+  }>
 ): Promise<string> {
-  const wallet = getAptosWallet();
   // The wallets do not handle Uint8Array serialization'
-  if (transaction?.arguments) {
-    transaction.arguments = transaction.arguments.map((a: any) =>
+  if (payload?.arguments) {
+    payload.arguments = payload.arguments.map((a: any) =>
       a instanceof Uint8Array ? Array.from(a) : a
     );
   }
   try {
     let hash = "";
-    if (wallet.generateSignAndSubmitTransaction) {
-      // Martian
-      hash = await wallet.generateSignAndSubmitTransaction(
-        wallet.address,
-        transaction
-      );
-    } else {
-      // Petra
-      hash = (await wallet.signAndSubmitTransaction(transaction)).hash;
-    }
+    hash = (await signAndSubmitTransaction(payload)).hash;
     if (!hash) {
       throw new Error("Invalid hash");
     }

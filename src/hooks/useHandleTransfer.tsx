@@ -201,6 +201,12 @@ async function aptos(
   recipientChain: ChainId,
   recipientAddress: Uint8Array,
   chainId: ChainId,
+  signAndSubmitTransaction: (
+    transaction: Types.TransactionPayload,
+    options?: any
+  ) => Promise<{
+    hash: string;
+  }>,
   relayerFee?: string
 ) {
   dispatch(setIsSending(true));
@@ -218,7 +224,10 @@ async function aptos(
       feeParsed.toString(),
       createNonce().readUInt32LE(0)
     );
-    const hash = await waitForSignAndSubmitTransaction(transferPayload);
+    const hash = await waitForSignAndSubmitTransaction(
+      transferPayload,
+      signAndSubmitTransaction
+    );
     dispatch(setTransferTx({ id: hash, block: 1 }));
     enqueueSnackbar(null, {
       content: <Alert severity="success">Transaction confirmed</Alert>,
@@ -522,7 +531,8 @@ export function useHandleTransfer() {
   const terraFeeDenom = useSelector(selectTerraFeeDenom);
   const xplaWallet = useXplaConnectedWallet();
   const { accounts: algoAccounts } = useAlgorandContext();
-  const { address: aptosAddress } = useAptosContext();
+  const { account: aptosAccount, signAndSubmitTransaction } = useAptosContext();
+  const aptosAddress = aptosAccount?.address?.toString();
   const sourceParsedTokenAccount = useSelector(
     selectTransferSourceParsedTokenAccount
   );
@@ -652,6 +662,7 @@ export function useHandleTransfer() {
         targetChain,
         targetAddress,
         sourceChain,
+        signAndSubmitTransaction,
         relayerFee
       );
     } else {
@@ -678,6 +689,7 @@ export function useHandleTransfer() {
     algoAccounts,
     xplaWallet,
     aptosAddress,
+    signAndSubmitTransaction,
   ]);
   return useMemo(
     () => ({
