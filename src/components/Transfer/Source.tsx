@@ -201,8 +201,7 @@ function Source() {
         disabled={
           !isSourceComplete ||
           isSourceTransferDisabled ||
-          isTargetTransferDisabled ||
-          isTransferLimited.reason === "EXCEEDS_MAX_NOTIONAL"
+          isTargetTransferDisabled
         }
         onClick={handleNextClick}
         showLoader={false}
