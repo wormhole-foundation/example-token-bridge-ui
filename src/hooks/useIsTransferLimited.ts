@@ -10,7 +10,7 @@ import {
 import { WORMHOLE_RPC_HOSTS } from "../utils/consts";
 import { ChainId } from "@certusone/wormhole-sdk";
 
-const REMAINING_NOTIONAL_TOLERANCE = 0.95;
+const REMAINING_NOTIONAL_TOLERANCE = 0.98;
 interface TokenListEntry {
   originAddress: string;
   originChainId: number;
@@ -25,6 +25,7 @@ interface AvailableNotionalByChainEntry {
   chainId: number;
   remainingAvailableNotional: number;
   notionalLimit: number;
+  bigTransactionSize: number;
 }
 
 interface AvailableNotionalByChain {
@@ -35,12 +36,16 @@ export interface ChainLimits {
   chainId: ChainId;
   chainNotionalLimit: number;
   chainRemainingAvailableNotional: number;
+  chainBigTransactionSize: number;
   tokenPrice: number;
 }
 
 export interface IsTransferLimitedResult {
   isLimited: boolean;
-  reason?: "EXCEEDS_REMAINING_NOTIONAL" | "EXCEEDS_MAX_NOTIONAL";
+  reason?:
+    | "EXCEEDS_REMAINING_NOTIONAL"
+    | "EXCEEDS_MAX_NOTIONAL"
+    | "EXCEEDS_LARGE_TRANSFER_LIMIT";
   limits?: ChainLimits;
 }
 
@@ -118,6 +123,9 @@ const useIsTransferLimited = (): IsTransferLimitedResult => {
             transferNotional > chain.notionalLimit
               ? "EXCEEDS_MAX_NOTIONAL"
               : transferNotional >
+                chain.bigTransactionSize * REMAINING_NOTIONAL_TOLERANCE
+              ? "EXCEEDS_LARGE_TRANSFER_LIMIT"
+              : transferNotional >
                 chain.remainingAvailableNotional * REMAINING_NOTIONAL_TOLERANCE
               ? "EXCEEDS_REMAINING_NOTIONAL"
               : undefined;
@@ -128,6 +136,7 @@ const useIsTransferLimited = (): IsTransferLimitedResult => {
               chainId: sourceChain,
               chainNotionalLimit: chain.notionalLimit,
               chainRemainingAvailableNotional: chain.remainingAvailableNotional,
+              chainBigTransactionSize: chain.bigTransactionSize,
               tokenPrice: token.price,
             },
           };
