@@ -1,6 +1,7 @@
 import {
   ChainId,
   CHAIN_ID_ACALA,
+  CHAIN_ID_ARBITRUM,
   CHAIN_ID_AURORA,
   CHAIN_ID_CELO,
   CHAIN_ID_FANTOM,
@@ -92,6 +93,8 @@ export default function TransactionProgress({
       ? 1 // these chains only require 1 conf
       : chainId === CHAIN_ID_SOLANA
       ? 32
+      : chainId === CHAIN_ID_ARBITRUM
+      ? 64 // something to show progress
       : isEVMChain(chainId)
       ? 15
       : 1;
@@ -109,7 +112,9 @@ export default function TransactionProgress({
           variant="determinate"
         />
         <Typography variant="body2" className={classes.message}>
-          {blockDiff < expectedBlocks
+          {chainId === CHAIN_ID_ARBITRUM
+            ? `Waiting for Ethereum finality on Arbitrum block ${tx?.block}` //TODO: more advanced finality checking for Arbitrum
+            : blockDiff < expectedBlocks
             ? `Waiting for ${blockDiff} / ${expectedBlocks} confirmations on ${CHAINS_BY_ID[chainId].name}...`
             : `Waiting for Wormhole Network consensus...`}
         </Typography>
