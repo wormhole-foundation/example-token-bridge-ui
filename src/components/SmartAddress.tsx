@@ -21,6 +21,7 @@ import {
   CHAIN_ID_XPLA,
   CHAIN_ID_APTOS,
   isValidAptosType,
+  CHAIN_ID_ARBITRUM,
 } from "@certusone/wormhole-sdk";
 import { Button, makeStyles, Tooltip, Typography } from "@material-ui/core";
 import { FileCopy, OpenInNew } from "@material-ui/icons";
@@ -188,6 +189,10 @@ export default function SmartAddress({
     ? `https://explorer.xpla.io/${
         CLUSTER === "testnet" ? "testnet/" : ""
       }address/${useableAddress}`
+    : chainId === CHAIN_ID_ARBITRUM
+    ? `https://${CLUSTER === "testnet" ? "goerli." : ""}arbiscan.io/${
+        isAsset ? "token" : "address"
+      }/${useableAddress}`
     : chainId === CHAIN_ID_APTOS
     ? `https://explorer.aptoslabs.com/account/${
         isValidAptosType(useableAddress)

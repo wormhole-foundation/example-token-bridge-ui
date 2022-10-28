@@ -3,6 +3,7 @@ import {
   CHAIN_ID_ACALA,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
+  CHAIN_ID_ARBITRUM,
   CHAIN_ID_AURORA,
   CHAIN_ID_AVAX,
   CHAIN_ID_BSC,
@@ -31,6 +32,7 @@ import { CHAIN_CONFIG_MAP } from "../config";
 import acalaIcon from "../icons/acala.svg";
 import algorandIcon from "../icons/algorand.svg";
 import aptosIcon from "../icons/aptos.svg";
+import arbitrumIcon from "../icons/arbitrum.svg";
 import auroraIcon from "../icons/aurora.svg";
 import avaxIcon from "../icons/avax.svg";
 import bscIcon from "../icons/bsc.svg";
@@ -75,6 +77,11 @@ export const CHAINS: ChainInfo[] =
           id: CHAIN_ID_APTOS,
           name: "Aptos",
           logo: aptosIcon,
+        },
+        {
+          id: CHAIN_ID_ARBITRUM,
+          name: "Arbitrum",
+          logo: arbitrumIcon,
         },
         {
           id: CHAIN_ID_AURORA,
@@ -209,7 +216,8 @@ export const CHAINS_WITH_NFT_SUPPORT = CHAINS.filter(
     id === CHAIN_ID_ACALA ||
     id === CHAIN_ID_KLAYTN ||
     id === CHAIN_ID_CELO ||
-    id === CHAIN_ID_NEON
+    id === CHAIN_ID_NEON ||
+    id === CHAIN_ID_ARBITRUM
 );
 export type ChainsById = { [key in ChainId]: ChainInfo };
 export const CHAINS_BY_ID: ChainsById = CHAINS.reduce((obj, chain) => {
@@ -255,6 +263,8 @@ export const getDefaultNativeCurrencySymbol = (chainId: ChainId) =>
     ? "XPLA"
     : chainId === CHAIN_ID_APTOS
     ? "APTOS"
+    : chainId === CHAIN_ID_ARBITRUM
+    ? "ETH"
     : "";
 
 export const getDefaultNativeCurrencyAddressEvm = (chainId: ChainId) => {
@@ -308,6 +318,8 @@ export const getExplorerName = (chainId: ChainId) =>
     ? "Solscan"
     : chainId === CHAIN_ID_XPLA
     ? "XPLA Explorer"
+    : chainId === CHAIN_ID_ARBITRUM
+    ? "Arbiscan"
     : "Explorer";
 export const WORMHOLE_RPC_HOSTS =
   CLUSTER === "testnet"
@@ -327,6 +339,7 @@ export const ACALA_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 597 : 1381;
 export const KLAYTN_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 1001 : 1381;
 export const CELO_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 44787 : 1381;
 export const NEON_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 245022926 : 1381;
+export const ARBITRUM_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 421613 : 1381;
 export const getEvmChainId = (chainId: ChainId) =>
   chainId === CHAIN_ID_ETH
     ? ETH_NETWORK_CHAIN_ID
@@ -354,6 +367,8 @@ export const getEvmChainId = (chainId: ChainId) =>
     ? CELO_NETWORK_CHAIN_ID
     : chainId === CHAIN_ID_NEON
     ? NEON_NETWORK_CHAIN_ID
+    : chainId === CHAIN_ID_ARBITRUM
+    ? ARBITRUM_NETWORK_CHAIN_ID
     : undefined;
 export const SOLANA_HOST = process.env.REACT_APP_SOLANA_API_URL
   ? process.env.REACT_APP_SOLANA_API_URL
@@ -472,6 +487,8 @@ export const COVALENT_FANTOM =
 export const COVALENT_KLAYTN = null; // Covalent only support mainnet
 export const COVALENT_CELO = CLUSTER === "devnet" ? null : null;
 export const COVALENT_NEON = CLUSTER === "devnet" ? null : null;
+export const COVALENT_ARBITRUM =
+  CLUSTER === "devnet" ? null : ARBITRUM_NETWORK_CHAIN_ID;
 export const COVALENT_GET_TOKENS_URL = (
   chainId: ChainId,
   walletAddress: string,
@@ -495,6 +512,8 @@ export const COVALENT_GET_TOKENS_URL = (
       ? COVALENT_CELO
       : chainId === CHAIN_ID_NEON
       ? COVALENT_NEON
+      : chainId === CHAIN_ID_ARBITRUM
+      ? COVALENT_ARBITRUM
       : "";
   // https://www.covalenthq.com/docs/api/#get-/v1/{chain_id}/address/{address}/balances_v2/
   return chainNum
