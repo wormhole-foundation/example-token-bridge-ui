@@ -6,6 +6,7 @@ import {
   CHAIN_ID_NEAR,
   CHAIN_ID_SEI,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_SUI,
   CHAIN_ID_XPLA,
   ChainId,
   TerraChainId,
@@ -19,6 +20,7 @@ import {
   redeemOnInjective,
   redeemOnNear,
   redeemOnSolana,
+  redeemOnSui,
   redeemOnTerra,
   redeemOnXpla,
   uint8ArrayToHex,
@@ -35,6 +37,10 @@ import {
 } from "@sei-js/react";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { Connection } from "@solana/web3.js";
+import {
+  WalletContextState as WalletContextStateSui,
+  useWallet,
+} from "@suiet/wallet-kit";
 import {
   ConnectedWallet,
   useConnectedWallet,
@@ -79,6 +85,7 @@ import {
   SOLANA_HOST,
   SOL_BRIDGE_ADDRESS,
   SOL_TOKEN_BRIDGE_ADDRESS,
+  getBridgeAddressForChain,
   getTokenBridgeAddressForChain,
 } from "../utils/consts";
 import { broadcastInjectiveTx } from "../utils/injective";
@@ -89,6 +96,7 @@ import {
 } from "../utils/near";
 import parseError from "../utils/parseError";
 import { signSendAndConfirm } from "../utils/solana";
+import { getSuiProvider } from "../utils/sui";
 import { postWithFees } from "../utils/terra";
 import { postWithFeesXpla } from "../utils/xpla";
 import useTransferSignedVAA from "./useTransferSignedVAA";
@@ -430,6 +438,41 @@ async function sei(
   }
 }
 
+async function sui(
+  dispatch: any,
+  enqueueSnackbar: any,
+  wallet: WalletContextStateSui,
+  signedVAA: Uint8Array
+) {
+  dispatch(setIsRedeeming(true));
+  try {
+    const provider = getSuiProvider();
+    const tx = await redeemOnSui(
+      provider,
+      getBridgeAddressForChain(CHAIN_ID_SUI),
+      getTokenBridgeAddressForChain(CHAIN_ID_SUI),
+      signedVAA
+    );
+    const response = await wallet.signAndExecuteTransactionBlock({
+      transactionBlock: tx,
+    });
+    dispatch(
+      setRedeemTx({
+        id: response.digest,
+        block: Number(response.checkpoint || 0),
+      })
+    );
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+  } catch (e) {
+    enqueueSnackbar(null, {
+      content: <Alert severity="error">{parseError(e)}</Alert>,
+    });
+    dispatch(setIsRedeeming(false));
+  }
+}
+
 export function useHandleRedeem() {
   const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
@@ -449,6 +492,7 @@ export function useHandleRedeem() {
     useSeiSigningCosmWasmClient();
   const { accounts: seiAccounts } = useSeiWallet();
   const seiAddress = seiAccounts.length ? seiAccounts[0].address : null;
+  const suiWallet = useWallet();
   const signedVAA = useTransferSignedVAA();
   const isRedeeming = useSelector(selectTransferIsRedeeming);
   const handleRedeemClick = useCallback(() => {
@@ -514,7 +558,12 @@ export function useHandleRedeem() {
       !!signedVAA
     ) {
       near(dispatch, enqueueSnackbar, nearAccountId, signedVAA, wallet);
-    } else {
+    } else if (
+      targetChain === CHAIN_ID_SUI &&
+      suiWallet.address &&
+      !!signedVAA
+    ) {
+      sui(dispatch, enqueueSnackbar, suiWallet, signedVAA);
     }
   }, [
     dispatch,
@@ -536,9 +585,11 @@ export function useHandleRedeem() {
     wallet,
     seiSigningCosmWasmClient,
     seiAddress,
+    suiWallet,
   ]);
 
   const handleRedeemNativeClick = useCallback(() => {
+    console.log(targetChain, suiWallet.address, !!signedVAA);
     if (isEVMChain(targetChain) && !!signer && signedVAA) {
       evm(dispatch, enqueueSnackbar, signer, signedVAA, true, targetChain);
     } else if (
@@ -590,6 +641,8 @@ export function useHandleRedeem() {
         seiAddress,
         signedVAA
       );
+    } else if (targetChain === CHAIN_ID_SUI && suiWallet.address && signedVAA) {
+      sui(dispatch, enqueueSnackbar, suiWallet, signedVAA);
     }
   }, [
     dispatch,
@@ -606,6 +659,7 @@ export function useHandleRedeem() {
     injAddress,
     seiSigningCosmWasmClient,
     seiAddress,
+    suiWallet,
   ]);
 
   const handleAcalaRelayerRedeemClick = useCallback(async () => {

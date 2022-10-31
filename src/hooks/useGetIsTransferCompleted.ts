@@ -5,6 +5,7 @@ import {
   CHAIN_ID_NEAR,
   CHAIN_ID_SEI,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_SUI,
   CHAIN_ID_XPLA,
   getIsTransferCompletedAlgorand,
   getIsTransferCompletedAptos,
@@ -12,6 +13,7 @@ import {
   getIsTransferCompletedInjective,
   getIsTransferCompletedNear,
   getIsTransferCompletedSolana,
+  getIsTransferCompletedSui,
   getIsTransferCompletedTerra,
   getIsTransferCompletedXpla,
   isEVMChain,
@@ -19,6 +21,7 @@ import {
 } from "@certusone/wormhole-sdk";
 import { Connection } from "@solana/web3.js";
 import { LCDClient } from "@terra-money/terra.js";
+import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
 import algosdk from "algosdk";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
@@ -29,24 +32,24 @@ import {
   selectTransferTargetAddressHex,
   selectTransferTargetChain,
 } from "../store/selectors";
+import { getAptosClient } from "../utils/aptos";
 import {
   ALGORAND_HOST,
   ALGORAND_TOKEN_BRIDGE_ID,
-  getEvmChainId,
-  getTokenBridgeAddressForChain,
-  SOLANA_HOST,
-  getTerraGasPricesUrl,
-  getTerraConfig,
-  XPLA_LCD_CLIENT_CONFIG,
   NEAR_TOKEN_BRIDGE_ACCOUNT,
+  SOLANA_HOST,
+  XPLA_LCD_CLIENT_CONFIG,
+  getEvmChainId,
+  getTerraConfig,
+  getTerraGasPricesUrl,
+  getTokenBridgeAddressForChain,
 } from "../utils/consts";
+import { getInjectiveWasmClient } from "../utils/injective";
 import { makeNearProvider } from "../utils/near";
+import { getIsTransferCompletedSei, getSeiWasmClient } from "../utils/sei";
+import { getSuiProvider } from "../utils/sui";
 import useIsWalletReady from "./useIsWalletReady";
 import useTransferSignedVAA from "./useTransferSignedVAA";
-import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
-import { getAptosClient } from "../utils/aptos";
-import { getInjectiveWasmClient } from "../utils/injective";
-import { getIsTransferCompletedSei, getSeiWasmClient } from "../utils/sei";
 
 /**
  * @param recoveryOnly Only fire when in recovery mode
@@ -250,6 +253,24 @@ export default function useGetIsTransferCompleted(
             transferCompleted = await getIsTransferCompletedNear(
               makeNearProvider(),
               NEAR_TOKEN_BRIDGE_ACCOUNT,
+              signedVAA
+            );
+          } catch (error) {
+            console.error(error);
+          }
+          if (!cancelled) {
+            setIsTransferCompleted(transferCompleted);
+            setIsLoading(false);
+          }
+        })();
+      } else if (targetChain === CHAIN_ID_SUI) {
+        setIsLoading(true);
+        (async () => {
+          try {
+            const provider = getSuiProvider();
+            transferCompleted = await getIsTransferCompletedSui(
+              provider,
+              getTokenBridgeAddressForChain(CHAIN_ID_SUI),
               signedVAA
             );
           } catch (error) {

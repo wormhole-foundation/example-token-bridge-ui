@@ -1,21 +1,24 @@
 import {
-  attestFromAlgorand,
-  attestFromAptos,
-  attestFromEth,
-  attestFromInjective,
-  attestFromSolana,
-  attestFromTerra,
-  attestFromXpla,
-  attestNearFromNear,
-  attestTokenFromNear,
-  ChainId,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_NEAR,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_SUI,
   CHAIN_ID_XPLA,
+  ChainId,
+  TerraChainId,
+  attestFromAlgorand,
+  attestFromAptos,
+  attestFromEth,
+  attestFromInjective,
+  attestFromSolana,
+  attestFromSui,
+  attestFromTerra,
+  attestFromXpla,
+  attestNearFromNear,
+  attestTokenFromNear,
   getEmitterAddressAlgorand,
   getEmitterAddressEth,
   getEmitterAddressInjective,
@@ -33,14 +36,19 @@ import {
   parseSequenceFromLogSolana,
   parseSequenceFromLogTerra,
   parseSequenceFromLogXpla,
-  TerraChainId,
   uint8ArrayToHex,
 } from "@certusone/wormhole-sdk";
+import { getOriginalPackageId } from "@certusone/wormhole-sdk/lib/cjs/sui";
+import { getEmitterAddressAndSequenceFromResponseSui } from "@certusone/wormhole-sdk/lib/esm/sui";
 import { WalletStrategy } from "@injectivelabs/wallet-ts";
 import { Alert } from "@material-ui/lab";
 import { Wallet } from "@near-wallet-selector/core";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { Connection, PublicKey } from "@solana/web3.js";
+import {
+  WalletContextState as WalletContextStateSui,
+  useWallet,
+} from "@suiet/wallet-kit";
 import {
   ConnectedWallet,
   useConnectedWallet,
@@ -84,8 +92,6 @@ import {
   ALGORAND_BRIDGE_ID,
   ALGORAND_HOST,
   ALGORAND_TOKEN_BRIDGE_ID,
-  getBridgeAddressForChain,
-  getTokenBridgeAddressForChain,
   NATIVE_NEAR_PLACEHOLDER,
   NEAR_CORE_BRIDGE_ACCOUNT,
   NEAR_TOKEN_BRIDGE_ACCOUNT,
@@ -93,7 +99,10 @@ import {
   SOL_BRIDGE_ADDRESS,
   SOL_TOKEN_BRIDGE_ADDRESS,
   WORMHOLE_RPC_HOSTS,
+  getBridgeAddressForChain,
+  getTokenBridgeAddressForChain,
 } from "../utils/consts";
+import { broadcastInjectiveTx } from "../utils/injective";
 import {
   makeNearAccount,
   makeNearProvider,
@@ -101,9 +110,9 @@ import {
 } from "../utils/near";
 import parseError from "../utils/parseError";
 import { signSendAndConfirm } from "../utils/solana";
+import { getSuiProvider } from "../utils/sui";
 import { postWithFees, waitForTerraExecution } from "../utils/terra";
 import { postWithFeesXpla, waitForXplaExecution } from "../utils/xpla";
-import { broadcastInjectiveTx } from "../utils/injective";
 
 async function algo(
   dispatch: any,
@@ -534,6 +543,69 @@ async function injective(
   }
 }
 
+async function sui(
+  dispatch: any,
+  enqueueSnackbar: any,
+  wallet: WalletContextStateSui,
+  asset: string
+) {
+  dispatch(setIsSending(true));
+  try {
+    const provider = getSuiProvider();
+    const tx = await attestFromSui(
+      provider,
+      getBridgeAddressForChain(CHAIN_ID_SUI),
+      getTokenBridgeAddressForChain(CHAIN_ID_SUI),
+      asset
+    );
+    const response = await wallet.signAndExecuteTransactionBlock({
+      transactionBlock: tx,
+      options: {
+        showEvents: true,
+      },
+    });
+    dispatch(
+      setAttestTx({
+        id: response.digest,
+        block: Number(response.checkpoint || 0),
+      })
+    );
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+    const coreBridgePackageId = await getOriginalPackageId(
+      provider,
+      getBridgeAddressForChain(CHAIN_ID_SUI)
+    );
+    if (!coreBridgePackageId)
+      throw new Error("Unable to retrieve original package id");
+    const { sequence, emitterAddress } =
+      getEmitterAddressAndSequenceFromResponseSui(
+        coreBridgePackageId,
+        response
+      );
+    enqueueSnackbar(null, {
+      content: <Alert severity="info">Fetching VAA</Alert>,
+    });
+    const { vaaBytes } = await getSignedVAAWithRetry(
+      WORMHOLE_RPC_HOSTS,
+      CHAIN_ID_SUI,
+      emitterAddress,
+      sequence
+    );
+    dispatch(setSignedVAAHex(uint8ArrayToHex(vaaBytes)));
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Fetched Signed VAA</Alert>,
+    });
+  } catch (e) {
+    console.error(e);
+    enqueueSnackbar(null, {
+      content: <Alert severity="error">{parseError(e)}</Alert>,
+    });
+    dispatch(setIsSending(false));
+  }
+}
+
 export function useHandleAttest() {
   const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
@@ -552,7 +624,8 @@ export function useHandleAttest() {
   const { account: aptosAccount, signAndSubmitTransaction } = useAptosContext();
   const aptosAddress = aptosAccount?.address?.toString();
   const { wallet: injWallet, address: injAddress } = useInjectiveContext();
-  const { accountId: nearAccountId, wallet } = useNearContext();
+  const { accountId: nearAccountId, wallet: nearWallet } = useNearContext();
+  const suiWallet = useWallet();
   const disabled = !isTargetComplete || isSending || isSendComplete;
   const handleAttestClick = useCallback(() => {
     if (isEVMChain(sourceChain) && !!signer) {
@@ -576,9 +649,14 @@ export function useHandleAttest() {
       aptos(dispatch, enqueueSnackbar, sourceAsset, signAndSubmitTransaction);
     } else if (sourceChain === CHAIN_ID_INJECTIVE && injWallet && injAddress) {
       injective(dispatch, enqueueSnackbar, injWallet, injAddress, sourceAsset);
-    } else if (sourceChain === CHAIN_ID_NEAR && nearAccountId && wallet) {
-      near(dispatch, enqueueSnackbar, nearAccountId, sourceAsset, wallet);
-    } else {
+    } else if (sourceChain === CHAIN_ID_NEAR && nearAccountId && nearWallet) {
+      near(dispatch, enqueueSnackbar, nearAccountId, sourceAsset, nearWallet);
+    } else if (
+      sourceChain === CHAIN_ID_SUI &&
+      suiWallet.connected &&
+      suiWallet.address
+    ) {
+      sui(dispatch, enqueueSnackbar, suiWallet, sourceAsset);
     }
   }, [
     dispatch,
@@ -597,7 +675,8 @@ export function useHandleAttest() {
     injWallet,
     injAddress,
     nearAccountId,
-    wallet,
+    nearWallet,
+    suiWallet,
   ]);
   return useMemo(
     () => ({

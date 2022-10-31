@@ -19,6 +19,8 @@ import {
   WormholeWrappedInfo,
   CHAIN_ID_SEI,
   cosmos,
+  CHAIN_ID_SUI,
+  getOriginalAssetSui,
 } from "@certusone/wormhole-sdk";
 import {
   getOriginalAssetEth as getOriginalAssetEthNFT,
@@ -62,6 +64,7 @@ import { getAptosClient } from "../utils/aptos";
 import { makeNearProvider } from "../utils/near";
 import { getOriginalAssetSei, getSeiWasmClient } from "../utils/sei";
 import { base58 } from "ethers/lib/utils";
+import { getSuiProvider } from "../utils/sui";
 
 export interface StateSafeWormholeWrappedInfo {
   isWrapped: boolean;
@@ -254,6 +257,22 @@ function useCheckIfWormholeWrapped(nft?: boolean) {
             dispatch(setSourceWormholeWrappedInfo(wrappedInfo));
           }
         } catch (e) {}
+      }
+      if (sourceChain === CHAIN_ID_SUI && sourceAsset) {
+        try {
+          const wrappedInfo = makeStateSafe(
+            await getOriginalAssetSui(
+              getSuiProvider(),
+              getTokenBridgeAddressForChain(CHAIN_ID_SUI),
+              sourceAsset
+            )
+          );
+          if (!cancelled) {
+            dispatch(setSourceWormholeWrappedInfo(wrappedInfo));
+          }
+        } catch (e) {
+          console.error(e);
+        }
       }
     })();
     return () => {

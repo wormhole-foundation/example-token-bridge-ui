@@ -5,6 +5,7 @@ import {
   CHAIN_ID_NEAR,
   CHAIN_ID_SEI,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_SUI,
   CHAIN_ID_TERRA2,
   CHAIN_ID_XPLA,
   ChainId,
@@ -15,6 +16,7 @@ import {
   getForeignAssetInjective,
   getForeignAssetNear,
   getForeignAssetSolana,
+  getForeignAssetSui,
   getForeignAssetTerra,
   getForeignAssetXpla,
   hexToUint8Array,
@@ -49,6 +51,7 @@ import {
 import { getInjectiveWasmClient } from "../utils/injective";
 import { makeNearProvider } from "../utils/near";
 import { getForeignAssetSei, getSeiWasmClient } from "../utils/sei";
+import { getSuiProvider } from "../utils/sui";
 import useIsWalletReady from "./useIsWalletReady";
 
 export type ForeignAssetInfo = {
@@ -231,6 +234,15 @@ function useFetchForeignAsset(
             } catch {
               return await Promise.reject("Failed to make Near account");
             }
+          }
+        : foreignChain === CHAIN_ID_SUI
+        ? () => {
+            return getForeignAssetSui(
+              getSuiProvider(),
+              getTokenBridgeAddressForChain(CHAIN_ID_SUI),
+              CHAIN_ID_SUI,
+              hexToUint8Array(originAssetHex)
+            );
           }
         : () => Promise.resolve(null);
 

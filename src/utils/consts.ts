@@ -22,6 +22,7 @@ import {
   CHAIN_ID_POLYGON,
   CHAIN_ID_SEPOLIA,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_SUI,
   CHAIN_ID_TERRA,
   CHAIN_ID_TERRA2,
   CHAIN_ID_XPLA,
@@ -56,6 +57,7 @@ import optimismIcon from "../icons/optimism.svg";
 import polygonIcon from "../icons/polygon.svg";
 import seiIcon from "../icons/sei.svg";
 import solanaIcon from "../icons/solana.svg";
+import suiIcon from "../icons/sui.svg";
 import terraIcon from "../icons/terra.svg";
 import terra2Icon from "../icons/terra2.svg";
 import xplaIcon from "../icons/xpla.svg";
@@ -65,6 +67,7 @@ import { getNetworkInfo, Network } from "@injectivelabs/networks";
 import nearIcon from "../icons/near.svg";
 import { ConnectConfig, keyStores } from "near-api-js";
 import { ChainConfiguration } from "@sei-js/react";
+import { testnetConnection, localnetConnection } from "@mysten/sui.js";
 
 export type Cluster = "devnet" | "testnet";
 const urlParams = new URLSearchParams(window.location.search);
@@ -195,6 +198,11 @@ export const CHAINS: ChainInfo[] =
           logo: solanaIcon,
         },
         {
+          id: CHAIN_ID_SUI,
+          name: "Sui",
+          logo: suiIcon,
+        },
+        {
           id: CHAIN_ID_TERRA,
           name: "Terra Classic",
           logo: terraIcon,
@@ -240,6 +248,11 @@ export const CHAINS: ChainInfo[] =
           id: CHAIN_ID_SOLANA,
           name: "Solana",
           logo: solanaIcon,
+        },
+        {
+          id: CHAIN_ID_SUI,
+          name: "Sui",
+          logo: suiIcon,
         },
         {
           id: CHAIN_ID_TERRA,
@@ -325,6 +338,8 @@ export const getDefaultNativeCurrencySymbol = (chainId: ChainId) =>
     ? "ETH"
     : chainId === CHAIN_ID_OPTIMISM
     ? "ETH"
+    : chainId === CHAIN_ID_SUI
+    ? "SUI"
     : "";
 
 export const getDefaultNativeCurrencyAddressEvm = (chainId: ChainId) => {
@@ -506,6 +521,16 @@ export const SEI_TRANSLATOR =
   "sei1dkdwdvknx0qav5cp5kw68mkn3r99m3svkyjfvkztwh97dv2lm0ksj6xrak";
 export const SEI_TRANSLATER_TARGET = cosmos.canonicalAddress(SEI_TRANSLATOR);
 export const SEI_DECIMALS = 6;
+
+export const SUI_URL =
+  CLUSTER === "testnet"
+    ? "https://fullnode.devnet.sui.io:443"
+    : "http://localhost:5001";
+export const SUI_CONNECTION =
+  CLUSTER === "testnet" ? testnetConnection : localnetConnection;
+
+export const SUI_NATIVE_DECIMALS = 9;
+export const SUI_NATIVE_TOKEN_KEY = "0x2::sui::SUI";
 
 export const ALGORAND_HOST =
   CLUSTER === "testnet"

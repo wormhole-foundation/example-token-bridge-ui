@@ -5,6 +5,7 @@ import {
   CHAIN_ID_NEAR,
   CHAIN_ID_SEI,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_SUI,
   CHAIN_ID_XPLA,
   ensureHexPrefix,
   ethers_contracts,
@@ -17,6 +18,7 @@ import {
 } from "@certusone/wormhole-sdk";
 import { useWallet as useSeiWallet } from "@sei-js/react";
 import { Connection, PublicKey } from "@solana/web3.js";
+import { useWallet } from "@suiet/wallet-kit";
 import { LCDClient } from "@terra-money/terra.js";
 import { useConnectedWallet } from "@terra-money/wallet-provider";
 import { useConnectedWallet as useXplaConnectedWallet } from "@xpla/wallet-provider";
@@ -29,6 +31,7 @@ import { useAlgorandContext } from "../contexts/AlgorandWalletContext";
 import { useAptosContext } from "../contexts/AptosWalletContext";
 import { useEthereumProvider } from "../contexts/EthereumProviderContext";
 import { useInjectiveContext } from "../contexts/InjectiveWalletContext";
+import { useNearContext } from "../contexts/NearWalletContext";
 import { useSolanaWallet } from "../contexts/SolanaWalletContext";
 import {
   selectTransferTargetAsset,
@@ -38,26 +41,26 @@ import { setTargetParsedTokenAccount } from "../store/transferSlice";
 import { getAptosClient } from "../utils/aptos";
 import {
   ALGORAND_HOST,
-  getEvmChainId,
-  getTerraConfig,
+  NATIVE_NEAR_DECIMALS,
+  NATIVE_NEAR_PLACEHOLDER,
   SOLANA_HOST,
   XPLA_LCD_CLIENT_CONFIG,
-  NATIVE_NEAR_PLACEHOLDER,
-  NATIVE_NEAR_DECIMALS,
+  getEvmChainId,
+  getTerraConfig,
 } from "../utils/consts";
 import {
+  NATIVE_INJECTIVE_DECIMALS,
   getInjectiveBankClient,
   getInjectiveWasmClient,
-  NATIVE_INJECTIVE_DECIMALS,
 } from "../utils/injective";
+import { makeNearAccount } from "../utils/near";
+import { getSeiWasmClient } from "../utils/sei";
+import { getSuiProvider } from "../utils/sui";
 import { NATIVE_TERRA_DECIMALS } from "../utils/terra";
 import { NATIVE_XPLA_DECIMALS } from "../utils/xpla";
 import { createParsedTokenAccount } from "./useGetSourceParsedTokenAccounts";
 import useMetadata from "./useMetadata";
-import { useNearContext } from "../contexts/NearWalletContext";
-import { makeNearAccount } from "../utils/near";
 import { fetchSingleMetadata } from "./useNearMetadata";
-import { getSeiWasmClient } from "../utils/sei";
 
 function useGetTargetParsedTokenAccounts() {
   const dispatch = useDispatch();
@@ -93,6 +96,7 @@ function useGetTargetParsedTokenAccounts() {
   const { accounts: seiAccounts } = useSeiWallet();
   const seiAddress = seiAccounts.length ? seiAccounts[0].address : null;
   const { accountId: nearAccountId } = useNearContext();
+  const { address: suiAddress } = useWallet();
   const hasResolvedMetadata = metadata.data || metadata.error;
   useEffect(() => {
     // targetParsedTokenAccount is cleared on setTargetAsset, but we need to clear it on wallet changes too
@@ -436,6 +440,47 @@ function useGetTargetParsedTokenAccounts() {
       }
     }
 
+    if (targetChain === CHAIN_ID_SUI && suiAddress) {
+      const provider = getSuiProvider();
+      (async () => {
+        try {
+          const { totalBalance } = await provider.getBalance({
+            owner: suiAddress,
+            coinType: targetAsset,
+          });
+          const response = await provider.getCoinMetadata({
+            coinType: targetAsset,
+          });
+          if (!response) {
+            throw new Error("bad response");
+          }
+          const { decimals, symbol } = response;
+          if (!cancelled) {
+            dispatch(
+              setTargetParsedTokenAccount(
+                createParsedTokenAccount(
+                  "",
+                  "",
+                  totalBalance,
+                  decimals,
+                  Number(formatUnits(totalBalance, decimals)),
+                  formatUnits(totalBalance, decimals),
+                  symbol,
+                  tokenName,
+                  logo
+                )
+              )
+            );
+          }
+        } catch (e: any) {
+          console.error("error getting target balance", e, e?.message, e?.code);
+          if (!cancelled) {
+            // TODO: error state
+          }
+        }
+      })();
+    }
+
     if (targetChain === CHAIN_ID_SOLANA && solPK) {
       let mint;
       try {
@@ -684,6 +729,7 @@ function useGetTargetParsedTokenAccounts() {
     injAddress,
     nearAccountId,
     seiAddress,
+    suiAddress,
   ]);
 }
 

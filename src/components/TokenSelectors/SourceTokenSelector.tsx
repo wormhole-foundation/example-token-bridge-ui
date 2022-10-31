@@ -5,6 +5,7 @@ import {
   CHAIN_ID_NEAR,
   CHAIN_ID_SEI,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_SUI,
   CHAIN_ID_XPLA,
   isEVMChain,
   isTerraChain,
@@ -35,6 +36,7 @@ import EvmTokenPicker from "./EvmTokenPicker";
 import NearTokenPicker from "./NearTokenPicker";
 import RefreshButtonWrapper from "./RefreshButtonWrapper";
 import SolanaTokenPicker from "./SolanaTokenPicker";
+import SuiTokenPicker from "./SuiTokenPicker";
 import TerraTokenPicker from "./TerraTokenPicker";
 import XplaTokenPicker from "./XplaTokenPicker";
 import InjectiveTokenPicker from "./InjectiveTokenPicker";
@@ -168,6 +170,14 @@ export const TokenSelector = (props: TokenSelectorProps) => {
     />
   ) : lookupChain === CHAIN_ID_SEI ? (
     <SeiTokenPicker
+      value={sourceParsedTokenAccount || null}
+      disabled={disabled}
+      onChange={handleOnChange}
+      resetAccounts={maps?.resetAccounts}
+      tokenAccounts={maps?.tokenAccounts}
+    />
+  ) : lookupChain === CHAIN_ID_SUI ? (
+    <SuiTokenPicker
       value={sourceParsedTokenAccount || null}
       disabled={disabled}
       onChange={handleOnChange}
