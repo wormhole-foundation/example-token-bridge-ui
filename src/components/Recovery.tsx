@@ -1,5 +1,4 @@
 import {
-  ChainId,
   CHAIN_ID_ACALA,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
@@ -7,8 +6,11 @@ import {
   CHAIN_ID_KARURA,
   CHAIN_ID_NEAR,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_SUI,
   CHAIN_ID_TERRA2,
   CHAIN_ID_XPLA,
+  ChainId,
+  TerraChainId,
   getEmitterAddressAlgorand,
   getEmitterAddressEth,
   getEmitterAddressInjective,
@@ -16,6 +18,7 @@ import {
   getEmitterAddressSolana,
   getEmitterAddressTerra,
   getEmitterAddressXpla,
+  getForeignAssetSui,
   hexToNativeAssetString,
   hexToNativeString,
   hexToUint8Array,
@@ -33,10 +36,11 @@ import {
   parseVaa,
   queryExternalId,
   queryExternalIdInjective,
-  TerraChainId,
   tryHexToNativeStringNear,
   uint8ArrayToHex,
 } from "@certusone/wormhole-sdk";
+import { getOriginalPackageId } from "@certusone/wormhole-sdk/lib/cjs/sui";
+import { getEmitterAddressAndSequenceFromResponseSui } from "@certusone/wormhole-sdk/lib/esm/sui";
 import {
   Accordion,
   AccordionDetails,
@@ -46,10 +50,10 @@ import {
   CircularProgress,
   Container,
   Divider,
-  makeStyles,
   MenuItem,
   TextField,
   Typography,
+  makeStyles,
 } from "@material-ui/core";
 import { ExpandMore } from "@material-ui/icons";
 import { Alert } from "@material-ui/lab";
@@ -82,30 +86,31 @@ import {
   CHAINS,
   CHAINS_BY_ID,
   CHAINS_WITH_NFT_SUPPORT,
-  getBridgeAddressForChain,
-  getNFTBridgeAddressForChain,
-  getTerraConfig,
-  getTokenBridgeAddressForChain,
+  NEAR_TOKEN_BRIDGE_ACCOUNT,
   RELAY_URL_EXTENSION,
   SOLANA_HOST,
   SOL_NFT_BRIDGE_ADDRESS,
   SOL_TOKEN_BRIDGE_ADDRESS,
   WORMHOLE_RPC_HOSTS,
   XPLA_LCD_CLIENT_CONFIG,
-  NEAR_TOKEN_BRIDGE_ACCOUNT,
+  getBridgeAddressForChain,
+  getNFTBridgeAddressForChain,
+  getTerraConfig,
+  getTokenBridgeAddressForChain,
 } from "../utils/consts";
 import { getSignedVAAWithRetry } from "../utils/getSignedVAAWithRetry";
+import {
+  getInjectiveTxClient,
+  getInjectiveWasmClient,
+} from "../utils/injective";
 import { makeNearProvider } from "../utils/near";
 import parseError from "../utils/parseError";
+import { getSuiProvider } from "../utils/sui";
 import ButtonWithLoader from "./ButtonWithLoader";
 import ChainSelect from "./ChainSelect";
 import KeyAndBalance from "./KeyAndBalance";
 import RelaySelector from "./RelaySelector";
 import PendingVAAWarning from "./Transfer/PendingVAAWarning";
-import {
-  getInjectiveTxClient,
-  getInjectiveWasmClient,
-} from "../utils/injective";
 
 const useStyles = makeStyles((theme) => ({
   mainCard: {
@@ -310,6 +315,27 @@ async function injective(txHash: string, enqueueSnackbar: any) {
       getTokenBridgeAddressForChain(CHAIN_ID_INJECTIVE)
     );
     return await fetchSignedVAA(CHAIN_ID_INJECTIVE, emitterAddress, sequence);
+  } catch (e) {
+    return handleError(e, enqueueSnackbar);
+  }
+}
+
+async function sui(digest: string, enqueueSnackbar: any) {
+  try {
+    const provider = getSuiProvider();
+    const tx = await provider.getTransactionBlock({
+      digest,
+      options: { showEvents: true },
+    });
+    const coreBridgePackageId = await getOriginalPackageId(
+      provider,
+      getBridgeAddressForChain(CHAIN_ID_SUI)
+    );
+    if (!coreBridgePackageId)
+      throw new Error("Unable to retrieve original package id");
+    const { sequence, emitterAddress } =
+      getEmitterAddressAndSequenceFromResponseSui(coreBridgePackageId, tx);
+    return await fetchSignedVAA(CHAIN_ID_SUI, emitterAddress, sequence);
   } catch (e) {
     return handleError(e, enqueueSnackbar);
   }
@@ -542,6 +568,19 @@ export default function Recovery() {
         }
       })();
     }
+    if (parsedPayload && parsedPayload.targetChain === CHAIN_ID_SUI) {
+      (async () => {
+        const tokenId = await getForeignAssetSui(
+          getSuiProvider(),
+          getTokenBridgeAddressForChain(CHAIN_ID_SUI),
+          parsedPayload.originChain as ChainId,
+          hexToUint8Array(parsedPayload.originAddress)
+        );
+        if (!cancelled) {
+          setTokenId(tokenId || "");
+        }
+      })();
+    }
     return () => {
       cancelled = true;
     };
@@ -726,6 +765,26 @@ export default function Recovery() {
             recoverySourceTx,
             enqueueSnackbar,
             nearAccountId
+          );
+          if (!cancelled) {
+            setRecoverySourceTxIsLoading(false);
+            if (vaa) {
+              setRecoverySignedVAA(vaa);
+            }
+            if (error) {
+              setRecoverySourceTxError(error);
+            }
+            setIsVAAPending(isPending);
+          }
+        })();
+      } else if (recoverySourceChain === CHAIN_ID_SUI) {
+        setRecoverySourceTxError("");
+        setRecoverySourceTxIsLoading(true);
+        setTokenId("");
+        (async () => {
+          const { vaa, isPending, error } = await sui(
+            recoverySourceTx,
+            enqueueSnackbar
           );
           if (!cancelled) {
             setRecoverySourceTxIsLoading(false);

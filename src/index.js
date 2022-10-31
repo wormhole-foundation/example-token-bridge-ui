@@ -13,6 +13,7 @@ import { EthereumProviderProvider } from "./contexts/EthereumProviderContext";
 import InjectiveWalletProvider from "./contexts/InjectiveWalletContext";
 import { NearContextProvider } from "./contexts/NearWalletContext";
 import { SolanaWalletProvider } from "./contexts/SolanaWalletContext.tsx";
+import SuiWalletProvider from "./contexts/SuiWalletContext";
 import { TerraWalletProvider } from "./contexts/TerraWalletContext.tsx";
 import XplaWalletProvider from "./contexts/XplaWalletContext";
 import { theme } from "./muiTheme";
@@ -37,9 +38,11 @@ ReactDOM.render(
                             <SeiWalletProvider
                               chainConfiguration={SEI_CHAIN_CONFIGURATION}
                             >
-                              <HashRouter>
-                                <App />
-                              </HashRouter>
+                              <SuiWalletProvider>
+                                <HashRouter>
+                                  <App />
+                                </HashRouter>
+                              </SuiWalletProvider>
                             </SeiWalletProvider>
                           </NearContextProvider>
                         </InjectiveWalletProvider>

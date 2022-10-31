@@ -1,12 +1,14 @@
 import {
-  ChainId,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_NEAR,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_SUI,
   CHAIN_ID_TERRA2,
   CHAIN_ID_XPLA,
+  ChainId,
+  getForeignAssetSui,
   getOriginalAssetAlgorand,
   getOriginalAssetAptos,
   getOriginalAssetCosmWasm,
@@ -14,6 +16,7 @@ import {
   getOriginalAssetInjective,
   getOriginalAssetNear,
   getOriginalAssetSol,
+  getOriginalAssetSui,
   getTypeFromExternalAddress,
   hexToNativeAssetString,
   isEVMChain,
@@ -24,9 +27,9 @@ import {
   uint8ArrayToNative,
 } from "@certusone/wormhole-sdk";
 import {
+  WormholeWrappedNFTInfo,
   getOriginalAssetEth as getOriginalAssetEthNFT,
   getOriginalAssetSol as getOriginalAssetSolNFT,
-  WormholeWrappedNFTInfo,
 } from "@certusone/wormhole-sdk/lib/esm/nft_bridge";
 import { Web3Provider } from "@ethersproject/providers";
 import { Connection } from "@solana/web3.js";
@@ -45,9 +48,6 @@ import { getAptosClient } from "../utils/aptos";
 import {
   ALGORAND_HOST,
   ALGORAND_TOKEN_BRIDGE_ID,
-  getNFTBridgeAddressForChain,
-  getTerraConfig,
-  getTokenBridgeAddressForChain,
   NATIVE_NEAR_PLACEHOLDER,
   NATIVE_NEAR_WH_ADDRESS,
   NEAR_TOKEN_BRIDGE_ACCOUNT,
@@ -56,9 +56,13 @@ import {
   SOL_NFT_BRIDGE_ADDRESS,
   SOL_TOKEN_BRIDGE_ADDRESS,
   XPLA_LCD_CLIENT_CONFIG,
+  getNFTBridgeAddressForChain,
+  getTerraConfig,
+  getTokenBridgeAddressForChain,
 } from "../utils/consts";
 import { getInjectiveWasmClient } from "../utils/injective";
 import { lookupHash, makeNearAccount, makeNearProvider } from "../utils/near";
+import { getSuiProvider } from "../utils/sui";
 import useIsWalletReady from "./useIsWalletReady";
 
 export type OriginalAssetInfo = {
@@ -123,6 +127,12 @@ export async function getOriginalAssetToken(
       promise = await getOriginalAssetNear(
         provider,
         NEAR_TOKEN_BRIDGE_ACCOUNT,
+        foreignNativeStringAddress
+      );
+    } else if (foreignChain === CHAIN_ID_SUI) {
+      promise = await getOriginalAssetSui(
+        getSuiProvider(),
+        getTokenBridgeAddressForChain(CHAIN_ID_SUI),
         foreignNativeStringAddress
       );
     }
@@ -336,6 +346,17 @@ function useOriginalAsset(
                 });
               });
             }
+          } else if (result.chainId === CHAIN_ID_SUI) {
+            getForeignAssetSui(
+              getSuiProvider(),
+              getTokenBridgeAddressForChain(CHAIN_ID_SUI),
+              result.chainId,
+              result.assetAddress
+            ).then((coinType) => {
+              if (!cancelled) {
+                setOriginAddress(coinType);
+              }
+            });
           } else {
             setOriginAddress(
               hexToNativeAssetString(

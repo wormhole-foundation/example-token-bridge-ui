@@ -2,6 +2,7 @@ import {
   CHAIN_ID_APTOS,
   CHAIN_ID_NEAR,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_SUI,
   getEmitterAddressNear,
   hexToNativeString,
   isEVMChain,
@@ -69,9 +70,12 @@ export const useTargetInfo = () => {
         getEmitterAddressNear(nearAccountId) === targetAddressHex
         ? nearAccountId
         : targetAddressHex || ""
-      : targetChain === CHAIN_ID_APTOS
-      ? `0x${targetAddressHex}` || ""
+      : targetChain === CHAIN_ID_APTOS || targetChain === CHAIN_ID_SUI
+      ? targetAddressHex
+        ? `0x${targetAddressHex}`
+        : ""
       : hexToNativeString(targetAddressHex, targetChain) || "";
+  console.log(targetAddressHex);
   return useMemo(
     () => ({
       targetChain,

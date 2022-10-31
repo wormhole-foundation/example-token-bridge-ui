@@ -1,18 +1,20 @@
 import {
-  ChainId,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_NEAR,
+  CHAIN_ID_SEI,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_SUI,
   CHAIN_ID_XPLA,
+  ChainId,
   isEVMChain,
   isTerraChain,
-  CHAIN_ID_SEI,
 } from "@certusone/wormhole-sdk";
-import { hexlify, hexStripZeros } from "@ethersproject/bytes";
-import { useConnectedWallet } from "@terra-money/wallet-provider";
+import { hexStripZeros, hexlify } from "@ethersproject/bytes";
 import { useWallet as useSeiWallet } from "@sei-js/react";
+import { useWallet as useSuiWallet } from "@suiet/wallet-kit";
+import { useConnectedWallet } from "@terra-money/wallet-provider";
 import { useConnectedWallet as useXplaConnectedWallet } from "@xpla/wallet-provider";
 import { useCallback, useMemo } from "react";
 import { useAlgorandContext } from "../contexts/AlgorandWalletContext";
@@ -21,6 +23,7 @@ import {
   ConnectType,
   useEthereumProvider,
 } from "../contexts/EthereumProviderContext";
+import { useInjectiveContext } from "../contexts/InjectiveWalletContext";
 import { useNearContext } from "../contexts/NearWalletContext";
 import { useSolanaWallet } from "../contexts/SolanaWalletContext";
 import { APTOS_NETWORK, CLUSTER, getEvmChainId } from "../utils/consts";
@@ -28,7 +31,6 @@ import {
   EVM_RPC_MAP,
   METAMASK_CHAIN_PARAMETERS,
 } from "../utils/metaMaskChainParameters";
-import { useInjectiveContext } from "../contexts/InjectiveWalletContext";
 
 const createWalletStatus = (
   isReady: boolean,
@@ -87,6 +89,7 @@ function useIsWalletReady(
   const { accounts: seiAccounts } = useSeiWallet();
   const seiAddress = seiAccounts.length ? seiAccounts[0].address : null;
   const hasSeiWallet = !!seiAddress;
+  const { address: suiAddress } = useSuiWallet();
 
   const forceNetworkSwitch = useCallback(async () => {
     if (provider && correctEvmNetwork) {
@@ -195,6 +198,14 @@ function useIsWalletReady(
     if (chainId === CHAIN_ID_NEAR && nearPK) {
       return createWalletStatus(true, undefined, forceNetworkSwitch, nearPK);
     }
+    if (chainId === CHAIN_ID_SUI && suiAddress) {
+      return createWalletStatus(
+        true,
+        undefined,
+        forceNetworkSwitch,
+        suiAddress
+      );
+    }
     if (isEVMChain(chainId) && hasEthInfo && signerAddress) {
       if (hasCorrectEvmNetwork) {
         return createWalletStatus(
@@ -245,6 +256,7 @@ function useIsWalletReady(
     hasSeiWallet,
     seiAddress,
     nearPK,
+    suiAddress,
   ]);
 }
 
