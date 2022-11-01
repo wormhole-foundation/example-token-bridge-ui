@@ -8,12 +8,16 @@ module.exports = function override(config, env) {
       rules: [
         ...config.module.rules,
         {
-          test: /\.js$/,
+          test: /\.m?js$/,
           enforce: "pre",
           use: ["source-map-loader"],
           resolve: {
             fullySpecified: false,
-          }
+            fallback: {
+              "react/jsx-runtime": "react/jsx-runtime.js",
+              "react/jsx-dev-runtime": "react/jsx-dev-runtime.js",
+            },
+          },
         },
         {
           test: /\.wasm$/,
