@@ -5,6 +5,7 @@ import {
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_NEAR,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_SUI,
   CHAIN_ID_XPLA,
   isEVMChain,
   isTerraChain,
@@ -15,6 +16,7 @@ import EthereumSignerKey from "./EthereumSignerKey";
 import InjectiveWalletKey from "./InjectiveWalletKey";
 import NearWalletKey from "./NearWalletKey";
 import SolanaWalletKey from "./SolanaWalletKey";
+import SuiWalletKey from "./SuiWalletKey";
 import TerraWalletKey from "./TerraWalletKey";
 import XplaWalletKey from "./XplaWalletKey";
 
@@ -42,6 +44,9 @@ function KeyAndBalance({ chainId }: { chainId: ChainId }) {
   }
   if (chainId === CHAIN_ID_NEAR) {
     return <NearWalletKey />;
+  }
+  if (chainId === CHAIN_ID_SUI) {
+    return <SuiWalletKey />;
   }
   return null;
 }
