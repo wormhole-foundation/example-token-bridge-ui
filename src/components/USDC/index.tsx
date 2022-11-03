@@ -4,7 +4,14 @@ import {
   CHAIN_ID_ETH,
   isEVMChain,
 } from "@certusone/wormhole-sdk";
-import { Container, makeStyles, Typography } from "@material-ui/core";
+import {
+  Container,
+  makeStyles,
+  Step,
+  StepLabel,
+  Stepper,
+  Typography,
+} from "@material-ui/core";
 import axios, { AxiosResponse } from "axios";
 import { constants, Contract, ethers } from "ethers";
 import { formatUnits, hexZeroPad, parseUnits } from "ethers/lib/utils";
@@ -20,6 +27,10 @@ import KeyAndBalance from "../KeyAndBalance";
 import NumberTextField from "../NumberTextField";
 import usdcLogo from "../../icons/usdc.svg";
 import wormholeLogo from "../../icons/wormhole.svg";
+import { useSnackbar } from "notistack";
+import { Alert } from "@material-ui/lab";
+import parseError from "../../utils/parseError";
+import HeaderText from "../HeaderText";
 
 const useStyles = makeStyles((theme) => ({
   header: {
@@ -28,9 +39,9 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: "center",
     marginBottom: "24px",
     "& > img": {
-      height: 64,
-      maxWidth: 64,
-      margin: "0 16px",
+      height: 20,
+      maxWidth: 20,
+      margin: "0 6px",
     },
   },
   chainSelectWrapper: {
@@ -63,6 +74,9 @@ const useStyles = makeStyles((theme) => ({
   },
   transferField: {
     marginTop: theme.spacing(2),
+  },
+  stepperContainer: {
+    marginTop: theme.spacing(4),
   },
 }));
 
@@ -161,6 +175,7 @@ type State = {
 
 function USDC() {
   const classes = useStyles();
+  const { enqueueSnackbar } = useSnackbar();
   // TODO: move to state with safety for switching
   const [{ sourceChain, targetChain }, setState] = useState<State>({
     sourceChain: CHAIN_ID_ETH,
@@ -169,23 +184,34 @@ function USDC() {
   const sourceContract = CIRCLE_BRIDGE_ADDRESSES[sourceChain];
   const sourceAsset = USDC_ADDRESSES[sourceChain];
   const targetContract = CIRCLE_EMITTER_ADDRESSES[targetChain];
-  const [amount, setAmount] = useState<string>("0");
+  const [amount, setAmount] = useState<string>("");
   const baseAmountParsed = amount && parseUnits(amount, USDC_DECIMALS);
   const transferAmountParsed = baseAmountParsed && baseAmountParsed.toBigInt();
   const humanReadableTransferAmount =
     transferAmountParsed && formatUnits(transferAmountParsed, USDC_DECIMALS);
   const oneParsed = parseUnits("1", USDC_DECIMALS).toBigInt();
-
+  const amountError =
+    transferAmountParsed !== "" && transferAmountParsed <= BigInt(0)
+      ? "Amount must be greater than zero"
+      : "";
+  const [isSending, setIsSending] = useState<boolean>(false);
+  const [sourceTxHash, setSourceTxHash] = useState<string>("");
   const [transferInfo, setTransferInfo] = useState<null | [string, string]>(
     null
   );
+  const isSendComplete = transferInfo !== null;
+  const [isRedeeming, setIsRedeeming] = useState<boolean>(false);
+  const [isRedeemComplete, setIsRedeemComplete] = useState<boolean>(false);
+  const [targetTxHash, setTargetTxHash] = useState<string>("");
 
   const { isReady, statusMessage } = useIsWalletReady(
     transferInfo ? targetChain : sourceChain
   );
   const { signer, signerAddress } = useEthereumProvider();
-  const preventNavigation = false;
-  // (isSending || isSendComplete || isRedeeming) && !isRedeemComplete;
+  const shouldLockFields =
+    isSending || isSendComplete || isRedeeming || isRedeemComplete;
+  const preventNavigation =
+    (isSending || isSendComplete || isRedeeming) && !isRedeemComplete;
 
   const { search } = useLocation();
   const query = useMemo(() => new URLSearchParams(search), [search]);
@@ -279,7 +305,12 @@ function USDC() {
 
   const approveButtonNeeded = isEVMChain(sourceChain) && !sufficientAllowance;
   const notOne = shouldApproveUnlimited || transferAmountParsed !== oneParsed;
-  const isDisabled = !isReady || isAllowanceFetching || isApproveProcessing;
+  const isApproveDisabled =
+    !isReady ||
+    !amount ||
+    !!amountError ||
+    isAllowanceFetching ||
+    isApproveProcessing;
   const errorMessage = statusMessage || allowanceError || undefined;
   const approveExactAmount = useMemo(() => {
     return () => {
@@ -287,22 +318,32 @@ function USDC() {
       approveAmount(BigInt(transferAmountParsed)).then(
         () => {
           setAllowanceError("");
+          enqueueSnackbar(null, {
+            content: (
+              <Alert severity="success">Approval transaction confirmed</Alert>
+            ),
+          });
         },
         (error) => setAllowanceError("Failed to approve the token transfer.")
       );
     };
-  }, [approveAmount, transferAmountParsed]);
+  }, [approveAmount, transferAmountParsed, enqueueSnackbar]);
   const approveUnlimited = useMemo(() => {
     return () => {
       setAllowanceError("");
       approveAmount(constants.MaxUint256.toBigInt()).then(
         () => {
           setAllowanceError("");
+          enqueueSnackbar(null, {
+            content: (
+              <Alert severity="success">Approval transaction confirmed</Alert>
+            ),
+          });
         },
         (error) => setAllowanceError("Failed to approve the token transfer.")
       );
     };
-  }, [approveAmount]);
+  }, [approveAmount, enqueueSnackbar]);
 
   const handleTransferClick = useCallback(() => {
     if (!isReady) return;
@@ -313,7 +354,7 @@ function USDC() {
     const sourceEmitter = CIRCLE_EMITTER_ADDRESSES[sourceChain];
     if (!sourceEmitter) return;
     const targetDomain = CIRCLE_DOMAINS[targetChain];
-    if (!targetDomain) return;
+    if (targetDomain === undefined) return;
     if (!transferAmountParsed) return;
     const contract = new Contract(
       sourceContract,
@@ -322,27 +363,45 @@ function USDC() {
       ],
       signer
     );
+    setIsSending(true);
     (async () => {
-      const tx = await contract.depositForBurn(
-        transferAmountParsed,
-        targetDomain,
-        hexZeroPad(signerAddress, 32),
-        sourceAsset
-      );
-      console.log(tx.hash);
-      const receipt = await tx.wait();
-      // const receipt = await signer.provider?.getTransactionReceipt(
-      //   "0x99087811e5dda33de54fdcfe3c5f541ede7f45d845d1f4880cbb1e6654fbcbb8"
-      // );
-      if (!receipt) return;
-      // find circle message
-      const [circleBridgeMessage, circleAttestation] =
-        await handleCircleMessageInLogs(receipt.logs, sourceEmitter);
-      if (circleBridgeMessage === null || circleAttestation === null) {
-        console.error("error parsing receipt", receipt);
-        return;
+      try {
+        const tx = await contract.depositForBurn(
+          transferAmountParsed,
+          targetDomain,
+          hexZeroPad(signerAddress, 32),
+          sourceAsset
+        );
+        setSourceTxHash(tx.hash);
+        const receipt = await tx.wait();
+        // const receipt = await signer.provider?.getTransactionReceipt(
+        //   "0x5772e912b4febaff4245472efe1c4a5d6bab663e20a66876c08fac376e3b1a60"
+        // );
+        if (!receipt) {
+          throw new Error("Invalid receipt");
+        }
+        enqueueSnackbar(null, {
+          content: (
+            <Alert severity="success">Transfer transaction confirmed</Alert>
+          ),
+        });
+        // find circle message
+        const [circleBridgeMessage, circleAttestation] =
+          await handleCircleMessageInLogs(receipt.logs, sourceEmitter);
+        if (circleBridgeMessage === null || circleAttestation === null) {
+          throw new Error(`Error parsing receipt for ${tx.hash}`);
+        }
+        setTransferInfo([circleBridgeMessage, circleAttestation]);
+        enqueueSnackbar(null, {
+          content: <Alert severity="success">Circle attestation found</Alert>,
+        });
+      } catch (e) {
+        console.error(e);
+        enqueueSnackbar(null, {
+          content: <Alert severity="error">{parseError(e)}</Alert>,
+        });
       }
-      setTransferInfo([circleBridgeMessage, circleAttestation]);
+      setIsSending(false);
     })();
   }, [
     isReady,
@@ -353,9 +412,8 @@ function USDC() {
     sourceChain,
     targetChain,
     transferAmountParsed,
+    enqueueSnackbar,
   ]);
-
-  const shouldLockFields = false;
 
   const handleRedeemClick = useCallback(() => {
     if (!isReady) return;
@@ -363,15 +421,47 @@ function USDC() {
     if (!signerAddress) return;
     if (!targetContract) return;
     if (!transferInfo) return;
-    const contract = new Contract(
-      targetContract,
-      [
-        "function receiveMessage(bytes memory _message, bytes calldata _attestation) external returns (bool success)",
-      ],
-      signer
-    );
-    contract.receiveMessage(transferInfo[0], transferInfo[1]);
-  }, [isReady, signer, signerAddress, transferInfo, targetContract]);
+    setIsRedeeming(true);
+    (async () => {
+      try {
+        const contract = new Contract(
+          targetContract,
+          [
+            "function receiveMessage(bytes memory _message, bytes calldata _attestation) external returns (bool success)",
+          ],
+          signer
+        );
+        const tx = await contract.receiveMessage(
+          transferInfo[0],
+          transferInfo[1]
+        );
+        setTargetTxHash(tx.hash);
+        const receipt = await tx.wait();
+        if (!receipt) {
+          throw new Error("Invalid receipt");
+        }
+        setIsRedeemComplete(true);
+        enqueueSnackbar(null, {
+          content: (
+            <Alert severity="success">Redeem transaction confirmed</Alert>
+          ),
+        });
+      } catch (e) {
+        console.error(e);
+        enqueueSnackbar(null, {
+          content: <Alert severity="error">{parseError(e)}</Alert>,
+        });
+      }
+      setIsRedeeming(false);
+    })();
+  }, [
+    isReady,
+    signer,
+    signerAddress,
+    transferInfo,
+    targetContract,
+    enqueueSnackbar,
+  ]);
 
   useEffect(() => {
     if (preventNavigation) {
@@ -382,63 +472,79 @@ function USDC() {
     }
   }, [preventNavigation]);
   return (
-    <Container maxWidth="xs">
-      <Typography variant="h1" className={classes.header}>
-        <img src={usdcLogo} alt="USDC" />
-        <span role="img">&#129309;</span>
-        <img src={wormholeLogo} alt="Wormhole" />
-      </Typography>
-      <KeyAndBalance chainId={sourceChain} />
-      <div className={classes.chainSelectWrapper}>
-        <div className={classes.chainSelectContainer}>
-          <img
-            src={CHAINS_BY_ID[sourceChain].logo}
-            alt={CHAINS_BY_ID[sourceChain].name}
-            className={classes.chainLogo}
-          />
-          <Typography>Source</Typography>
-        </div>
-        <div className={classes.chainSelectArrow}>
-          <ChainSelectArrow
-            onClick={handleSwitch}
-            disabled={shouldLockFields}
-          />
-        </div>
-        <div className={classes.chainSelectContainer}>
-          <img
-            src={CHAINS_BY_ID[targetChain].logo}
-            alt={CHAINS_BY_ID[targetChain].name}
-            className={classes.chainLogo}
-          />
-          <Typography>Target</Typography>
-        </div>
-      </div>
-      <NumberTextField
-        variant="outlined"
-        label="Amount"
-        fullWidth
-        className={classes.transferField}
-        value={amount}
-        onChange={handleAmountChange}
-        disabled={shouldLockFields}
-        // onMaxClick={
-        //   uiAmountString && !parsedTokenAccount.isNativeAsset
-        //     ? handleMaxClick
-        //     : undefined
-        // }
-      />
-      {transferInfo ? (
-        <ButtonWithLoader
-          disabled={false}
-          onClick={handleRedeemClick}
-          showLoader={false}
-          error={statusMessage}
+    <>
+      <Container maxWidth="md" style={{ paddingBottom: 24 }}>
+        <HeaderText
+          white
+          subtitle={
+            <>
+              <Typography gutterBottom>
+                This is a developmental USDC bridge that tests transfers across
+                chains using the Circle bridge.
+              </Typography>
+              <Typography className={classes.header}>
+                <img src={usdcLogo} alt="USDC" />
+                <span role="img">&#129309;</span>
+                <img src={wormholeLogo} alt="Wormhole" />
+              </Typography>
+            </>
+          }
         >
-          Redeem
-        </ButtonWithLoader>
-      ) : approveButtonNeeded ? (
-        <>
-          {/* <FormControlLabel
+          USDC Bridge
+        </HeaderText>
+      </Container>
+      <Container maxWidth="xs">
+        <KeyAndBalance chainId={sourceChain} />
+        <div className={classes.chainSelectWrapper}>
+          <div className={classes.chainSelectContainer}>
+            <img
+              src={CHAINS_BY_ID[sourceChain].logo}
+              alt={CHAINS_BY_ID[sourceChain].name}
+              className={classes.chainLogo}
+            />
+            <Typography>Source</Typography>
+          </div>
+          <div className={classes.chainSelectArrow}>
+            <ChainSelectArrow
+              onClick={handleSwitch}
+              disabled={shouldLockFields}
+            />
+          </div>
+          <div className={classes.chainSelectContainer}>
+            <img
+              src={CHAINS_BY_ID[targetChain].logo}
+              alt={CHAINS_BY_ID[targetChain].name}
+              className={classes.chainLogo}
+            />
+            <Typography>Target</Typography>
+          </div>
+        </div>
+        <NumberTextField
+          variant="outlined"
+          label="Amount (USDC)"
+          fullWidth
+          className={classes.transferField}
+          value={amount}
+          onChange={handleAmountChange}
+          disabled={shouldLockFields}
+          // onMaxClick={
+          //   uiAmountString && !parsedTokenAccount.isNativeAsset
+          //     ? handleMaxClick
+          //     : undefined
+          // }
+        />
+        {transferInfo ? (
+          <ButtonWithLoader
+            disabled={!isReady || isRedeeming || isRedeemComplete}
+            onClick={handleRedeemClick}
+            showLoader={isRedeeming}
+            error={statusMessage}
+          >
+            Redeem
+          </ButtonWithLoader>
+        ) : approveButtonNeeded ? (
+          <>
+            {/* <FormControlLabel
             control={
               <Checkbox
                 checked={shouldApproveUnlimited}
@@ -448,34 +554,59 @@ function USDC() {
             }
             label="Approve Unlimited Tokens"
           /> */}
+            <ButtonWithLoader
+              disabled={isApproveDisabled}
+              onClick={
+                shouldApproveUnlimited ? approveUnlimited : approveExactAmount
+              }
+              showLoader={isAllowanceFetching || isApproveProcessing}
+              error={errorMessage || amountError}
+            >
+              {"Approve " +
+                (shouldApproveUnlimited
+                  ? "Unlimited"
+                  : humanReadableTransferAmount
+                  ? humanReadableTransferAmount
+                  : amount) +
+                ` Token${notOne ? "s" : ""}`}
+            </ButtonWithLoader>
+          </>
+        ) : (
           <ButtonWithLoader
-            disabled={isDisabled}
-            onClick={
-              shouldApproveUnlimited ? approveUnlimited : approveExactAmount
-            }
-            showLoader={isAllowanceFetching || isApproveProcessing}
-            error={errorMessage}
+            disabled={!isReady || isSending}
+            onClick={handleTransferClick}
+            showLoader={isSending}
+            error={statusMessage || amountError}
           >
-            {"Approve " +
-              (shouldApproveUnlimited
-                ? "Unlimited"
-                : humanReadableTransferAmount
-                ? humanReadableTransferAmount
-                : amount) +
-              ` Token${notOne ? "s" : ""}`}
+            Transfer
           </ButtonWithLoader>
-        </>
-      ) : (
-        <ButtonWithLoader
-          disabled={false}
-          onClick={handleTransferClick}
-          showLoader={false}
-          error={statusMessage}
-        >
-          Transfer
-        </ButtonWithLoader>
-      )}
-    </Container>
+        )}
+        <div className={classes.stepperContainer}>
+          <Stepper
+            activeStep={
+              isRedeemComplete
+                ? 3
+                : transferInfo
+                ? 2
+                : approveButtonNeeded
+                ? 0
+                : 1
+            }
+            alternativeLabel
+          >
+            <Step>
+              <StepLabel>Approve</StepLabel>
+            </Step>
+            <Step>
+              <StepLabel>Transfer</StepLabel>
+            </Step>
+            <Step>
+              <StepLabel>Redeem</StepLabel>
+            </Step>
+          </Stepper>
+        </div>
+      </Container>
+    </>
   );
 }
 export default USDC;
