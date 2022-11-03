@@ -32,8 +32,8 @@ const ToggleConnectedButton = ({
   return connected ? (
     <Tooltip title={pk}>
       <Button
-        color="primary"
-        variant="contained"
+        color="default"
+        variant="outlined"
         size="small"
         onClick={disconnect}
         className={classes.button}

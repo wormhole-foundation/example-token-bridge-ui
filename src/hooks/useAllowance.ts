@@ -17,7 +17,8 @@ export default function useAllowance(
   chainId: ChainId,
   tokenAddress?: string,
   transferAmount?: BigInt,
-  sourceIsNative?: boolean
+  sourceIsNative?: boolean,
+  overrideAddress?: string
 ) {
   const dispatch = useDispatch();
   const [allowance, setAllowance] = useState<BigInt | null>(null);
@@ -34,7 +35,7 @@ export default function useAllowance(
     if (isEVMChain(chainId) && tokenAddress && signer && !isApproveProcessing) {
       setIsAllowanceFetching(true);
       getAllowanceEth(
-        getTokenBridgeAddressForChain(chainId),
+        overrideAddress || getTokenBridgeAddressForChain(chainId),
         tokenAddress,
         signer
       ).then(
@@ -56,7 +57,7 @@ export default function useAllowance(
     return () => {
       cancelled = true;
     };
-  }, [chainId, tokenAddress, signer, isApproveProcessing]);
+  }, [chainId, tokenAddress, signer, isApproveProcessing, overrideAddress]);
 
   const approveAmount: (amount: BigInt) => Promise<any> = useMemo(() => {
     return !isEVMChain(chainId) || !tokenAddress || !signer
@@ -73,7 +74,7 @@ export default function useAllowance(
           return gasPricePromise.then(
             (gasPrice) =>
               approveEth(
-                getTokenBridgeAddressForChain(chainId),
+                overrideAddress || getTokenBridgeAddressForChain(chainId),
                 tokenAddress,
                 signer,
                 BigNumber.from(amount),
@@ -94,7 +95,7 @@ export default function useAllowance(
             }
           );
         };
-  }, [chainId, tokenAddress, signer, dispatch]);
+  }, [chainId, tokenAddress, signer, dispatch, overrideAddress]);
 
   return useMemo(
     () => ({
