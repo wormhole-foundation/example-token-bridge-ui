@@ -1,17 +1,17 @@
 import {
   AppBar,
+  Box,
+  Button,
   Container,
   makeStyles,
   MenuItem,
   Select,
-  Tab,
-  Tabs,
   Toolbar,
   Typography,
 } from "@material-ui/core";
 import { useCallback } from "react";
-import { useHistory, useLocation } from "react-router";
-import { Redirect, Route, Switch } from "react-router-dom";
+import { useLocation } from "react-router";
+import { Link, Redirect, Route, Switch } from "react-router-dom";
 import Attest from "./components/Attest";
 import Footer from "./components/Footer";
 import HeaderText from "./components/HeaderText";
@@ -21,6 +21,7 @@ import Recovery from "./components/Recovery";
 import TokenOriginVerifier from "./components/TokenOriginVerifier";
 import Transfer from "./components/Transfer";
 import UnwrapNative from "./components/UnwrapNative";
+import USDC from "./components/USDC";
 import WithdrawTokensTerra from "./components/WithdrawTokensTerra";
 import { CLUSTER } from "./utils/consts";
 
@@ -72,14 +73,7 @@ const useStyles = makeStyles((theme) => ({
 
 function App() {
   const classes = useStyles();
-  const { push } = useHistory();
   const { pathname } = useLocation();
-  const handleTabChange = useCallback(
-    (event, value) => {
-      push(value);
-    },
-    [push]
-  );
   const handleClusterChange = useCallback((event) => {
     const urlParams = new URLSearchParams(window.location.search);
     urlParams.set("cluster", event.target.value);
@@ -90,11 +84,19 @@ function App() {
       {
         <AppBar position="static" elevation={0} style={{ marginBottom: 40 }}>
           <Toolbar variant="dense">
-            <Typography>
-              Caution! You are using the {CLUSTER.toUpperCase()} build of this
-              app.
-            </Typography>
-            <div style={{ flexGrow: 1 }} />
+            <Button component={Link} to="/usdc">
+              USDC
+            </Button>
+            <Button component={Link} to="/transfer">
+              Tokens
+            </Button>
+            <Button component={Link} to="/nft">
+              NFTs
+            </Button>
+            <Button component={Link} to="/redeem">
+              Redeem
+            </Button>
+            <Box sx={{ flexGrow: 1 }} />
             <Select
               value={CLUSTER}
               onChange={handleClusterChange}
@@ -122,19 +124,12 @@ function App() {
           >
             Token Bridge
           </HeaderText>
-          <Tabs
-            value={pathname}
-            variant="fullWidth"
-            onChange={handleTabChange}
-            indicatorColor="primary"
-          >
-            <Tab label="Tokens" value="/transfer" />
-            <Tab label="NFTs" value="/nft" />
-            <Tab label="Redeem" value="/redeem" to="/redeem" />
-          </Tabs>
         </Container>
       ) : null}
       <Switch>
+        <Route exact path="/usdc">
+          <USDC />
+        </Route>
         <Route exact path="/transfer">
           <Transfer />
         </Route>
