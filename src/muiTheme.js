@@ -37,8 +37,7 @@ export const theme = responsiveFontSizes(
             width: "8px",
             height: "8px",
           },
-          "*::-webkit-scrollbar-thumb": {
-          },
+          "*::-webkit-scrollbar-thumb": {},
           "*::-webkit-scrollbar-corner": {
             // this hides an annoying white box which appears when both scrollbars are present
             backgroundColor: "transparent",
@@ -58,19 +57,16 @@ export const theme = responsiveFontSizes(
         },
       },
       MuiButton: {
-        root: {
-        },
+        root: {},
         outlinedSizeSmall: {
           padding: "6px 9px",
           fontSize: "0.70rem",
         },
       },
       MuiLink: {
-        root: {
-        },
+        root: {},
       },
-      MuiPaper: {
-      },
+      MuiPaper: {},
       MuiStepper: {
         root: {
           backgroundColor: "transparent",
@@ -78,7 +74,7 @@ export const theme = responsiveFontSizes(
         },
       },
       MuiStep: {
-        root: {
+        vertical: {
           backgroundColor: "rgba(255,255,255,.07)",
           backdropFilter: "blur(4px)",
           padding: "32px 32px 16px",
@@ -99,13 +95,13 @@ export const theme = responsiveFontSizes(
       MuiStepLabel: {
         label: {
           textTransform: "uppercase",
+          "&.MuiStepLabel-alternativeLabel": { textTransform: "none" },
           "&.MuiStepLabel-active": {},
           "&.MuiStepLabel-completed": {},
         },
       },
       MuiTabs: {
-        root: {
-        },
+        root: {},
         indicator: {
           height: "100%",
           zIndex: -1,
