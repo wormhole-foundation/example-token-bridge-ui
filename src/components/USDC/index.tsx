@@ -75,6 +75,11 @@ const useStyles = makeStyles((theme) => ({
   transferField: {
     marginTop: theme.spacing(2),
   },
+  message: {
+    color: theme.palette.warning.light,
+    marginTop: theme.spacing(1),
+    textAlign: "center",
+  },
   stepperContainer: {
     marginTop: theme.spacing(4),
   },
@@ -196,6 +201,7 @@ function USDC() {
       : "";
   const [isSending, setIsSending] = useState<boolean>(false);
   const [sourceTxHash, setSourceTxHash] = useState<string>("");
+  const [sourceTxConfirmed, setSourceTxConfirmed] = useState<boolean>(false);
   const [transferInfo, setTransferInfo] = useState<null | [string, string]>(
     null
   );
@@ -374,6 +380,7 @@ function USDC() {
         );
         setSourceTxHash(tx.hash);
         const receipt = await tx.wait();
+        setSourceTxConfirmed(true);
         // const receipt = await signer.provider?.getTransactionReceipt(
         //   "0x5772e912b4febaff4245472efe1c4a5d6bab663e20a66876c08fac376e3b1a60"
         // );
@@ -581,6 +588,29 @@ function USDC() {
             Transfer
           </ButtonWithLoader>
         )}
+        {!statusMessage && !amountError ? (
+          <Typography variant="body2" className={classes.message}>
+            {isApproveProcessing ? (
+              "Waiting for wallet approval and confirmation..."
+            ) : isSending ? (
+              !sourceTxHash ? (
+                "Waiting for wallet approval..."
+              ) : !sourceTxConfirmed ? (
+                "Waiting for tx confirmation..."
+              ) : (
+                "Waiting for Circle attestation..."
+              )
+            ) : isRedeeming ? (
+              !targetTxHash ? (
+                "Waiting for wallet approval..."
+              ) : (
+                "Waiting for tx confirmation..."
+              )
+            ) : (
+              <>&nbsp;</>
+            )}
+          </Typography>
+        ) : null}
         <div className={classes.stepperContainer}>
           <Stepper
             activeStep={
