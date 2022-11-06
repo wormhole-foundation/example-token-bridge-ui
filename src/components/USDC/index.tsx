@@ -2,35 +2,46 @@ import {
   ChainId,
   CHAIN_ID_AVAX,
   CHAIN_ID_ETH,
+  getEmitterAddressEth,
+  getSignedVAAWithRetry,
   isEVMChain,
+  parseSequenceFromLogEth,
+  uint8ArrayToHex,
 } from "@certusone/wormhole-sdk";
 import {
   Container,
+  FormControlLabel,
+  FormGroup,
   makeStyles,
   Step,
   StepLabel,
   Stepper,
+  Switch,
   Typography,
 } from "@material-ui/core";
+import { Alert } from "@material-ui/lab";
 import axios, { AxiosResponse } from "axios";
 import { constants, Contract, ethers } from "ethers";
 import { formatUnits, hexZeroPad, parseUnits } from "ethers/lib/utils";
+import { useSnackbar } from "notistack";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useEthereumProvider } from "../../contexts/EthereumProviderContext";
 import useAllowance from "../../hooks/useAllowance";
 import useIsWalletReady from "../../hooks/useIsWalletReady";
-import { CHAINS_BY_ID } from "../../utils/consts";
-import ButtonWithLoader from "../ButtonWithLoader";
-import ChainSelectArrow from "../ChainSelectArrow";
-import KeyAndBalance from "../KeyAndBalance";
-import NumberTextField from "../NumberTextField";
 import usdcLogo from "../../icons/usdc.svg";
 import wormholeLogo from "../../icons/wormhole.svg";
-import { useSnackbar } from "notistack";
-import { Alert } from "@material-ui/lab";
+import {
+  CHAINS_BY_ID,
+  getBridgeAddressForChain,
+  WORMHOLE_RPC_HOSTS,
+} from "../../utils/consts";
 import parseError from "../../utils/parseError";
+import ButtonWithLoader from "../ButtonWithLoader";
+import ChainSelectArrow from "../ChainSelectArrow";
 import HeaderText from "../HeaderText";
+import KeyAndBalance from "../KeyAndBalance";
+import NumberTextField from "../NumberTextField";
 
 const useStyles = makeStyles((theme) => ({
   header: {
@@ -82,6 +93,17 @@ const useStyles = makeStyles((theme) => ({
   },
   stepperContainer: {
     marginTop: theme.spacing(4),
+  },
+  toggle: {
+    marginTop: theme.spacing(2),
+    "& .MuiFormControlLabel-root": {
+      flexDirection: "row-reverse",
+      marginLeft: theme.spacing(1),
+      marginRight: 0,
+    },
+    "& .MuiFormControlLabel-label": {
+      flexGrow: 1,
+    },
   },
 }));
 
@@ -172,6 +194,18 @@ const CIRCLE_DOMAINS: { [key in ChainId]?: number } = {
   [CHAIN_ID_ETH]: 0,
   [CHAIN_ID_AVAX]: 1,
 };
+const USDC_RELAYER: { [key in ChainId]?: string } = {
+  [CHAIN_ID_ETH]: "0xd9d949cd09d57ab7e40d558ce592352dd4cf82bc",
+  [CHAIN_ID_AVAX]: "0x3f091d2e415dccc451c4ca3de18b98a1641741d9",
+};
+const USDC_WH_EMITTER: { [key in ChainId]?: string } = {
+  [CHAIN_ID_ETH]: getEmitterAddressEth(
+    "0xbed1d2fa5e26653235879c64aa79e553d24c4c33"
+  ),
+  [CHAIN_ID_AVAX]: getEmitterAddressEth(
+    "0x8e9e80431c5b1d32163b1a2c6e98216982d90ffb"
+  ),
+};
 
 type State = {
   sourceChain: ChainId;
@@ -187,8 +221,11 @@ function USDC() {
     targetChain: CHAIN_ID_AVAX,
   });
   const sourceContract = CIRCLE_BRIDGE_ADDRESSES[sourceChain];
+  const sourceRelayContract = USDC_RELAYER[sourceChain];
+  const sourceRelayEmitter = USDC_WH_EMITTER[sourceChain];
   const sourceAsset = USDC_ADDRESSES[sourceChain];
   const targetContract = CIRCLE_EMITTER_ADDRESSES[targetChain];
+  const targetRelayContract = USDC_RELAYER[targetChain];
   const [amount, setAmount] = useState<string>("");
   const baseAmountParsed = amount && parseUnits(amount, USDC_DECIMALS);
   const transferAmountParsed = baseAmountParsed && baseAmountParsed.toBigInt();
@@ -199,12 +236,13 @@ function USDC() {
     transferAmountParsed !== "" && transferAmountParsed <= BigInt(0)
       ? "Amount must be greater than zero"
       : "";
+  const [shouldRelay, setShouldRelay] = useState<boolean>(false);
   const [isSending, setIsSending] = useState<boolean>(false);
   const [sourceTxHash, setSourceTxHash] = useState<string>("");
   const [sourceTxConfirmed, setSourceTxConfirmed] = useState<boolean>(false);
-  const [transferInfo, setTransferInfo] = useState<null | [string, string]>(
-    null
-  );
+  const [transferInfo, setTransferInfo] = useState<
+    null | [string | null, string, string]
+  >(null);
   const isSendComplete = transferInfo !== null;
   const [isRedeeming, setIsRedeeming] = useState<boolean>(false);
   const [isRedeemComplete, setIsRedeemComplete] = useState<boolean>(false);
@@ -245,6 +283,9 @@ function USDC() {
       sourceChain: s.targetChain,
       targetChain: s.sourceChain,
     }));
+  }, []);
+  const handleToggleRelay = useCallback(() => {
+    setShouldRelay((r) => !r);
   }, []);
   //This effect initializes the state based on the path params
   useEffect(() => {
@@ -306,7 +347,7 @@ function USDC() {
     sourceAsset,
     transferAmountParsed || undefined,
     false,
-    sourceContract
+    shouldRelay ? sourceRelayContract : sourceContract
   );
 
   const approveButtonNeeded = isEVMChain(sourceChain) && !sufficientAllowance;
@@ -362,54 +403,136 @@ function USDC() {
     const targetDomain = CIRCLE_DOMAINS[targetChain];
     if (targetDomain === undefined) return;
     if (!transferAmountParsed) return;
-    const contract = new Contract(
-      sourceContract,
-      [
-        "function depositForBurn(uint256 _amount, uint32 _destinationDomain, bytes32 _mintRecipient, address _burnToken) external returns (uint64 _nonce)",
-      ],
-      signer
-    );
-    setIsSending(true);
-    (async () => {
-      try {
-        const tx = await contract.depositForBurn(
-          transferAmountParsed,
-          targetDomain,
-          hexZeroPad(signerAddress, 32),
-          sourceAsset
-        );
-        setSourceTxHash(tx.hash);
-        const receipt = await tx.wait();
-        setSourceTxConfirmed(true);
-        // const receipt = await signer.provider?.getTransactionReceipt(
-        //   "0x5772e912b4febaff4245472efe1c4a5d6bab663e20a66876c08fac376e3b1a60"
-        // );
-        if (!receipt) {
-          throw new Error("Invalid receipt");
+    if (shouldRelay) {
+      if (!sourceRelayContract) return;
+      if (!sourceRelayEmitter) return;
+      const contract = new Contract(
+        sourceRelayContract,
+        [
+          `function transferTokensWithRelay(
+          address token,
+          uint256 amount,
+          uint256 toNativeTokenAmount,
+          uint16 targetChain,
+          bytes32 targetRecipientWallet
+        ) external payable returns (uint64 messageSequence)`,
+        ],
+        signer
+      );
+      setIsSending(true);
+      (async () => {
+        try {
+          const tx = await contract.transferTokensWithRelay(
+            sourceAsset,
+            transferAmountParsed,
+            BigInt(0),
+            targetChain,
+            hexZeroPad(signerAddress, 32)
+          );
+          setSourceTxHash(tx.hash);
+          const receipt = await tx.wait();
+          setSourceTxConfirmed(true);
+          // recovery test
+          // const hash =
+          //   "0xa73642c06cdcce5882c208885481b4433c0abf8a4128889ff1996865a06af90d";
+          // setSourceTxHash(hash);
+          // const receipt = await signer.provider?.getTransactionReceipt(hash);
+          // setSourceTxConfirmed(true);
+          if (!receipt) {
+            throw new Error("Invalid receipt");
+          }
+          enqueueSnackbar(null, {
+            content: (
+              <Alert severity="success">Transfer transaction confirmed</Alert>
+            ),
+          });
+          // find circle message
+          const [circleBridgeMessage, circleAttestation] =
+            await handleCircleMessageInLogs(receipt.logs, sourceEmitter);
+          if (circleBridgeMessage === null || circleAttestation === null) {
+            throw new Error(`Error parsing receipt for ${tx.hash}`);
+          }
+          enqueueSnackbar(null, {
+            content: <Alert severity="success">Circle attestation found</Alert>,
+          });
+          // find wormhole message
+          const seq = parseSequenceFromLogEth(
+            receipt,
+            getBridgeAddressForChain(sourceChain)
+          );
+          const { vaaBytes } = await getSignedVAAWithRetry(
+            WORMHOLE_RPC_HOSTS,
+            sourceChain,
+            sourceRelayEmitter,
+            seq
+          );
+          // TODO: more discreet state for better loading messages
+          setTransferInfo([
+            `0x${uint8ArrayToHex(vaaBytes)}`,
+            circleBridgeMessage,
+            circleAttestation,
+          ]);
+          enqueueSnackbar(null, {
+            content: <Alert severity="success">Wormhole message found</Alert>,
+          });
+        } catch (e) {
+          console.error(e);
+          enqueueSnackbar(null, {
+            content: <Alert severity="error">{parseError(e)}</Alert>,
+          });
         }
-        enqueueSnackbar(null, {
-          content: (
-            <Alert severity="success">Transfer transaction confirmed</Alert>
-          ),
-        });
-        // find circle message
-        const [circleBridgeMessage, circleAttestation] =
-          await handleCircleMessageInLogs(receipt.logs, sourceEmitter);
-        if (circleBridgeMessage === null || circleAttestation === null) {
-          throw new Error(`Error parsing receipt for ${tx.hash}`);
+        setIsSending(false);
+      })();
+    } else {
+      const contract = new Contract(
+        sourceContract,
+        [
+          "function depositForBurn(uint256 _amount, uint32 _destinationDomain, bytes32 _mintRecipient, address _burnToken) external returns (uint64 _nonce)",
+        ],
+        signer
+      );
+      setIsSending(true);
+      (async () => {
+        try {
+          const tx = await contract.depositForBurn(
+            transferAmountParsed,
+            targetDomain,
+            hexZeroPad(signerAddress, 32),
+            sourceAsset
+          );
+          setSourceTxHash(tx.hash);
+          const receipt = await tx.wait();
+          setSourceTxConfirmed(true);
+          // const receipt = await signer.provider?.getTransactionReceipt(
+          //   "0x5772e912b4febaff4245472efe1c4a5d6bab663e20a66876c08fac376e3b1a60"
+          // );
+          if (!receipt) {
+            throw new Error("Invalid receipt");
+          }
+          enqueueSnackbar(null, {
+            content: (
+              <Alert severity="success">Transfer transaction confirmed</Alert>
+            ),
+          });
+          // find circle message
+          const [circleBridgeMessage, circleAttestation] =
+            await handleCircleMessageInLogs(receipt.logs, sourceEmitter);
+          if (circleBridgeMessage === null || circleAttestation === null) {
+            throw new Error(`Error parsing receipt for ${tx.hash}`);
+          }
+          setTransferInfo([null, circleBridgeMessage, circleAttestation]);
+          enqueueSnackbar(null, {
+            content: <Alert severity="success">Circle attestation found</Alert>,
+          });
+        } catch (e) {
+          console.error(e);
+          enqueueSnackbar(null, {
+            content: <Alert severity="error">{parseError(e)}</Alert>,
+          });
         }
-        setTransferInfo([circleBridgeMessage, circleAttestation]);
-        enqueueSnackbar(null, {
-          content: <Alert severity="success">Circle attestation found</Alert>,
-        });
-      } catch (e) {
-        console.error(e);
-        enqueueSnackbar(null, {
-          content: <Alert severity="error">{parseError(e)}</Alert>,
-        });
-      }
-      setIsSending(false);
-    })();
+        setIsSending(false);
+      })();
+    }
   }, [
     isReady,
     signer,
@@ -419,6 +542,9 @@ function USDC() {
     sourceChain,
     targetChain,
     transferAmountParsed,
+    shouldRelay,
+    sourceRelayContract,
+    sourceRelayEmitter,
     enqueueSnackbar,
   ]);
 
@@ -428,45 +554,80 @@ function USDC() {
     if (!signerAddress) return;
     if (!targetContract) return;
     if (!transferInfo) return;
-    setIsRedeeming(true);
-    (async () => {
-      try {
-        const contract = new Contract(
-          targetContract,
-          [
-            "function receiveMessage(bytes memory _message, bytes calldata _attestation) external returns (bool success)",
-          ],
-          signer
-        );
-        const tx = await contract.receiveMessage(
-          transferInfo[0],
-          transferInfo[1]
-        );
-        setTargetTxHash(tx.hash);
-        const receipt = await tx.wait();
-        if (!receipt) {
-          throw new Error("Invalid receipt");
+    if (shouldRelay) {
+      if (!targetRelayContract) return;
+      setIsRedeeming(true);
+      (async () => {
+        try {
+          const contract = new Contract(
+            targetRelayContract,
+            [`function redeemTokens((bytes,bytes,bytes)) external payable`],
+            signer
+          );
+          console.log(transferInfo);
+          const tx = await contract.redeemTokens(transferInfo);
+          setTargetTxHash(tx.hash);
+          const receipt = await tx.wait();
+          if (!receipt) {
+            throw new Error("Invalid receipt");
+          }
+          setIsRedeemComplete(true);
+          enqueueSnackbar(null, {
+            content: (
+              <Alert severity="success">Redeem transaction confirmed</Alert>
+            ),
+          });
+        } catch (e) {
+          console.error(e);
+          enqueueSnackbar(null, {
+            content: <Alert severity="error">{parseError(e)}</Alert>,
+          });
         }
-        setIsRedeemComplete(true);
-        enqueueSnackbar(null, {
-          content: (
-            <Alert severity="success">Redeem transaction confirmed</Alert>
-          ),
-        });
-      } catch (e) {
-        console.error(e);
-        enqueueSnackbar(null, {
-          content: <Alert severity="error">{parseError(e)}</Alert>,
-        });
-      }
-      setIsRedeeming(false);
-    })();
+        setIsRedeeming(false);
+      })();
+    } else {
+      setIsRedeeming(true);
+      (async () => {
+        try {
+          const contract = new Contract(
+            targetContract,
+            [
+              "function receiveMessage(bytes memory _message, bytes calldata _attestation) external returns (bool success)",
+            ],
+            signer
+          );
+          const tx = await contract.receiveMessage(
+            transferInfo[1],
+            transferInfo[2]
+          );
+          setTargetTxHash(tx.hash);
+          const receipt = await tx.wait();
+          if (!receipt) {
+            throw new Error("Invalid receipt");
+          }
+          setIsRedeemComplete(true);
+          enqueueSnackbar(null, {
+            content: (
+              <Alert severity="success">Redeem transaction confirmed</Alert>
+            ),
+          });
+        } catch (e) {
+          console.error(e);
+          enqueueSnackbar(null, {
+            content: <Alert severity="error">{parseError(e)}</Alert>,
+          });
+        }
+        setIsRedeeming(false);
+      })();
+    }
   }, [
     isReady,
     signer,
     signerAddress,
     transferInfo,
     targetContract,
+    shouldRelay,
+    targetRelayContract,
     enqueueSnackbar,
   ]);
 
@@ -540,6 +701,19 @@ function USDC() {
           //     : undefined
           // }
         />
+        <FormGroup className={classes.toggle}>
+          <FormControlLabel
+            disabled={shouldLockFields}
+            control={
+              <Switch
+                value={shouldRelay}
+                onChange={handleToggleRelay}
+                color="primary"
+              />
+            }
+            label="Use relayer"
+          />
+        </FormGroup>
         {transferInfo ? (
           <ButtonWithLoader
             disabled={!isReady || isRedeeming || isRedeemComplete}
