@@ -6,7 +6,6 @@ import {
   CHAIN_ID_BSC,
   CHAIN_ID_CELO,
   CHAIN_ID_ETH,
-  CHAIN_ID_ETHEREUM_ROPSTEN,
   CHAIN_ID_FANTOM,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_KARURA,
@@ -50,10 +49,6 @@ export default function ShowTx({
   const explorerAddress =
     chainId === CHAIN_ID_ETH
       ? `https://${CLUSTER === "testnet" ? "goerli." : ""}etherscan.io/tx/${
-          tx?.id
-        }`
-      : chainId === CHAIN_ID_ETHEREUM_ROPSTEN
-      ? `https://${CLUSTER === "testnet" ? "ropsten." : ""}etherscan.io/tx/${
           tx?.id
         }`
       : chainId === CHAIN_ID_BSC
