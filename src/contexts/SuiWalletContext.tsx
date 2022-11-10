@@ -1,8 +1,36 @@
 import { WalletStandardAdapterProvider } from "@mysten/wallet-adapter-all-wallets";
 import { useWallet, WalletProvider } from "@mysten/wallet-adapter-react";
-import { ReactChildren, useMemo } from "react";
+import { ReactChildren, useEffect, useMemo, useState } from "react";
 
-export const useSuiContext = useWallet;
+export const useSuiContext = () => {
+  const [accounts, setAccounts] = useState<string[]>([]);
+  const { wallet, select, wallets, connected, disconnect, getAccounts } =
+    useWallet();
+
+  useEffect(() => {
+    let isCancelled = false;
+    if (wallet) {
+      wallet.getAccounts().then((accounts) => {
+        if (!isCancelled) {
+          setAccounts(accounts);
+        }
+      });
+    }
+    return () => {
+      isCancelled = true;
+    };
+  }, [wallet]);
+
+  return {
+    wallet,
+    accounts,
+    select,
+    wallets,
+    connected,
+    disconnect,
+    getAccounts,
+  };
+};
 
 export const SuiWalletProvider = ({
   children,

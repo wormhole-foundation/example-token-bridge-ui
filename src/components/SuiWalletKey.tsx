@@ -4,18 +4,21 @@ import SuiConnectWalletDialog from "./SuiConnectWalletDialog";
 import ToggleConnectedButton from "./ToggleConnectedButton";
 
 const SuiWalletKey = () => {
-  const { connected, disconnect, getAccounts } = useSuiContext();
-  // const address = (await getAccounts())[0];
-  const [address, setAddress] = useState("");
+  const { connected, disconnect, getAccounts, wallet } = useSuiContext();
+  const [address, setAddress] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  // TODO: can we use `accounts` instead of `getAccounts` here?
   useEffect(() => {
-    const fn = async () => {
-      const accounts = await getAccounts();
-      setAddress(accounts[0]);
-    };
-    fn();
-  }, []);
+    (async () => {
+      if (wallet) {
+        const accounts = await getAccounts();
+        setAddress(accounts[0]);
+      } else {
+        setAddress(null);
+      }
+    })();
+  }, [wallet]);
 
   const connect = useCallback(() => {
     setIsDialogOpen(true);
