@@ -493,9 +493,21 @@ export const APTOS_NETWORK =
 export const APTOS_NATIVE_DECIMALS = 8;
 export const APTOS_NATIVE_TOKEN_KEY = "0x1::aptos_coin::AptosCoin";
 
+<<<<<<< HEAD
 export const INJECTIVE_NETWORK = Network.TestnetK8s;
 export const INJECTIVE_NETWORK_INFO = getNetworkInfo(Network.TestnetK8s);
 
+||||||| parent of 6a0e92b (sui: token picker works)
+=======
+export const SUI_URL =
+  CLUSTER === "testnet"
+    ? "https://fullnode.devnet.sui.io:443"
+    : "http://localhost:5001";
+
+export const SUI_NATIVE_DECIMALS = 9;
+export const SUI_NATIVE_TOKEN_KEY = "0x2::sui::SUI";
+
+>>>>>>> 6a0e92b (sui: token picker works)
 export const ALGORAND_HOST =
   CLUSTER === "testnet"
     ? {

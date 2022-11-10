@@ -21,6 +21,7 @@
     "@near-wallet-selector/near-wallet": "^7.0.1",
     "@near-wallet-selector/nightly": "^7.0.1",
     "@near-wallet-selector/sender": "^7.0.1",
+    "@mysten/sui.js": "^0.14.0",
     "@mysten/wallet-adapter-all-wallets": "^0.2.2",
     "@mysten/wallet-adapter-react": "^5.0.0",
     "@mysten/wallet-adapter-react-ui": "^0.2.2",

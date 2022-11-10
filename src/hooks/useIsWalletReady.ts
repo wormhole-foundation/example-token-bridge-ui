@@ -5,6 +5,7 @@ import {
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_NEAR,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_SUI,
   CHAIN_ID_XPLA,
   isEVMChain,
   isTerraChain,
@@ -21,6 +22,7 @@ import {
 } from "../contexts/EthereumProviderContext";
 import { useNearContext } from "../contexts/NearWalletContext";
 import { useSolanaWallet } from "../contexts/SolanaWalletContext";
+import { useSuiContext } from "../contexts/SuiWalletContext";
 import { APTOS_NETWORK, CLUSTER, getEvmChainId } from "../utils/consts";
 import {
   EVM_RPC_MAP,
@@ -82,6 +84,9 @@ function useIsWalletReady(
   const { address: injAddress } = useInjectiveContext();
   const hasInjWallet = !!injAddress;
   const { accountId: nearPK } = useNearContext();
+  const { wallet, accounts } = useSuiContext();
+  const suiWallet = accounts;
+  const hasSuiWallet = !!wallet;
 
   const forceNetworkSwitch = useCallback(async () => {
     if (provider && correctEvmNetwork) {
@@ -171,6 +176,7 @@ function useIsWalletReady(
         );
       }
     }
+<<<<<<< HEAD
     if (chainId === CHAIN_ID_INJECTIVE && hasInjWallet && injAddress) {
       return createWalletStatus(
         true,
@@ -181,6 +187,14 @@ function useIsWalletReady(
     }
     if (chainId === CHAIN_ID_NEAR && nearPK) {
       return createWalletStatus(true, undefined, forceNetworkSwitch, nearPK);
+    }
+    if (chainId === CHAIN_ID_SUI && hasSuiWallet && suiWallet) {
+      return createWalletStatus(
+        true,
+        undefined,
+        forceNetworkSwitch,
+        suiWallet[0]
+      );
     }
     if (isEVMChain(chainId) && hasEthInfo && signerAddress) {
       if (hasCorrectEvmNetwork) {
@@ -230,6 +244,8 @@ function useIsWalletReady(
     hasInjWallet,
     injAddress,
     nearPK,
+    suiWallet,
+    hasSuiWallet,
   ]);
 }
 
