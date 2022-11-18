@@ -1,6 +1,7 @@
 {
   "files": {
-    "main.js": "/example-token-bridge-ui/static/js/main.d23984fd.js",
+    "main.css": "/example-token-bridge-ui/static/css/main.388f3ec5.css",
+    "main.js": "/example-token-bridge-ui/static/js/main.c8c3a305.js",
     "static/js/986.59bb44ed.chunk.js": "/example-token-bridge-ui/static/js/986.59bb44ed.chunk.js",
     "static/js/882.21d5a78a.chunk.js": "/example-token-bridge-ui/static/js/882.21d5a78a.chunk.js",
     "static/js/94.b61bf91f.chunk.js": "/example-token-bridge-ui/static/js/94.b61bf91f.chunk.js",
@@ -21,22 +22,25 @@
     "static/media/oasis-network-rose-logo.svg": "/example-token-bridge-ui/static/media/oasis-network-rose-logo.8f04dadd5b02ff48b835e789ad1c6dea.svg",
     "static/media/walletconnect.svg": "/example-token-bridge-ui/static/media/walletconnect.0105fde9a45ec17ab49ce31623bc4373.svg",
     "static/media/bsc.svg": "/example-token-bridge-ui/static/media/bsc.651c7605759848e72d890a9f7ecda59f.svg",
+    "index.html": "/example-token-bridge-ui/index.html",
     "static/media/aurora.svg": "/example-token-bridge-ui/static/media/aurora.4367c8904ada068be8b2993caab6f0e3.svg",
     "static/media/polygon.svg": "/example-token-bridge-ui/static/media/polygon.49c728fd68de61ac611a454a5c6ceb2d.svg",
-    "index.html": "/example-token-bridge-ui/index.html",
     "static/media/fantom.svg": "/example-token-bridge-ui/static/media/fantom.9248a2ffc8ffd648deb33b2ae9f8a95a.svg",
     "static/media/bnb.svg": "/example-token-bridge-ui/static/media/bnb.24513546440ec02f65084d000be7af0c.svg",
+    "static/media/near.svg": "/example-token-bridge-ui/static/media/near.bd102ec18374f08bd0c3f993edef5ca7.svg",
     "static/media/avax.svg": "/example-token-bridge-ui/static/media/avax.1e98fe3597e8eaf3f1fbacc3013f2d2f.svg",
     "static/media/xpla.svg": "/example-token-bridge-ui/static/media/xpla.39d25b51bf8a5b7f6aeb01cd57c5ec61.svg",
     "static/media/algorand.svg": "/example-token-bridge-ui/static/media/algorand.699bf008d7073523b8edd75d8f3b38ac.svg",
     "static/media/eth.svg": "/example-token-bridge-ui/static/media/eth.5a5de20bf3808241fc61ed9ad7680ab5.svg",
-    "main.d23984fd.js.map": "/example-token-bridge-ui/static/js/main.d23984fd.js.map",
+    "main.388f3ec5.css.map": "/example-token-bridge-ui/static/css/main.388f3ec5.css.map",
+    "main.c8c3a305.js.map": "/example-token-bridge-ui/static/js/main.c8c3a305.js.map",
     "986.59bb44ed.chunk.js.map": "/example-token-bridge-ui/static/js/986.59bb44ed.chunk.js.map",
     "882.21d5a78a.chunk.js.map": "/example-token-bridge-ui/static/js/882.21d5a78a.chunk.js.map",
     "94.b61bf91f.chunk.js.map": "/example-token-bridge-ui/static/js/94.b61bf91f.chunk.js.map",
     "578.318a21c4.chunk.js.map": "/example-token-bridge-ui/static/js/578.318a21c4.chunk.js.map"
   },
   "entrypoints": [
-    "static/js/main.d23984fd.js"
+    "static/css/main.388f3ec5.css",
+    "static/js/main.c8c3a305.js"
   ]
 }
