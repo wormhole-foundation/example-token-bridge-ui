@@ -5,7 +5,10 @@ import {
   getEmitterAddressEth,
   getSignedVAAWithRetry,
   isEVMChain,
+  keccak256,
   parseSequenceFromLogEth,
+  parseVaa,
+  tryUint8ArrayToNative,
   uint8ArrayToHex,
 } from "@certusone/wormhole-sdk";
 import {
@@ -13,6 +16,7 @@ import {
   FormControlLabel,
   FormGroup,
   makeStyles,
+  Slider,
   Step,
   StepLabel,
   Stepper,
@@ -22,7 +26,13 @@ import {
 import { Alert } from "@material-ui/lab";
 import axios, { AxiosResponse } from "axios";
 import { constants, Contract, ethers } from "ethers";
-import { formatUnits, hexZeroPad, parseUnits } from "ethers/lib/utils";
+import {
+  arrayify,
+  formatUnits,
+  hexlify,
+  hexZeroPad,
+  parseUnits,
+} from "ethers/lib/utils";
 import { useSnackbar } from "notistack";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
@@ -104,6 +114,9 @@ const useStyles = makeStyles((theme) => ({
     "& .MuiFormControlLabel-label": {
       flexGrow: 1,
     },
+  },
+  sliderContainer: {
+    margin: theme.spacing(2, 1, 0),
   },
 }));
 
@@ -194,16 +207,22 @@ const CIRCLE_DOMAINS: { [key in ChainId]?: number } = {
   [CHAIN_ID_ETH]: 0,
   [CHAIN_ID_AVAX]: 1,
 };
+const CIRCLE_DOMAIN_TO_WORMHOLE_CHAIN: { [key in number]: ChainId } = {
+  0: CHAIN_ID_ETH,
+  1: CHAIN_ID_AVAX,
+};
 const USDC_RELAYER: { [key in ChainId]?: string } = {
-  [CHAIN_ID_ETH]: "0xd9d949cd09d57ab7e40d558ce592352dd4cf82bc",
-  [CHAIN_ID_AVAX]: "0x3f091d2e415dccc451c4ca3de18b98a1641741d9",
+  [CHAIN_ID_ETH]: "0x2dacca34c172687efa15243a179ea9e170864a67",
+  [CHAIN_ID_AVAX]: "0x7b135d7959e59ba45c55ae08c14920b06f2658ec",
+};
+const USDC_WH_INTEGRATION: { [key in ChainId]?: string } = {
+  [CHAIN_ID_ETH]: "0xbdcc4ebe3157df347671e078a41ee5ce137cd306",
+  [CHAIN_ID_AVAX]: "0xb200977d46aea35ce6368d181534f413570a0f54",
 };
 const USDC_WH_EMITTER: { [key in ChainId]?: string } = {
-  [CHAIN_ID_ETH]: getEmitterAddressEth(
-    "0xbed1d2fa5e26653235879c64aa79e553d24c4c33"
-  ),
+  [CHAIN_ID_ETH]: getEmitterAddressEth(USDC_WH_INTEGRATION[CHAIN_ID_ETH] || ""),
   [CHAIN_ID_AVAX]: getEmitterAddressEth(
-    "0x8e9e80431c5b1d32163b1a2c6e98216982d90ffb"
+    USDC_WH_INTEGRATION[CHAIN_ID_AVAX] || ""
   ),
 };
 
@@ -226,6 +245,7 @@ function USDC() {
   const sourceAsset = USDC_ADDRESSES[sourceChain];
   const targetContract = CIRCLE_EMITTER_ADDRESSES[targetChain];
   const targetRelayContract = USDC_RELAYER[targetChain];
+  const targetCircleIntegrationContract = USDC_WH_INTEGRATION[targetChain];
   const [amount, setAmount] = useState<string>("");
   const baseAmountParsed = amount && parseUnits(amount, USDC_DECIMALS);
   const transferAmountParsed = baseAmountParsed && baseAmountParsed.toBigInt();
@@ -237,6 +257,7 @@ function USDC() {
       ? "Amount must be greater than zero"
       : "";
   const [shouldRelay, setShouldRelay] = useState<boolean>(false);
+  const [toNativeAmount, setToNativeAmount] = useState<bigint>(BigInt(1000));
   const [isSending, setIsSending] = useState<boolean>(false);
   const [sourceTxHash, setSourceTxHash] = useState<string>("");
   const [sourceTxConfirmed, setSourceTxConfirmed] = useState<boolean>(false);
@@ -247,7 +268,7 @@ function USDC() {
   const [isRedeeming, setIsRedeeming] = useState<boolean>(false);
   const [isRedeemComplete, setIsRedeemComplete] = useState<boolean>(false);
   const [targetTxHash, setTargetTxHash] = useState<string>("");
-
+  const vaa = transferInfo && transferInfo[0];
   const { isReady, statusMessage } = useIsWalletReady(
     transferInfo ? targetChain : sourceChain
   );
@@ -287,6 +308,9 @@ function USDC() {
   const handleToggleRelay = useCallback(() => {
     setShouldRelay((r) => !r);
   }, []);
+  const handleSliderChange = useCallback((event, value) => {
+    setToNativeAmount(parseUnits(value.toString(), 6).toBigInt());
+  }, []);
   //This effect initializes the state based on the path params
   useEffect(() => {
     if (!pathSourceChain && !pathTargetChain) {
@@ -321,7 +345,51 @@ function USDC() {
       console.error("Invalid path params specified.");
     }
   }, [pathSourceChain, pathTargetChain]);
-
+  //This effect polls to see if the transaction has been redeemed when relaying
+  useEffect(() => {
+    if (!shouldRelay) return;
+    if (!isSendComplete) return;
+    if (!vaa) return;
+    if (!targetCircleIntegrationContract) return;
+    if (!isReady) return;
+    if (!signer) return;
+    const hash = hexlify(keccak256(parseVaa(arrayify(vaa)).hash));
+    let cancelled = false;
+    (async () => {
+      let wasRedeemed = false;
+      while (!wasRedeemed && !cancelled) {
+        try {
+          const contract = new Contract(
+            targetCircleIntegrationContract,
+            [
+              `function isMessageConsumed(bytes32 hash) external view returns (bool)`,
+            ],
+            signer
+          );
+          wasRedeemed = await contract.isMessageConsumed(hash);
+          if (!wasRedeemed) await sleep(5000);
+        } catch (e) {
+          console.error(
+            "An error occurred while checking if the message was consumed",
+            e
+          );
+        }
+      }
+      if (!cancelled) {
+        setIsRedeemComplete(wasRedeemed);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    shouldRelay,
+    isSendComplete,
+    vaa,
+    targetCircleIntegrationContract,
+    isReady,
+    signer,
+  ]);
   const handleAmountChange = useCallback((event) => {
     setAmount(event.target.value);
   }, []);
@@ -425,7 +493,7 @@ function USDC() {
           const tx = await contract.transferTokensWithRelay(
             sourceAsset,
             transferAmountParsed,
-            BigInt(0),
+            toNativeAmount,
             targetChain,
             hexZeroPad(signerAddress, 32)
           );
@@ -545,6 +613,7 @@ function USDC() {
     shouldRelay,
     sourceRelayContract,
     sourceRelayEmitter,
+    toNativeAmount,
     enqueueSnackbar,
   ]);
 
@@ -556,16 +625,44 @@ function USDC() {
     if (!transferInfo) return;
     if (shouldRelay) {
       if (!targetRelayContract) return;
+      if (!vaa) return;
       setIsRedeeming(true);
       (async () => {
         try {
+          // adapted from https://github.com/wormhole-foundation/example-circle-relayer/blob/c488fe61c528b6099a90f01f42e796df7f330485/relayer/src/main.ts
           const contract = new Contract(
             targetRelayContract,
-            [`function redeemTokens((bytes,bytes,bytes)) external payable`],
+            [
+              `function calculateNativeSwapAmount(
+                address token,
+                uint256 toNativeAmount
+                ) external view returns (uint256)`,
+              `function redeemTokens((bytes,bytes,bytes)) external payable`,
+            ],
             signer
           );
-          console.log(transferInfo);
-          const tx = await contract.redeemTokens(transferInfo);
+          const payloadArray = parseVaa(arrayify(vaa)).payload;
+          // parse the domain into a chain
+          const toDomain = payloadArray.readUInt32BE(69);
+          if (!(toDomain in CIRCLE_DOMAIN_TO_WORMHOLE_CHAIN)) {
+            console.warn(`Unknown toDomain ${toDomain}`);
+          }
+          const toChain = CIRCLE_DOMAIN_TO_WORMHOLE_CHAIN[toDomain];
+          // parse the token address and toNativeAmount
+          const token = tryUint8ArrayToNative(
+            payloadArray.subarray(1, 33),
+            toChain
+          );
+          const toNativeAmount = ethers.utils.hexlify(
+            payloadArray.subarray(180, 212)
+          );
+          const nativeSwapQuote = await contract.calculateNativeSwapAmount(
+            token,
+            toNativeAmount
+          );
+          const tx = await contract.redeemTokens(transferInfo, {
+            value: nativeSwapQuote,
+          });
           setTargetTxHash(tx.hash);
           const receipt = await tx.wait();
           if (!receipt) {
@@ -628,6 +725,7 @@ function USDC() {
     targetContract,
     shouldRelay,
     targetRelayContract,
+    vaa,
     enqueueSnackbar,
   ]);
 
@@ -714,6 +812,25 @@ function USDC() {
             label="Use relayer"
           />
         </FormGroup>
+        <div className={classes.sliderContainer}>
+          <Typography
+            gutterBottom
+            color={shouldRelay ? "textPrimary" : "textSecondary"}
+          >
+            Destination Gas (in USDC)
+            {/* TODO: show quote */}
+            {/* TODO: enforce max */}
+          </Typography>
+          <Slider
+            disabled={!shouldRelay || shouldLockFields}
+            onChange={handleSliderChange}
+            value={Number(formatUnits(toNativeAmount, 6))}
+            step={0.001}
+            min={0}
+            max={1}
+            valueLabelDisplay="auto"
+          />
+        </div>
         {transferInfo ? (
           <ButtonWithLoader
             disabled={!isReady || isRedeeming || isRedeemComplete}
