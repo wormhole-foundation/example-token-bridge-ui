@@ -1,7 +1,7 @@
 import {
-  ChainId,
   CHAIN_ID_ETH,
   CHAIN_ID_SOLANA,
+  ChainId,
 } from "@certusone/wormhole-sdk";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { StateSafeWormholeWrappedInfo } from "../hooks/useCheckIfWormholeWrapped";
@@ -63,6 +63,7 @@ export interface TransferState {
   useRelayer: boolean;
   relayerFee: string | undefined;
   acalaRelayerInfo: DataWrapper<AcalaRelayerInfo>;
+  neonRelayerInfo: DataWrapper<AcalaRelayerInfo>;
 }
 
 const initialState: TransferState = {
@@ -91,6 +92,7 @@ const initialState: TransferState = {
   useRelayer: false,
   relayerFee: undefined,
   acalaRelayerInfo: getEmptyDataWrapper(),
+  neonRelayerInfo: getEmptyDataWrapper(),
 };
 
 export const transferSlice = createSlice({
@@ -308,6 +310,31 @@ export const transferSlice = createSlice({
     ) => {
       state.acalaRelayerInfo = receiveDataWrapper(action.payload);
     },
+    setNeonRelayerInfo: (
+      state,
+      action: PayloadAction<AcalaRelayerInfo | undefined>
+    ) => {
+      state.neonRelayerInfo = action.payload
+        ? receiveDataWrapper(action.payload)
+        : getEmptyDataWrapper();
+    },
+    fetchNeonRelayerInfo: (state) => {
+      state.neonRelayerInfo = fetchDataWrapper();
+    },
+    errorNeonRelayerInfo: (
+      state,
+      action: PayloadAction<string | undefined>
+    ) => {
+      state.neonRelayerInfo = errorDataWrapper(
+        action.payload || "An unknown error occurred."
+      );
+    },
+    receiveNeonRelayerInfo: (
+      state,
+      action: PayloadAction<AcalaRelayerInfo>
+    ) => {
+      state.neonRelayerInfo = receiveDataWrapper(action.payload);
+    },
   },
 });
 
@@ -344,6 +371,10 @@ export const {
   fetchAcalaRelayerInfo,
   errorAcalaRelayerInfo,
   receiveAcalaRelayerInfo,
+  setNeonRelayerInfo,
+  fetchNeonRelayerInfo,
+  errorNeonRelayerInfo,
+  receiveNeonRelayerInfo,
 } = transferSlice.actions;
 
 export default transferSlice.reducer;

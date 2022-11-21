@@ -1,5 +1,4 @@
 import {
-  ChainId,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
   CHAIN_ID_INJECTIVE,
@@ -7,6 +6,8 @@ import {
   CHAIN_ID_NEAR,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
+  ChainId,
+  CHAINS,
   isEVMChain,
   isTerraChain,
   postVaaSolanaWithRetry,
@@ -68,9 +69,10 @@ import {
   getTokenBridgeAddressForChain,
   MAX_VAA_UPLOAD_RETRIES_SOLANA,
   NEAR_TOKEN_BRIDGE_ACCOUNT,
-  SOLANA_HOST,
+  NEON_RELAY_URL,
   SOL_BRIDGE_ADDRESS,
   SOL_TOKEN_BRIDGE_ADDRESS,
+  SOLANA_HOST,
 } from "../utils/consts";
 import { broadcastInjectiveTx } from "../utils/injective";
 import {
@@ -530,13 +532,22 @@ export function useHandleRedeem() {
     injAddress,
   ]);
 
+  const getUrl = (targetChain: ChainId): string => {
+    switch (targetChain) {
+      case CHAINS.neon:
+        return NEON_RELAY_URL;
+      default:
+        return ACALA_RELAY_URL;
+    }
+  };
+
   const handleAcalaRelayerRedeemClick = useCallback(async () => {
     if (!signedVAA) return;
 
     dispatch(setIsRedeeming(true));
 
     try {
-      const res = await axios.post(ACALA_RELAY_URL, {
+      const res = await axios.post(getUrl(targetChain), {
         targetChain,
         signedVAA: uint8ArrayToHex(signedVAA),
       });
