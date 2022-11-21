@@ -1,5 +1,4 @@
 import {
-  ChainId,
   CHAIN_ID_ACALA,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
@@ -22,6 +21,7 @@ import {
   CHAIN_ID_TERRA,
   CHAIN_ID_TERRA2,
   CHAIN_ID_XPLA,
+  ChainId,
   coalesceChainName,
   CONTRACTS,
   isEVMChain,
@@ -63,11 +63,13 @@ const urlParams = new URLSearchParams(window.location.search);
 const paramCluster = urlParams.get("cluster");
 export const CLUSTER: Cluster =
   paramCluster === "devnet" ? "devnet" : "testnet";
+
 export interface ChainInfo {
   id: ChainId;
   name: string;
   logo: string;
 }
+
 export const CHAINS: ChainInfo[] =
   CLUSTER === "testnet"
     ? [
@@ -839,6 +841,11 @@ export const ACALA_RELAYER_URL =
 
 export const ACALA_RELAY_URL = `${ACALA_RELAYER_URL}/relay`;
 export const ACALA_SHOULD_RELAY_URL = `${ACALA_RELAYER_URL}/shouldRelay`;
+
+export const NEON_RELAYER_URL =
+  CLUSTER === "testnet" ? "https://wormhole-relayer.neontest.xyz" : "";
+export const NEON_RELAY_URL = `${NEON_RELAYER_URL}/relay`;
+export const NEON_SHOULD_RELAY_URL = `${NEON_RELAYER_URL}/shouldRelay`;
 
 export const getChainShortName = (chainId: ChainId) => {
   return chainId === CHAIN_ID_BSC ? "BSC" : CHAINS_BY_ID[chainId]?.name;

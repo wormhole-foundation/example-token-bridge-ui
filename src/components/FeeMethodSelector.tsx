@@ -1,6 +1,7 @@
 import {
   CHAIN_ID_ACALA,
   CHAIN_ID_KARURA,
+  CHAIN_ID_NEON,
   CHAIN_ID_TERRA,
   hexToNativeAssetString,
   isEVMChain,
@@ -32,6 +33,7 @@ import {
 } from "../store/selectors";
 import { setRelayerFee, setUseRelayer } from "../store/transferSlice";
 import { CHAINS_BY_ID, getDefaultNativeCurrencySymbol } from "../utils/consts";
+import { useNeonRelayerInfo } from "../hooks/useNeonRelayerInfo";
 
 const useStyles = makeStyles((theme) => ({
   feeSelectorContainer: {
@@ -107,6 +109,11 @@ function FeeMethodSelector() {
     vaaNormalizedAmount,
     originChain ? hexToNativeAssetString(originAsset, originChain) : undefined
   );
+  const neonRelayerInfo = useNeonRelayerInfo(
+    targetChain,
+    vaaNormalizedAmount,
+    originChain ? hexToNativeAssetString(originAsset, originChain) : undefined
+  );
   const sourceChain = useSelector(selectTransferSourceChain);
   const dispatch = useDispatch();
   const relayerSelected = !!useSelector(selectTransferUseRelayer);
@@ -123,12 +130,22 @@ function FeeMethodSelector() {
     targetChain === CHAIN_ID_ACALA || targetChain === CHAIN_ID_KARURA;
   const acalaRelayerEligible = acalaRelayerInfo.data?.shouldRelay;
 
+  const targetIsNeon = targetChain === CHAIN_ID_NEON;
+  const neonRelayerEligible = neonRelayerInfo.data?.shouldRelay;
+
   const chooseAcalaRelayer = useCallback(() => {
     if (targetIsAcala && acalaRelayerEligible) {
       dispatch(setUseRelayer(true));
       dispatch(setRelayerFee(undefined));
     }
   }, [dispatch, targetIsAcala, acalaRelayerEligible]);
+
+  const chooseNeonRelayer = useCallback(() => {
+    if (targetIsNeon && neonRelayerEligible) {
+      dispatch(setUseRelayer(true));
+      dispatch(setRelayerFee(undefined));
+    }
+  }, [dispatch, targetIsNeon, neonRelayerEligible]);
 
   const chooseRelayer = useCallback(() => {
     if (relayerEligible) {
@@ -149,6 +166,12 @@ function FeeMethodSelector() {
       } else {
         chooseManual();
       }
+    } else if (targetIsNeon) {
+      if (neonRelayerEligible) {
+        chooseNeonRelayer();
+      } else {
+        chooseManual();
+      }
     } else if (relayerInfo.data?.isRelayable === true) {
       chooseRelayer();
     } else if (relayerInfo.data?.isRelayable === false) {
@@ -164,51 +187,62 @@ function FeeMethodSelector() {
     chooseAcalaRelayer,
   ]);
 
-  const acalaRelayerContent = (
-    <Card
-      className={
-        classes.optionCardBase +
-        " " +
-        (relayerSelected ? classes.optionCardSelected : "") +
-        " " +
-        (acalaRelayerEligible ? classes.optionCardSelectable : "")
-      }
-      onClick={chooseAcalaRelayer}
-    >
-      <div className={classes.alignCenterContainer}>
-        <Checkbox
-          checked={relayerSelected}
-          disabled={!acalaRelayerEligible}
-          onClick={chooseAcalaRelayer}
-          className={classes.inlineBlock}
-        />
-        <div className={clsx(classes.inlineBlock, classes.alignLeft)}>
-          {acalaRelayerEligible ? (
-            <div>
-              <Typography variant="body1">
-                {CHAINS_BY_ID[targetChain].name}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                {CHAINS_BY_ID[targetChain].name} pays gas for you &#127881;
-              </Typography>
-            </div>
-          ) : (
-            <>
-              <Typography color="textSecondary" variant="body2">
-                {"Automatic redeem is unavailable for this token."}
-              </Typography>
-              <div />
-            </>
-          )}
+  const relayerContentFactory = (relayerEligible: any, chooseRelayer: any) => {
+    return (
+      <Card
+        className={
+          classes.optionCardBase +
+          " " +
+          (relayerSelected ? classes.optionCardSelected : "") +
+          " " +
+          (relayerEligible ? classes.optionCardSelectable : "")
+        }
+        onClick={chooseRelayer}
+      >
+        <div className={classes.alignCenterContainer}>
+          <Checkbox
+            checked={relayerSelected}
+            disabled={!relayerEligible}
+            onClick={chooseRelayer}
+            className={classes.inlineBlock}
+          />
+          <div className={clsx(classes.inlineBlock, classes.alignLeft)}>
+            {relayerEligible ? (
+              <>
+                <Typography variant="body1">
+                  {CHAINS_BY_ID[targetChain].name}
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  {CHAINS_BY_ID[targetChain].name} pays gas for you &#127881;
+                </Typography>
+              </>
+            ) : (
+              <>
+                <Typography color="textSecondary" variant="body2">
+                  {"Automatic redeem is unavailable for this token."}
+                </Typography>
+                <div />
+              </>
+            )}
+          </div>
         </div>
-      </div>
-      {acalaRelayerEligible ? (
-        <>
-          <div></div>
-          <div></div>
-        </>
-      ) : null}
-    </Card>
+        {relayerEligible ? (
+          <>
+            <div></div>
+            <div></div>
+          </>
+        ) : null}
+      </Card>
+    );
+  };
+
+  const acalaRelayerContent = relayerContentFactory(
+    acalaRelayerEligible,
+    chooseAcalaRelayer
+  );
+  const neonRelayerContent = relayerContentFactory(
+    neonRelayerEligible,
+    chooseNeonRelayer
   );
 
   const relayerContent = (
@@ -323,7 +357,11 @@ function FeeMethodSelector() {
       >
         How would you like to pay the target chain fees?
       </Typography>
-      {targetIsAcala ? acalaRelayerContent : relayerContent}
+      {targetIsAcala
+        ? acalaRelayerContent
+        : targetIsNeon
+        ? neonRelayerContent
+        : relayerContent}
       {manualRedeemContent}
     </div>
   );
