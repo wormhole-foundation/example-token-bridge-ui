@@ -1,18 +1,13 @@
 import {
   CHAIN_ID_ACALA,
   CHAIN_ID_KARURA,
+  CHAIN_ID_NEON,
   CHAIN_ID_TERRA,
   hexToNativeAssetString,
   isEVMChain,
-  isTerraChain,
+  isTerraChain
 } from "@certusone/wormhole-sdk";
-import {
-  Card,
-  Checkbox,
-  Chip,
-  makeStyles,
-  Typography,
-} from "@material-ui/core";
+import { Card, Checkbox, Chip, makeStyles, Typography } from "@material-ui/core";
 import clsx from "clsx";
 import { parseUnits } from "ethers/lib/utils";
 import { useCallback, useEffect } from "react";
@@ -28,18 +23,19 @@ import {
   selectTransferSourceChain,
   selectTransferSourceParsedTokenAccount,
   selectTransferTargetChain,
-  selectTransferUseRelayer,
+  selectTransferUseRelayer
 } from "../store/selectors";
 import { setRelayerFee, setUseRelayer } from "../store/transferSlice";
 import { CHAINS_BY_ID, getDefaultNativeCurrencySymbol } from "../utils/consts";
+import { useNeonRelayerInfo } from "../hooks/useNeonRelayerInfo";
 
 const useStyles = makeStyles((theme) => ({
   feeSelectorContainer: {
     marginTop: "2rem",
-    textAlign: "center",
+    textAlign: "center"
   },
   title: {
-    margin: theme.spacing(2),
+    margin: theme.spacing(2)
   },
   optionCardBase: {
     display: "flex",
@@ -48,37 +44,37 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: "space-between",
     padding: theme.spacing(1),
     "& > *": {
-      margin: ".5rem",
+      margin: ".5rem"
     },
-    border: "1px solid ",
+    border: "1px solid "
   },
   alignCenterContainer: {
     alignItems: "center",
     display: "flex",
     "& > *": {
-      margin: "0rem 1rem 0rem 1rem",
-    },
+      margin: "0rem 1rem 0rem 1rem"
+    }
   },
   optionCardSelectable: {
     "&:hover": {
       cursor: "pointer",
-      boxShadow: "inset 0 0 100px 100px rgba(255, 255, 255, 0.1)",
-    },
+      boxShadow: "inset 0 0 100px 100px rgba(255, 255, 255, 0.1)"
+    }
   },
   optionCardSelected: {
-    border: "1px solid ",
+    border: "1px solid "
   },
   inlineBlock: {
-    display: "inline-block",
+    display: "inline-block"
   },
   alignLeft: {
-    textAlign: "left",
+    textAlign: "left"
   },
   betaLabel: {
     background: "linear-gradient(20deg, #f44b1b 0%, #eeb430 100%)",
     marginLeft: theme.spacing(1),
-    fontSize: "120%",
-  },
+    fontSize: "120%"
+  }
 }));
 
 function FeeMethodSelector() {
@@ -99,10 +95,16 @@ function FeeMethodSelector() {
         transferAmount,
         Math.min(sourceDecimals, 8)
       ).toString();
-    } catch (e) {}
+    } catch (e) {
+    }
   }
   const sourceSymbol = sourceParsedTokenAccount?.symbol;
   const acalaRelayerInfo = useAcalaRelayerInfo(
+    targetChain,
+    vaaNormalizedAmount,
+    originChain ? hexToNativeAssetString(originAsset, originChain) : undefined
+  );
+  const neonRelayerInfo = useNeonRelayerInfo(
     targetChain,
     vaaNormalizedAmount,
     originChain ? hexToNativeAssetString(originAsset, originChain) : undefined
@@ -123,12 +125,22 @@ function FeeMethodSelector() {
     targetChain === CHAIN_ID_ACALA || targetChain === CHAIN_ID_KARURA;
   const acalaRelayerEligible = acalaRelayerInfo.data?.shouldRelay;
 
+  const targetIsNeon = targetChain === CHAIN_ID_NEON;
+  const neonRelayerEligible = neonRelayerInfo.data?.shouldRelay;
+
   const chooseAcalaRelayer = useCallback(() => {
     if (targetIsAcala && acalaRelayerEligible) {
       dispatch(setUseRelayer(true));
       dispatch(setRelayerFee(undefined));
     }
   }, [dispatch, targetIsAcala, acalaRelayerEligible]);
+
+  const chooseNeonRelayer = useCallback(() => {
+    if (targetIsNeon && neonRelayerEligible) {
+      dispatch(setUseRelayer(true));
+      dispatch(setRelayerFee(undefined));
+    }
+  }, [dispatch, targetIsNeon, neonRelayerEligible]);
 
   const chooseRelayer = useCallback(() => {
     if (relayerEligible) {
@@ -149,6 +161,12 @@ function FeeMethodSelector() {
       } else {
         chooseManual();
       }
+    } else if (targetIsNeon) {
+      if (neonRelayerEligible) {
+        chooseNeonRelayer();
+      } else {
+        chooseManual();
+      }
     } else if (relayerInfo.data?.isRelayable === true) {
       chooseRelayer();
     } else if (relayerInfo.data?.isRelayable === false) {
@@ -161,55 +179,60 @@ function FeeMethodSelector() {
     chooseManual,
     targetIsAcala,
     acalaRelayerEligible,
-    chooseAcalaRelayer,
+    chooseAcalaRelayer
   ]);
 
-  const acalaRelayerContent = (
-    <Card
-      className={
-        classes.optionCardBase +
-        " " +
-        (relayerSelected ? classes.optionCardSelected : "") +
-        " " +
-        (acalaRelayerEligible ? classes.optionCardSelectable : "")
-      }
-      onClick={chooseAcalaRelayer}
-    >
-      <div className={classes.alignCenterContainer}>
-        <Checkbox
-          checked={relayerSelected}
-          disabled={!acalaRelayerEligible}
-          onClick={chooseAcalaRelayer}
-          className={classes.inlineBlock}
-        />
-        <div className={clsx(classes.inlineBlock, classes.alignLeft)}>
-          {acalaRelayerEligible ? (
-            <div>
-              <Typography variant="body1">
-                {CHAINS_BY_ID[targetChain].name}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                {CHAINS_BY_ID[targetChain].name} pays gas for you &#127881;
-              </Typography>
-            </div>
-          ) : (
-            <>
-              <Typography color="textSecondary" variant="body2">
-                {"Automatic redeem is unavailable for this token."}
-              </Typography>
-              <div />
-            </>
-          )}
+  const relayerContentFactory = (relayerEligible: any, chooseRelayer: any) => {
+    return (
+      <Card
+        className={
+          classes.optionCardBase +
+          " " +
+          (relayerSelected ? classes.optionCardSelected : "") +
+          " " +
+          (relayerEligible ? classes.optionCardSelectable : "")
+        }
+        onClick={chooseRelayer}
+      >
+        <div className={classes.alignCenterContainer}>
+          <Checkbox
+            checked={relayerSelected}
+            disabled={!relayerEligible}
+            onClick={chooseRelayer}
+            className={classes.inlineBlock}
+          />
+          <div className={clsx(classes.inlineBlock, classes.alignLeft)}>
+            {relayerEligible ? (
+              <>
+                <Typography variant="body1">
+                  {CHAINS_BY_ID[targetChain].name}
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  {CHAINS_BY_ID[targetChain].name} pays gas for you &#127881;
+                </Typography>
+              </>
+            ) : (
+              <>
+                <Typography color="textSecondary" variant="body2">
+                  {"Automatic redeem is unavailable for this token."}
+                </Typography>
+                <div />
+              </>
+            )}
+          </div>
         </div>
-      </div>
-      {acalaRelayerEligible ? (
-        <>
-          <div></div>
-          <div></div>
-        </>
-      ) : null}
-    </Card>
-  );
+        {relayerEligible ? (
+          <>
+            <div></div>
+            <div></div>
+          </>
+        ) : null}
+      </Card>
+    );
+  };
+
+  const acalaRelayerContent = relayerContentFactory(acalaRelayerEligible, chooseAcalaRelayer);
+  const neonRelayerContent = relayerContentFactory(neonRelayerEligible, chooseNeonRelayer);
 
   const relayerContent = (
     <Card
@@ -268,7 +291,8 @@ function FeeMethodSelector() {
                 parsedTokenAccount={sourceParsedTokenAccount}
                 isAsset
               />
-            </div>{" "}
+            </div>
+            {" "}
             <Typography>{`($ ${relayerInfo.data?.feeUsd})`}</Typography>
           </div>
         </>
@@ -323,7 +347,9 @@ function FeeMethodSelector() {
       >
         How would you like to pay the target chain fees?
       </Typography>
-      {targetIsAcala ? acalaRelayerContent : relayerContent}
+      {targetIsAcala ? acalaRelayerContent :
+        targetIsNeon ? neonRelayerContent :
+          relayerContent}
       {manualRedeemContent}
     </div>
   );
