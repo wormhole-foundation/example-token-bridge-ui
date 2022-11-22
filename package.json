@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@certusone/wormhole-sdk": "^0.9.1",
+    "@certusone/wormhole-sdk": "^0.9.3",
     "@injectivelabs/sdk-ts": "^1.0.211",
     "@injectivelabs/ts-types": "^1.0.14",
     "@injectivelabs/tx-ts": "^1.0.43",
