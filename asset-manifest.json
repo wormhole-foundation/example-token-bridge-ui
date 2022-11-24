@@ -1,17 +1,19 @@
 {
   "files": {
     "main.css": "/example-token-bridge-ui/static/css/main.388f3ec5.css",
-    "main.js": "/example-token-bridge-ui/static/js/main.c8c3a305.js",
+    "main.js": "/example-token-bridge-ui/static/js/main.ebb86898.js",
     "static/js/986.59bb44ed.chunk.js": "/example-token-bridge-ui/static/js/986.59bb44ed.chunk.js",
     "static/js/882.21d5a78a.chunk.js": "/example-token-bridge-ui/static/js/882.21d5a78a.chunk.js",
     "static/js/94.b61bf91f.chunk.js": "/example-token-bridge-ui/static/js/94.b61bf91f.chunk.js",
     "static/js/578.318a21c4.chunk.js": "/example-token-bridge-ui/static/js/578.318a21c4.chunk.js",
     "static/media/keplr.svg": "/example-token-bridge-ui/static/media/keplr.5bd78b0b1b00da236168db2185418da3.svg",
     "static/media/neon.svg": "/example-token-bridge-ui/static/media/neon.c3f3c0c2eeecc7d724bfcce581d1b4bf.svg",
+    "static/media/wormhole.svg": "/example-token-bridge-ui/static/media/wormhole.5bb8fbe223a0218e97e6aa04e03b3c8f.svg",
     "static/media/terra2.svg": "/example-token-bridge-ui/static/media/terra2.3b8a4497121229ac69ab6afa1c4e9317.svg",
     "static/media/metamask-fox.svg": "/example-token-bridge-ui/static/media/metamask-fox.ff320abc80456aa6f689de97f5bc29b4.svg",
     "static/media/arbitrum.svg": "/example-token-bridge-ui/static/media/arbitrum.c9ada05fe5facf49a5f1ef9ba1c1578c.svg",
     "static/media/injective.svg": "/example-token-bridge-ui/static/media/injective.ac2f95a4532d20546ad21b59abc01d13.svg",
+    "static/media/usdc.svg": "/example-token-bridge-ui/static/media/usdc.f08e02b1252e78ae2924100dfcb8428c.svg",
     "static/media/terra.svg": "/example-token-bridge-ui/static/media/terra.77cd51a6fb8dbae70872b3d3b813c2ab.svg",
     "static/media/acala.svg": "/example-token-bridge-ui/static/media/acala.dad6d76736ec87722300c598c51c3d4f.svg",
     "static/media/klaytn.svg": "/example-token-bridge-ui/static/media/klaytn.5c570c72fc1acba8b9c7bf49e4b838c0.svg",
@@ -33,7 +35,7 @@
     "static/media/algorand.svg": "/example-token-bridge-ui/static/media/algorand.699bf008d7073523b8edd75d8f3b38ac.svg",
     "static/media/eth.svg": "/example-token-bridge-ui/static/media/eth.5a5de20bf3808241fc61ed9ad7680ab5.svg",
     "main.388f3ec5.css.map": "/example-token-bridge-ui/static/css/main.388f3ec5.css.map",
-    "main.c8c3a305.js.map": "/example-token-bridge-ui/static/js/main.c8c3a305.js.map",
+    "main.ebb86898.js.map": "/example-token-bridge-ui/static/js/main.ebb86898.js.map",
     "986.59bb44ed.chunk.js.map": "/example-token-bridge-ui/static/js/986.59bb44ed.chunk.js.map",
     "882.21d5a78a.chunk.js.map": "/example-token-bridge-ui/static/js/882.21d5a78a.chunk.js.map",
     "94.b61bf91f.chunk.js.map": "/example-token-bridge-ui/static/js/94.b61bf91f.chunk.js.map",
@@ -41,6 +43,6 @@
   },
   "entrypoints": [
     "static/css/main.388f3ec5.css",
-    "static/js/main.c8c3a305.js"
+    "static/js/main.ebb86898.js"
   ]
 }
