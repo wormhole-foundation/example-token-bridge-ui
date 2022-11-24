@@ -36,16 +36,27 @@ import {
 import { useSnackbar } from "notistack";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { useDebounce } from "use-debounce";
 import { useEthereumProvider } from "../../contexts/EthereumProviderContext";
 import useAllowance from "../../hooks/useAllowance";
 import useIsWalletReady from "../../hooks/useIsWalletReady";
 import usdcLogo from "../../icons/usdc.svg";
 import wormholeLogo from "../../icons/wormhole.svg";
+import { ParsedTokenAccount } from "../../store/transferSlice";
 import {
   CHAINS_BY_ID,
   getBridgeAddressForChain,
+  getEvmChainId,
   WORMHOLE_RPC_HOSTS,
 } from "../../utils/consts";
+import {
+  ethTokenToParsedTokenAccount,
+  getEthereumToken,
+} from "../../utils/ethereum";
+import {
+  EVM_RPC_MAP,
+  METAMASK_CHAIN_PARAMETERS,
+} from "../../utils/metaMaskChainParameters";
 import parseError from "../../utils/parseError";
 import ButtonWithLoader from "../ButtonWithLoader";
 import ChainSelectArrow from "../ChainSelectArrow";
@@ -116,6 +127,14 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   sliderContainer: {
+    margin: theme.spacing(0.5, 2, 0),
+    "& .MuiSlider-thumb.MuiSlider-active": {
+      // avoid increasing the margin further
+      boxShadow: "0px 0px 0px 12px rgb(63 81 181 / 16%)",
+    },
+  },
+  infoContainer: {
+    display: "flex",
     margin: theme.spacing(2, 1, 0),
   },
 }));
@@ -246,18 +265,39 @@ function USDC() {
   const targetContract = CIRCLE_EMITTER_ADDRESSES[targetChain];
   const targetRelayContract = USDC_RELAYER[targetChain];
   const targetCircleIntegrationContract = USDC_WH_INTEGRATION[targetChain];
+  const targetAsset = USDC_ADDRESSES[targetChain];
+  const [balance, setBalance] = useState<ParsedTokenAccount | null>(null);
+  const [relayerFee, setRelayerFee] = useState<bigint | null>(null);
+  const [maxSwapAmount, setMaxSwapAmount] = useState<bigint | null>(null);
+  const [estimatedSwapAmount, setEstimatedSwapAmount] = useState<bigint | null>(
+    null
+  );
   const [amount, setAmount] = useState<string>("");
   const baseAmountParsed = amount && parseUnits(amount, USDC_DECIMALS);
   const transferAmountParsed = baseAmountParsed && baseAmountParsed.toBigInt();
   const humanReadableTransferAmount =
     transferAmountParsed && formatUnits(transferAmountParsed, USDC_DECIMALS);
   const oneParsed = parseUnits("1", USDC_DECIMALS).toBigInt();
+  let bigIntBalance = BigInt(0);
+  try {
+    bigIntBalance = BigInt(balance?.amount || "0");
+  } catch (e) {}
+  const [shouldRelay, setShouldRelay] = useState<boolean>(false);
+  const [toNativeAmount, setToNativeAmount] = useState<bigint>(BigInt(0));
+  const [debouncedToNativeAmount] = useDebounce(toNativeAmount, 500);
   const amountError =
     transferAmountParsed !== "" && transferAmountParsed <= BigInt(0)
       ? "Amount must be greater than zero"
+      : transferAmountParsed > bigIntBalance
+      ? "Amount must not be greater than balance"
+      : shouldRelay && relayerFee && transferAmountParsed < relayerFee
+      ? "Amount must at least cover the relayer fee"
+      : shouldRelay &&
+        relayerFee &&
+        toNativeAmount &&
+        transferAmountParsed < relayerFee + toNativeAmount
+      ? "Amount must at least cover the relayer fee and swap amount"
       : "";
-  const [shouldRelay, setShouldRelay] = useState<boolean>(false);
-  const [toNativeAmount, setToNativeAmount] = useState<bigint>(BigInt(1000));
   const [isSending, setIsSending] = useState<boolean>(false);
   const [sourceTxHash, setSourceTxHash] = useState<string>("");
   const [sourceTxConfirmed, setSourceTxConfirmed] = useState<boolean>(false);
@@ -272,7 +312,7 @@ function USDC() {
   const { isReady, statusMessage } = useIsWalletReady(
     transferInfo ? targetChain : sourceChain
   );
-  const { signer, signerAddress } = useEthereumProvider();
+  const { provider, signer, signerAddress } = useEthereumProvider();
   const shouldLockFields =
     isSending || isSendComplete || isRedeeming || isRedeemComplete;
   const preventNavigation =
@@ -309,7 +349,7 @@ function USDC() {
     setShouldRelay((r) => !r);
   }, []);
   const handleSliderChange = useCallback((event, value) => {
-    setToNativeAmount(parseUnits(value.toString(), 6).toBigInt());
+    setToNativeAmount(parseUnits(value.toString(), USDC_DECIMALS).toBigInt());
   }, []);
   //This effect initializes the state based on the path params
   useEffect(() => {
@@ -345,6 +385,114 @@ function USDC() {
       console.error("Invalid path params specified.");
     }
   }, [pathSourceChain, pathTargetChain]);
+  //This effect fetches the USDC balance for the connected wallet
+  useEffect(() => {
+    setBalance(null);
+    if (!sourceAsset) return;
+    if (!isReady) return;
+    if (!signerAddress) return;
+    if (!provider) return;
+    let cancelled = false;
+    (async () => {
+      const token = await getEthereumToken(sourceAsset, provider);
+      if (cancelled) return;
+      const parsedTokenAccount = await ethTokenToParsedTokenAccount(
+        token,
+        signerAddress
+      );
+      if (cancelled) return;
+      setBalance(parsedTokenAccount);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sourceAsset, isReady, signerAddress, provider]);
+  //This effect fetches the relayer fee for the destination chain (from the source chain, which will be encoded into the transfer)
+  useEffect(() => {
+    setRelayerFee(null);
+    if (!sourceRelayContract) return;
+    if (!sourceAsset) return;
+    if (!isReady) return;
+    if (!provider) return;
+    let cancelled = false;
+    (async () => {
+      const contract = new Contract(
+        sourceRelayContract,
+        [
+          `function relayerFee(uint16 chainId_, address token) external view returns (uint256)`,
+        ],
+        provider
+      );
+      const fee = await contract.relayerFee(targetChain, sourceAsset);
+      if (cancelled) return;
+      setRelayerFee(fee.toBigInt());
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sourceRelayContract, sourceAsset, targetChain, isReady, provider]);
+  //This effect fetches the maximum swap amount from the destination chain
+  useEffect(() => {
+    setMaxSwapAmount(null);
+    if (!targetRelayContract) return;
+    if (!targetAsset) return;
+    const targetEVMChain = getEvmChainId(targetChain);
+    if (!targetEVMChain) return;
+    const targetRPC = EVM_RPC_MAP[targetEVMChain];
+    if (!targetRPC) return;
+    const provider = new ethers.providers.JsonRpcProvider(targetRPC);
+    let cancelled = false;
+    (async () => {
+      const contract = new Contract(
+        targetRelayContract,
+        [
+          `function calculateMaxSwapAmount(
+              address token
+          ) external view returns (uint256)`,
+        ],
+        provider
+      );
+      const maxSwap = await contract.calculateMaxSwapAmount(targetAsset);
+      if (cancelled) return;
+      setMaxSwapAmount(maxSwap.toBigInt());
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [targetRelayContract, targetAsset, targetChain]);
+  //This effect fetches the estimated swap amount from the destination chain
+  useEffect(() => {
+    setEstimatedSwapAmount(null);
+    if (!targetRelayContract) return;
+    if (!targetAsset) return;
+    const targetEVMChain = getEvmChainId(targetChain);
+    if (!targetEVMChain) return;
+    const targetRPC = EVM_RPC_MAP[targetEVMChain];
+    if (!targetRPC) return;
+    const provider = new ethers.providers.JsonRpcProvider(targetRPC);
+    let cancelled = false;
+    (async () => {
+      const contract = new Contract(
+        targetRelayContract,
+        [
+          `function calculateNativeSwapAmount(
+            address token,
+            uint256 toNativeAmount
+        ) external view returns (uint256)`,
+        ],
+        provider
+      );
+      const estimatedSwap = await contract.calculateNativeSwapAmount(
+        targetAsset,
+        debouncedToNativeAmount
+      );
+      if (cancelled) return;
+      setEstimatedSwapAmount(estimatedSwap.toBigInt());
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [targetRelayContract, targetAsset, targetChain, debouncedToNativeAmount]);
   //This effect polls to see if the transaction has been redeemed when relaying
   useEffect(() => {
     if (!shouldRelay) return;
@@ -393,18 +541,18 @@ function USDC() {
   const handleAmountChange = useCallback((event) => {
     setAmount(event.target.value);
   }, []);
-  // const handleMaxClick = useCallback(() => {
-  //   if (uiAmountString) {
-  //     setAmount(uiAmountString);
-  //   }
-  // }, [uiAmountString]);
+  const handleMaxClick = useCallback(() => {
+    if (balance && balance.uiAmountString) {
+      setAmount(balance.uiAmountString);
+    }
+  }, [balance]);
 
   const [allowanceError, setAllowanceError] = useState("");
-  const [shouldApproveUnlimited, setShouldApproveUnlimited] = useState(false);
-  const toggleShouldApproveUnlimited = useCallback(
-    () => setShouldApproveUnlimited(!shouldApproveUnlimited),
-    [shouldApproveUnlimited]
-  );
+  const [shouldApproveUnlimited] = useState(false);
+  // const toggleShouldApproveUnlimited = useCallback(
+  //   () => setShouldApproveUnlimited(!shouldApproveUnlimited),
+  //   [shouldApproveUnlimited]
+  // );
   const {
     sufficientAllowance,
     isAllowanceFetching,
@@ -793,12 +941,19 @@ function USDC() {
           value={amount}
           onChange={handleAmountChange}
           disabled={shouldLockFields}
-          // onMaxClick={
-          //   uiAmountString && !parsedTokenAccount.isNativeAsset
-          //     ? handleMaxClick
-          //     : undefined
-          // }
+          onMaxClick={
+            balance && balance.uiAmountString ? handleMaxClick : undefined
+          }
         />
+        <div className={classes.infoContainer}>
+          <Typography variant="body2" style={{ flexGrow: 1 }}>
+            Source Balance
+          </Typography>
+          <Typography variant="body2">
+            {balance?.uiAmountString || 0} USDC
+          </Typography>
+        </div>
+        {/* TODO: destination balance */}
         <FormGroup className={classes.toggle}>
           <FormControlLabel
             disabled={shouldLockFields}
@@ -812,24 +967,89 @@ function USDC() {
             label="Use relayer"
           />
         </FormGroup>
-        <div className={classes.sliderContainer}>
+        <div className={classes.infoContainer}>
           <Typography
-            gutterBottom
+            variant="body2"
+            style={{ flexGrow: 1 }}
             color={shouldRelay ? "textPrimary" : "textSecondary"}
           >
-            Destination Gas (in USDC)
-            {/* TODO: show quote */}
-            {/* TODO: enforce max */}
+            Relayer Fee
           </Typography>
+          <Typography
+            variant="body2"
+            color={shouldRelay ? "textPrimary" : "textSecondary"}
+          >
+            {(relayerFee && `${formatUnits(relayerFee, USDC_DECIMALS)} USDC`) ||
+              null}
+          </Typography>
+        </div>
+        <div className={classes.infoContainer}>
+          <Typography
+            variant="body2"
+            style={{ flexGrow: 1 }}
+            color={shouldRelay ? "textPrimary" : "textSecondary"}
+          >
+            Destination Gas
+          </Typography>
+          <Typography
+            variant="body2"
+            color={shouldRelay ? "textPrimary" : "textSecondary"}
+          >
+            {formatUnits(toNativeAmount, USDC_DECIMALS)} USDC
+          </Typography>
+        </div>
+        {/* TODO: enforce max */}
+        <div className={classes.sliderContainer}>
           <Slider
             disabled={!shouldRelay || shouldLockFields}
             onChange={handleSliderChange}
-            value={Number(formatUnits(toNativeAmount, 6))}
+            value={Number(formatUnits(toNativeAmount, USDC_DECIMALS))}
             step={0.001}
             min={0}
-            max={1}
-            valueLabelDisplay="auto"
+            max={Number(formatUnits(maxSwapAmount || 0, USDC_DECIMALS))}
+            valueLabelDisplay="off"
           />
+        </div>
+        <div className={classes.infoContainer}>
+          <Typography
+            variant="body2"
+            style={{ flexGrow: 1 }}
+            color={shouldRelay ? "textPrimary" : "textSecondary"}
+          >
+            Maximum Destination Gas
+          </Typography>
+          <Typography
+            variant="body2"
+            color={shouldRelay ? "textPrimary" : "textSecondary"}
+          >
+            {(maxSwapAmount &&
+              `${formatUnits(maxSwapAmount, USDC_DECIMALS)} USDC`) ||
+              null}
+          </Typography>
+        </div>
+        <div className={classes.infoContainer}>
+          <Typography
+            variant="body2"
+            style={{ flexGrow: 1 }}
+            color={shouldRelay ? "textPrimary" : "textSecondary"}
+          >
+            Estimated Destination Gas
+          </Typography>
+          <Typography
+            variant="body2"
+            color={shouldRelay ? "textPrimary" : "textSecondary"}
+          >
+            {(estimatedSwapAmount &&
+              `${formatUnits(
+                estimatedSwapAmount,
+                METAMASK_CHAIN_PARAMETERS[getEvmChainId(targetChain) || 1]
+                  ?.nativeCurrency.decimals || 18
+              )} ${
+                METAMASK_CHAIN_PARAMETERS[getEvmChainId(targetChain) || 1]
+                  ?.nativeCurrency.symbol || "ETH"
+              }`) ||
+              null}
+          </Typography>
         </div>
         {transferInfo ? (
           <ButtonWithLoader
