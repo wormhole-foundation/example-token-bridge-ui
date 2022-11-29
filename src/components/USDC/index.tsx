@@ -34,7 +34,8 @@ import {
   parseUnits,
 } from "ethers/lib/utils";
 import { useSnackbar } from "notistack";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import { useDebounce } from "use-debounce";
 import { useEthereumProvider } from "../../contexts/EthereumProviderContext";
@@ -42,7 +43,45 @@ import useAllowance from "../../hooks/useAllowance";
 import useIsWalletReady from "../../hooks/useIsWalletReady";
 import usdcLogo from "../../icons/usdc.svg";
 import wormholeLogo from "../../icons/wormhole.svg";
-import { ParsedTokenAccount } from "../../store/transferSlice";
+import {
+  selectAllowanceError,
+  selectAmount,
+  selectBalance,
+  selectEstimatedSwapAmount,
+  selectIsRedeemComplete,
+  selectIsRedeeming,
+  selectIsSending,
+  selectMaxSwapAmount,
+  selectRelayerFee,
+  selectShouldApproveUnlimited,
+  selectShouldRelay,
+  selectSourceChain,
+  selectSourceTxConfirmed,
+  selectSourceTxHash,
+  selectTargetChain,
+  selectTargetTxHash,
+  selectToNativeAmount,
+  selectTransferInfo,
+} from "../../store/usdcSelectors";
+import {
+  setAllowanceError,
+  setAmount,
+  setBalance,
+  setEstimatedSwapAmount,
+  setIsRedeemComplete,
+  setIsRedeeming,
+  setIsSending,
+  setMaxSwapAmount,
+  setRelayerFee,
+  setShouldRelay,
+  setSourceChain,
+  setSourceTxConfirmed,
+  setSourceTxHash,
+  setTargetChain,
+  setTargetTxHash,
+  setToNativeAmount,
+  setTransferInfo,
+} from "../../store/usdcSlice";
 import {
   CHAINS_BY_ID,
   getBridgeAddressForChain,
@@ -245,19 +284,12 @@ const USDC_WH_EMITTER: { [key in ChainId]?: string } = {
   ),
 };
 
-type State = {
-  sourceChain: ChainId;
-  targetChain: ChainId;
-};
-
 function USDC() {
   const classes = useStyles();
+  const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
-  // TODO: move to state with safety for switching
-  const [{ sourceChain, targetChain }, setState] = useState<State>({
-    sourceChain: CHAIN_ID_ETH,
-    targetChain: CHAIN_ID_AVAX,
-  });
+  const sourceChain = useSelector(selectSourceChain);
+  const targetChain = useSelector(selectTargetChain);
   const sourceContract = CIRCLE_BRIDGE_ADDRESSES[sourceChain];
   const sourceRelayContract = USDC_RELAYER[sourceChain];
   const sourceRelayEmitter = USDC_WH_EMITTER[sourceChain];
@@ -266,13 +298,11 @@ function USDC() {
   const targetRelayContract = USDC_RELAYER[targetChain];
   const targetCircleIntegrationContract = USDC_WH_INTEGRATION[targetChain];
   const targetAsset = USDC_ADDRESSES[targetChain];
-  const [balance, setBalance] = useState<ParsedTokenAccount | null>(null);
-  const [relayerFee, setRelayerFee] = useState<bigint | null>(null);
-  const [maxSwapAmount, setMaxSwapAmount] = useState<bigint | null>(null);
-  const [estimatedSwapAmount, setEstimatedSwapAmount] = useState<bigint | null>(
-    null
-  );
-  const [amount, setAmount] = useState<string>("");
+  const balance = useSelector(selectBalance);
+  const relayerFee = useSelector(selectRelayerFee);
+  const maxSwapAmount = useSelector(selectMaxSwapAmount);
+  const estimatedSwapAmount = useSelector(selectEstimatedSwapAmount);
+  const amount = useSelector(selectAmount);
   const baseAmountParsed = amount && parseUnits(amount, USDC_DECIMALS);
   const transferAmountParsed = baseAmountParsed && baseAmountParsed.toBigInt();
   const humanReadableTransferAmount =
@@ -282,33 +312,31 @@ function USDC() {
   try {
     bigIntBalance = BigInt(balance?.amount || "0");
   } catch (e) {}
-  const [shouldRelay, setShouldRelay] = useState<boolean>(false);
-  const [toNativeAmount, setToNativeAmount] = useState<bigint>(BigInt(0));
+  const shouldRelay = useSelector(selectShouldRelay);
+  const toNativeAmount = useSelector(selectToNativeAmount);
   const [debouncedToNativeAmount] = useDebounce(toNativeAmount, 500);
   const amountError =
     transferAmountParsed !== "" && transferAmountParsed <= BigInt(0)
       ? "Amount must be greater than zero"
       : transferAmountParsed > bigIntBalance
       ? "Amount must not be greater than balance"
-      : shouldRelay && relayerFee && transferAmountParsed < relayerFee
+      : shouldRelay && relayerFee && transferAmountParsed < BigInt(relayerFee)
       ? "Amount must at least cover the relayer fee"
       : shouldRelay &&
         relayerFee &&
         toNativeAmount &&
-        transferAmountParsed < relayerFee + toNativeAmount
+        transferAmountParsed < BigInt(relayerFee) + BigInt(toNativeAmount)
       ? "Amount must at least cover the relayer fee and swap amount"
       : "";
-  const [isSending, setIsSending] = useState<boolean>(false);
-  const [sourceTxHash, setSourceTxHash] = useState<string>("");
-  const [sourceTxConfirmed, setSourceTxConfirmed] = useState<boolean>(false);
-  const [transferInfo, setTransferInfo] = useState<
-    null | [string | null, string, string]
-  >(null);
+  const isSending = useSelector(selectIsSending);
+  const sourceTxHash = useSelector(selectSourceTxHash);
+  const sourceTxConfirmed = useSelector(selectSourceTxConfirmed);
+  const transferInfo = useSelector(selectTransferInfo);
   const isSendComplete = transferInfo !== null;
-  const [isRedeeming, setIsRedeeming] = useState<boolean>(false);
-  const [isRedeemComplete, setIsRedeemComplete] = useState<boolean>(false);
-  const [targetTxHash, setTargetTxHash] = useState<string>("");
-  const vaa = transferInfo && transferInfo[0];
+  const isRedeeming = useSelector(selectIsRedeeming);
+  const isRedeemComplete = useSelector(selectIsRedeemComplete);
+  const targetTxHash = useSelector(selectTargetTxHash);
+  const vaa = transferInfo && transferInfo.vaaHex;
   const { isReady, statusMessage } = useIsWalletReady(
     transferInfo ? targetChain : sourceChain
   );
@@ -322,72 +350,50 @@ function USDC() {
   const query = useMemo(() => new URLSearchParams(search), [search]);
   const pathSourceChain = query.get("sourceChain");
   const pathTargetChain = query.get("targetChain");
-  // const handleSourceChange = useCallback((event) => {
-  //   const v = event.target.value;
-  //   setState((s) => ({
-  //     ...s,
-  //     sourceChain: v,
-  //     targetChain: v === s.targetChain ? s.sourceChain : s.targetChain,
-  //   }));
-  // }, []);
-  // const handleTargetChange = useCallback((event) => {
-  //   const v = event.target.value;
-  //   setState((s) => ({
-  //     ...s,
-  //     targetChain: v,
-  //     sourceChain: v === s.targetChain ? s.targetChain : s.sourceChain,
-  //   }));
-  // }, []);
   const handleSwitch = useCallback(() => {
-    setState((s) => ({
-      ...s,
-      sourceChain: s.targetChain,
-      targetChain: s.sourceChain,
-    }));
-  }, []);
+    dispatch(setSourceChain(targetChain));
+    dispatch(setTargetChain(sourceChain));
+  }, [sourceChain, targetChain, dispatch]);
   const handleToggleRelay = useCallback(() => {
-    setShouldRelay((r) => !r);
-  }, []);
-  const handleSliderChange = useCallback((event, value) => {
-    setToNativeAmount(parseUnits(value.toString(), USDC_DECIMALS).toBigInt());
-  }, []);
+    dispatch(setShouldRelay(!shouldRelay));
+  }, [shouldRelay, dispatch]);
+  const handleSliderChange = useCallback(
+    (event, value) => {
+      dispatch(
+        setToNativeAmount(
+          parseUnits(value.toString(), USDC_DECIMALS).toString()
+        )
+      );
+    },
+    [dispatch]
+  );
   //This effect initializes the state based on the path params
   useEffect(() => {
     if (!pathSourceChain && !pathTargetChain) {
       return;
     }
     try {
-      const sourceChain: ChainId =
-        CHAINS_BY_ID[parseFloat(pathSourceChain || "") as ChainId]?.id;
-      const targetChain: ChainId =
-        CHAINS_BY_ID[parseFloat(pathTargetChain || "") as ChainId]?.id;
+      const parsedSourceChain: ChainId =
+        CHAINS_BY_ID[parseInt(pathSourceChain || "") as ChainId]?.id;
+      const parsedTargetChain: ChainId =
+        CHAINS_BY_ID[parseInt(pathTargetChain || "") as ChainId]?.id;
 
-      if (sourceChain === targetChain) {
+      if (parsedSourceChain === parsedTargetChain) {
         return;
       }
-      if (sourceChain) {
-        setState((s) => ({
-          ...s,
-          sourceChain,
-          targetChain:
-            sourceChain === s.targetChain ? s.sourceChain : s.targetChain,
-        }));
+      if (parsedSourceChain) {
+        dispatch(setSourceChain(parsedSourceChain));
       }
-      if (targetChain) {
-        setState((s) => ({
-          ...s,
-          targetChain,
-          sourceChain:
-            targetChain === s.targetChain ? s.targetChain : s.sourceChain,
-        }));
+      if (parsedTargetChain) {
+        dispatch(setTargetChain(parsedTargetChain));
       }
     } catch (e) {
       console.error("Invalid path params specified.");
     }
-  }, [pathSourceChain, pathTargetChain]);
+  }, [pathSourceChain, pathTargetChain, dispatch]);
   //This effect fetches the USDC balance for the connected wallet
   useEffect(() => {
-    setBalance(null);
+    dispatch(setBalance(null));
     if (!sourceAsset) return;
     if (!isReady) return;
     if (!signerAddress) return;
@@ -401,15 +407,15 @@ function USDC() {
         signerAddress
       );
       if (cancelled) return;
-      setBalance(parsedTokenAccount);
+      dispatch(setBalance(parsedTokenAccount));
     })();
     return () => {
       cancelled = true;
     };
-  }, [sourceAsset, isReady, signerAddress, provider]);
+  }, [sourceAsset, isReady, signerAddress, provider, dispatch]);
   //This effect fetches the relayer fee for the destination chain (from the source chain, which will be encoded into the transfer)
   useEffect(() => {
-    setRelayerFee(null);
+    dispatch(setRelayerFee(null));
     if (!sourceRelayContract) return;
     if (!sourceAsset) return;
     if (!isReady) return;
@@ -425,15 +431,22 @@ function USDC() {
       );
       const fee = await contract.relayerFee(targetChain, sourceAsset);
       if (cancelled) return;
-      setRelayerFee(fee.toBigInt());
+      dispatch(setRelayerFee(fee.toString()));
     })();
     return () => {
       cancelled = true;
     };
-  }, [sourceRelayContract, sourceAsset, targetChain, isReady, provider]);
+  }, [
+    sourceRelayContract,
+    sourceAsset,
+    targetChain,
+    isReady,
+    provider,
+    dispatch,
+  ]);
   //This effect fetches the maximum swap amount from the destination chain
   useEffect(() => {
-    setMaxSwapAmount(null);
+    dispatch(setMaxSwapAmount(null));
     if (!targetRelayContract) return;
     if (!targetAsset) return;
     const targetEVMChain = getEvmChainId(targetChain);
@@ -454,15 +467,15 @@ function USDC() {
       );
       const maxSwap = await contract.calculateMaxSwapAmount(targetAsset);
       if (cancelled) return;
-      setMaxSwapAmount(maxSwap.toBigInt());
+      dispatch(setMaxSwapAmount(maxSwap.toString()));
     })();
     return () => {
       cancelled = true;
     };
-  }, [targetRelayContract, targetAsset, targetChain]);
+  }, [targetRelayContract, targetAsset, targetChain, dispatch]);
   //This effect fetches the estimated swap amount from the destination chain
   useEffect(() => {
-    setEstimatedSwapAmount(null);
+    dispatch(setEstimatedSwapAmount(null));
     if (!targetRelayContract) return;
     if (!targetAsset) return;
     const targetEVMChain = getEvmChainId(targetChain);
@@ -487,12 +500,18 @@ function USDC() {
         debouncedToNativeAmount
       );
       if (cancelled) return;
-      setEstimatedSwapAmount(estimatedSwap.toBigInt());
+      dispatch(setEstimatedSwapAmount(estimatedSwap.toString()));
     })();
     return () => {
       cancelled = true;
     };
-  }, [targetRelayContract, targetAsset, targetChain, debouncedToNativeAmount]);
+  }, [
+    targetRelayContract,
+    targetAsset,
+    targetChain,
+    debouncedToNativeAmount,
+    dispatch,
+  ]);
   //This effect polls to see if the transaction has been redeemed when relaying
   useEffect(() => {
     if (!shouldRelay) return;
@@ -524,7 +543,7 @@ function USDC() {
         }
       }
       if (!cancelled) {
-        setIsRedeemComplete(wasRedeemed);
+        dispatch(setIsRedeemComplete(wasRedeemed));
       }
     })();
     return () => {
@@ -537,18 +556,22 @@ function USDC() {
     targetCircleIntegrationContract,
     isReady,
     signer,
+    dispatch,
   ]);
-  const handleAmountChange = useCallback((event) => {
-    setAmount(event.target.value);
-  }, []);
+  const handleAmountChange = useCallback(
+    (event) => {
+      dispatch(setAmount(event.target.value));
+    },
+    [dispatch]
+  );
   const handleMaxClick = useCallback(() => {
     if (balance && balance.uiAmountString) {
-      setAmount(balance.uiAmountString);
+      dispatch(setAmount(balance.uiAmountString));
     }
-  }, [balance]);
+  }, [balance, dispatch]);
 
-  const [allowanceError, setAllowanceError] = useState("");
-  const [shouldApproveUnlimited] = useState(false);
+  const allowanceError = useSelector(selectAllowanceError);
+  const shouldApproveUnlimited = useSelector(selectShouldApproveUnlimited);
   // const toggleShouldApproveUnlimited = useCallback(
   //   () => setShouldApproveUnlimited(!shouldApproveUnlimited),
   //   [shouldApproveUnlimited]
@@ -577,36 +600,38 @@ function USDC() {
   const errorMessage = statusMessage || allowanceError || undefined;
   const approveExactAmount = useMemo(() => {
     return () => {
-      setAllowanceError("");
+      dispatch(setAllowanceError(""));
       approveAmount(BigInt(transferAmountParsed)).then(
         () => {
-          setAllowanceError("");
+          dispatch(setAllowanceError(""));
           enqueueSnackbar(null, {
             content: (
               <Alert severity="success">Approval transaction confirmed</Alert>
             ),
           });
         },
-        (error) => setAllowanceError("Failed to approve the token transfer.")
+        (error) =>
+          dispatch(setAllowanceError("Failed to approve the token transfer."))
       );
     };
-  }, [approveAmount, transferAmountParsed, enqueueSnackbar]);
+  }, [approveAmount, transferAmountParsed, enqueueSnackbar, dispatch]);
   const approveUnlimited = useMemo(() => {
     return () => {
-      setAllowanceError("");
+      dispatch(setAllowanceError(""));
       approveAmount(constants.MaxUint256.toBigInt()).then(
         () => {
-          setAllowanceError("");
+          dispatch(setAllowanceError(""));
           enqueueSnackbar(null, {
             content: (
               <Alert severity="success">Approval transaction confirmed</Alert>
             ),
           });
         },
-        (error) => setAllowanceError("Failed to approve the token transfer.")
+        (error) =>
+          dispatch(setAllowanceError("Failed to approve the token transfer."))
       );
     };
-  }, [approveAmount, enqueueSnackbar]);
+  }, [approveAmount, enqueueSnackbar, dispatch]);
 
   const handleTransferClick = useCallback(() => {
     if (!isReady) return;
@@ -635,7 +660,7 @@ function USDC() {
         ],
         signer
       );
-      setIsSending(true);
+      dispatch(setIsSending(true));
       (async () => {
         try {
           const tx = await contract.transferTokensWithRelay(
@@ -645,9 +670,9 @@ function USDC() {
             targetChain,
             hexZeroPad(signerAddress, 32)
           );
-          setSourceTxHash(tx.hash);
+          dispatch(setSourceTxHash(tx.hash));
           const receipt = await tx.wait();
-          setSourceTxConfirmed(true);
+          dispatch(setSourceTxConfirmed(true));
           // recovery test
           // const hash =
           //   "0xa73642c06cdcce5882c208885481b4433c0abf8a4128889ff1996865a06af90d";
@@ -683,11 +708,13 @@ function USDC() {
             seq
           );
           // TODO: more discreet state for better loading messages
-          setTransferInfo([
-            `0x${uint8ArrayToHex(vaaBytes)}`,
-            circleBridgeMessage,
-            circleAttestation,
-          ]);
+          dispatch(
+            setTransferInfo({
+              vaaHex: `0x${uint8ArrayToHex(vaaBytes)}`,
+              circleBridgeMessage,
+              circleAttestation,
+            })
+          );
           enqueueSnackbar(null, {
             content: <Alert severity="success">Wormhole message found</Alert>,
           });
@@ -697,7 +724,7 @@ function USDC() {
             content: <Alert severity="error">{parseError(e)}</Alert>,
           });
         }
-        setIsSending(false);
+        dispatch(setIsSending(false));
       })();
     } else {
       const contract = new Contract(
@@ -707,7 +734,7 @@ function USDC() {
         ],
         signer
       );
-      setIsSending(true);
+      dispatch(setIsSending(true));
       (async () => {
         try {
           const tx = await contract.depositForBurn(
@@ -716,9 +743,9 @@ function USDC() {
             hexZeroPad(signerAddress, 32),
             sourceAsset
           );
-          setSourceTxHash(tx.hash);
+          dispatch(setSourceTxHash(tx.hash));
           const receipt = await tx.wait();
-          setSourceTxConfirmed(true);
+          dispatch(setSourceTxConfirmed(true));
           // const receipt = await signer.provider?.getTransactionReceipt(
           //   "0x5772e912b4febaff4245472efe1c4a5d6bab663e20a66876c08fac376e3b1a60"
           // );
@@ -736,7 +763,13 @@ function USDC() {
           if (circleBridgeMessage === null || circleAttestation === null) {
             throw new Error(`Error parsing receipt for ${tx.hash}`);
           }
-          setTransferInfo([null, circleBridgeMessage, circleAttestation]);
+          dispatch(
+            setTransferInfo({
+              vaaHex: null,
+              circleBridgeMessage,
+              circleAttestation,
+            })
+          );
           enqueueSnackbar(null, {
             content: <Alert severity="success">Circle attestation found</Alert>,
           });
@@ -746,7 +779,7 @@ function USDC() {
             content: <Alert severity="error">{parseError(e)}</Alert>,
           });
         }
-        setIsSending(false);
+        dispatch(setIsSending(false));
       })();
     }
   }, [
@@ -763,6 +796,7 @@ function USDC() {
     sourceRelayEmitter,
     toNativeAmount,
     enqueueSnackbar,
+    dispatch,
   ]);
 
   const handleRedeemClick = useCallback(() => {
@@ -774,7 +808,7 @@ function USDC() {
     if (shouldRelay) {
       if (!targetRelayContract) return;
       if (!vaa) return;
-      setIsRedeeming(true);
+      dispatch(setIsRedeeming(true));
       (async () => {
         try {
           // adapted from https://github.com/wormhole-foundation/example-circle-relayer/blob/c488fe61c528b6099a90f01f42e796df7f330485/relayer/src/main.ts
@@ -808,15 +842,22 @@ function USDC() {
             token,
             toNativeAmount
           );
-          const tx = await contract.redeemTokens(transferInfo, {
-            value: nativeSwapQuote,
-          });
-          setTargetTxHash(tx.hash);
+          const tx = await contract.redeemTokens(
+            [
+              transferInfo.vaaHex,
+              transferInfo.circleBridgeMessage,
+              transferInfo.circleAttestation,
+            ],
+            {
+              value: nativeSwapQuote,
+            }
+          );
+          dispatch(setTargetTxHash(tx.hash));
           const receipt = await tx.wait();
           if (!receipt) {
             throw new Error("Invalid receipt");
           }
-          setIsRedeemComplete(true);
+          dispatch(setIsRedeemComplete(true));
           enqueueSnackbar(null, {
             content: (
               <Alert severity="success">Redeem transaction confirmed</Alert>
@@ -828,10 +869,10 @@ function USDC() {
             content: <Alert severity="error">{parseError(e)}</Alert>,
           });
         }
-        setIsRedeeming(false);
+        dispatch(setIsRedeeming(false));
       })();
     } else {
-      setIsRedeeming(true);
+      dispatch(setIsRedeeming(true));
       (async () => {
         try {
           const contract = new Contract(
@@ -842,15 +883,15 @@ function USDC() {
             signer
           );
           const tx = await contract.receiveMessage(
-            transferInfo[1],
-            transferInfo[2]
+            transferInfo.circleBridgeMessage,
+            transferInfo.circleAttestation
           );
-          setTargetTxHash(tx.hash);
+          dispatch(setTargetTxHash(tx.hash));
           const receipt = await tx.wait();
           if (!receipt) {
             throw new Error("Invalid receipt");
           }
-          setIsRedeemComplete(true);
+          dispatch(setIsRedeemComplete(true));
           enqueueSnackbar(null, {
             content: (
               <Alert severity="success">Redeem transaction confirmed</Alert>
@@ -862,7 +903,7 @@ function USDC() {
             content: <Alert severity="error">{parseError(e)}</Alert>,
           });
         }
-        setIsRedeeming(false);
+        dispatch(setIsRedeeming(false));
       })();
     }
   }, [
@@ -875,6 +916,7 @@ function USDC() {
     targetRelayContract,
     vaa,
     enqueueSnackbar,
+    dispatch,
   ]);
 
   useEffect(() => {
