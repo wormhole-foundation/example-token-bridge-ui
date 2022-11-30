@@ -644,7 +644,7 @@ export const CELO_DECIMALS = 18;
 
 export const WNEON_ADDRESS =
   CLUSTER === "testnet"
-    ? "0xf1041596da0499c3438e3B1Eb7b95354C6Aed1f5"
+    ? "0x11adc2d986e334137b9ad0a0f290771f31e9517f"
     : "0xDDb64fE46a91D46ee29420539FC25FD07c5FEa3E";
 export const WNEON_DECIMALS = 18;
 
