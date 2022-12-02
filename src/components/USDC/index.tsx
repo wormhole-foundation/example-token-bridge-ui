@@ -340,7 +340,7 @@ function USDC() {
   const { isReady, statusMessage } = useIsWalletReady(
     transferInfo ? targetChain : sourceChain
   );
-  const { provider, signer, signerAddress } = useEthereumProvider();
+  const { signer, signerAddress } = useEthereumProvider();
   const shouldLockFields =
     isSending || isSendComplete || isRedeeming || isRedeemComplete;
   const preventNavigation =
@@ -391,13 +391,16 @@ function USDC() {
       console.error("Invalid path params specified.");
     }
   }, [pathSourceChain, pathTargetChain, dispatch]);
-  //This effect fetches the USDC balance for the connected wallet
+  //This effect fetches the source USDC balance for the connected wallet
   useEffect(() => {
     dispatch(setBalance(null));
     if (!sourceAsset) return;
-    if (!isReady) return;
     if (!signerAddress) return;
-    if (!provider) return;
+    const sourceEVMChain = getEvmChainId(sourceChain);
+    if (!sourceEVMChain) return;
+    const sourceRPC = EVM_RPC_MAP[sourceEVMChain];
+    if (!sourceRPC) return;
+    const provider = new ethers.providers.JsonRpcProvider(sourceRPC);
     let cancelled = false;
     (async () => {
       const token = await getEthereumToken(sourceAsset, provider);
@@ -412,14 +415,17 @@ function USDC() {
     return () => {
       cancelled = true;
     };
-  }, [sourceAsset, isReady, signerAddress, provider, dispatch]);
+  }, [dispatch, sourceAsset, signerAddress, sourceChain]);
   //This effect fetches the relayer fee for the destination chain (from the source chain, which will be encoded into the transfer)
   useEffect(() => {
     dispatch(setRelayerFee(null));
     if (!sourceRelayContract) return;
     if (!sourceAsset) return;
-    if (!isReady) return;
-    if (!provider) return;
+    const sourceEVMChain = getEvmChainId(sourceChain);
+    if (!sourceEVMChain) return;
+    const sourceRPC = EVM_RPC_MAP[sourceEVMChain];
+    if (!sourceRPC) return;
+    const provider = new ethers.providers.JsonRpcProvider(sourceRPC);
     let cancelled = false;
     (async () => {
       const contract = new Contract(
@@ -436,14 +442,7 @@ function USDC() {
     return () => {
       cancelled = true;
     };
-  }, [
-    sourceRelayContract,
-    sourceAsset,
-    targetChain,
-    isReady,
-    provider,
-    dispatch,
-  ]);
+  }, [dispatch, sourceRelayContract, sourceAsset, targetChain, sourceChain]);
   //This effect fetches the maximum swap amount from the destination chain
   useEffect(() => {
     dispatch(setMaxSwapAmount(null));
