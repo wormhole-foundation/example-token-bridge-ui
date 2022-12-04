@@ -1,5 +1,4 @@
 import {
-  ChainId,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
   CHAIN_ID_INJECTIVE,
@@ -7,6 +6,8 @@ import {
   CHAIN_ID_NEAR,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
+  ChainId,
+  CHAINS,
   isEVMChain,
   isTerraChain,
   postVaaSolanaWithRetry,
@@ -20,7 +21,7 @@ import {
   redeemOnTerra,
   redeemOnXpla,
   TerraChainId,
-  uint8ArrayToHex,
+  uint8ArrayToHex
 } from "@certusone/wormhole-sdk";
 import { completeTransferAndRegister } from "@certusone/wormhole-sdk/lib/esm/aptos/api/tokenBridge";
 import { WalletStrategy } from "@injectivelabs/wallet-ts";
@@ -28,13 +29,10 @@ import { Alert } from "@material-ui/lab";
 import { Wallet } from "@near-wallet-selector/core";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { Connection } from "@solana/web3.js";
-import {
-  ConnectedWallet,
-  useConnectedWallet,
-} from "@terra-money/wallet-provider";
+import { ConnectedWallet, useConnectedWallet } from "@terra-money/wallet-provider";
 import {
   ConnectedWallet as XplaConnectedWallet,
-  useConnectedWallet as useXplaConnectedWallet,
+  useConnectedWallet as useXplaConnectedWallet
 } from "@xpla/wallet-provider";
 import algosdk from "algosdk";
 import { Types } from "aptos";
@@ -49,17 +47,10 @@ import { useEthereumProvider } from "../contexts/EthereumProviderContext";
 import { useInjectiveContext } from "../contexts/InjectiveWalletContext";
 import { useNearContext } from "../contexts/NearWalletContext";
 import { useSolanaWallet } from "../contexts/SolanaWalletContext";
-import {
-  selectTerraFeeDenom,
-  selectTransferIsRedeeming,
-  selectTransferTargetChain,
-} from "../store/selectors";
+import { selectTerraFeeDenom, selectTransferIsRedeeming, selectTransferTargetChain } from "../store/selectors";
 import { setIsRedeeming, setRedeemTx } from "../store/transferSlice";
 import { signSendAndConfirmAlgorand } from "../utils/algorand";
-import {
-  getAptosClient,
-  waitForSignAndSubmitTransaction,
-} from "../utils/aptos";
+import { getAptosClient, waitForSignAndSubmitTransaction } from "../utils/aptos";
 import {
   ACALA_RELAY_URL,
   ALGORAND_BRIDGE_ID,
@@ -68,9 +59,10 @@ import {
   getTokenBridgeAddressForChain,
   MAX_VAA_UPLOAD_RETRIES_SOLANA,
   NEAR_TOKEN_BRIDGE_ACCOUNT,
-  SOLANA_HOST,
+  NEON_RELAY_URL,
   SOL_BRIDGE_ADDRESS,
   SOL_TOKEN_BRIDGE_ADDRESS,
+  SOLANA_HOST
 } from "../utils/consts";
 import { broadcastInjectiveTx } from "../utils/injective";
 import { makeNearAccount, makeNearProvider, signAndSendTransactions } from "../utils/near";
@@ -105,15 +97,15 @@ async function algo(
     dispatch(
       setRedeemTx({
         id: txs[txs.length - 1].tx.txID(),
-        block: result["confirmed-round"],
+        block: result["confirmed-round"]
       })
     );
     enqueueSnackbar(null, {
-      content: <Alert severity="success">Transaction confirmed</Alert>,
+      content: <Alert severity="success">Transaction confirmed</Alert>
     });
   } catch (e) {
     enqueueSnackbar(null, {
-      content: <Alert severity="error">{parseError(e)}</Alert>,
+      content: <Alert severity="error">{parseError(e)}</Alert>
     });
     dispatch(setIsRedeeming(false));
   }
@@ -144,11 +136,11 @@ async function aptos(
     );
     dispatch(setRedeemTx({ id: result, block: 1 }));
     enqueueSnackbar(null, {
-      content: <Alert severity="success">Transaction confirmed</Alert>,
+      content: <Alert severity="success">Transaction confirmed</Alert>
     });
   } catch (e) {
     enqueueSnackbar(null, {
-      content: <Alert severity="error">{parseError(e)}</Alert>,
+      content: <Alert severity="error">{parseError(e)}</Alert>
     });
     dispatch(setIsRedeeming(false));
   }
@@ -171,26 +163,26 @@ async function evm(
         : {};
     const receipt = isNative
       ? await redeemOnEthNative(
-          getTokenBridgeAddressForChain(chainId),
-          signer,
-          signedVAA,
-          overrides
-        )
+        getTokenBridgeAddressForChain(chainId),
+        signer,
+        signedVAA,
+        overrides
+      )
       : await redeemOnEth(
-          getTokenBridgeAddressForChain(chainId),
-          signer,
-          signedVAA,
-          overrides
-        );
+        getTokenBridgeAddressForChain(chainId),
+        signer,
+        signedVAA,
+        overrides
+      );
     dispatch(
       setRedeemTx({ id: receipt.transactionHash, block: receipt.blockNumber })
     );
     enqueueSnackbar(null, {
-      content: <Alert severity="success">Transaction confirmed</Alert>,
+      content: <Alert severity="success">Transaction confirmed</Alert>
     });
   } catch (e) {
     enqueueSnackbar(null, {
-      content: <Alert severity="error">{parseError(e)}</Alert>,
+      content: <Alert severity="error">{parseError(e)}</Alert>
     });
     dispatch(setIsRedeeming(false));
   }
@@ -255,28 +247,28 @@ async function solana(
     // TODO: how do we retry in between these steps
     const transaction = isNative
       ? await redeemAndUnwrapOnSolana(
-          connection,
-          SOL_BRIDGE_ADDRESS,
-          SOL_TOKEN_BRIDGE_ADDRESS,
-          payerAddress,
-          signedVAA
-        )
+        connection,
+        SOL_BRIDGE_ADDRESS,
+        SOL_TOKEN_BRIDGE_ADDRESS,
+        payerAddress,
+        signedVAA
+      )
       : await redeemOnSolana(
-          connection,
-          SOL_BRIDGE_ADDRESS,
-          SOL_TOKEN_BRIDGE_ADDRESS,
-          payerAddress,
-          signedVAA
-        );
+        connection,
+        SOL_BRIDGE_ADDRESS,
+        SOL_TOKEN_BRIDGE_ADDRESS,
+        payerAddress,
+        signedVAA
+      );
     const txid = await signSendAndConfirm(wallet, connection, transaction);
     // TODO: didn't want to make an info call we didn't need, can we get the block without it by modifying the above call?
     dispatch(setRedeemTx({ id: txid, block: 1 }));
     enqueueSnackbar(null, {
-      content: <Alert severity="success">Transaction confirmed</Alert>,
+      content: <Alert severity="success">Transaction confirmed</Alert>
     });
   } catch (e) {
     enqueueSnackbar(null, {
-      content: <Alert severity="error">{parseError(e)}</Alert>,
+      content: <Alert severity="error">{parseError(e)}</Alert>
     });
     dispatch(setIsRedeeming(false));
   }
@@ -308,11 +300,11 @@ async function terra(
       setRedeemTx({ id: result.result.txhash, block: result.result.height })
     );
     enqueueSnackbar(null, {
-      content: <Alert severity="success">Transaction confirmed</Alert>,
+      content: <Alert severity="success">Transaction confirmed</Alert>
     });
   } catch (e) {
     enqueueSnackbar(null, {
-      content: <Alert severity="error">{parseError(e)}</Alert>,
+      content: <Alert severity="error">{parseError(e)}</Alert>
     });
     dispatch(setIsRedeeming(false));
   }
@@ -340,11 +332,11 @@ async function xpla(
       setRedeemTx({ id: result.result.txhash, block: result.result.height })
     );
     enqueueSnackbar(null, {
-      content: <Alert severity="success">Transaction confirmed</Alert>,
+      content: <Alert severity="success">Transaction confirmed</Alert>
     });
   } catch (e) {
     enqueueSnackbar(null, {
-      content: <Alert severity="error">{parseError(e)}</Alert>,
+      content: <Alert severity="error">{parseError(e)}</Alert>
     });
     dispatch(setIsRedeeming(false));
   }
@@ -372,11 +364,11 @@ async function injective(
     );
     dispatch(setRedeemTx({ id: tx.txhash, block: tx.height }));
     enqueueSnackbar(null, {
-      content: <Alert severity="success">Transaction confirmed</Alert>,
+      content: <Alert severity="success">Transaction confirmed</Alert>
     });
   } catch (e) {
     enqueueSnackbar(null, {
-      content: <Alert severity="error">{parseError(e)}</Alert>,
+      content: <Alert severity="error">{parseError(e)}</Alert>
     });
     dispatch(setIsRedeeming(false));
   }
@@ -523,8 +515,17 @@ export function useHandleRedeem() {
     terraFeeDenom,
     algoAccounts,
     injWallet,
-    injAddress,
+    injAddress
   ]);
+
+  const getUrl = (targetChain: ChainId): string => {
+    switch (targetChain) {
+      case CHAINS.neon:
+        return NEON_RELAY_URL;
+      default:
+        return ACALA_RELAY_URL;
+    }
+  };
 
   const handleAcalaRelayerRedeemClick = useCallback(async () => {
     if (!signedVAA) return;
@@ -532,23 +533,23 @@ export function useHandleRedeem() {
     dispatch(setIsRedeeming(true));
 
     try {
-      const res = await axios.post(ACALA_RELAY_URL, {
+      const res = await axios.post(getUrl(targetChain), {
         targetChain,
-        signedVAA: uint8ArrayToHex(signedVAA),
+        signedVAA: uint8ArrayToHex(signedVAA)
       });
 
       dispatch(
         setRedeemTx({
           id: res.data.transactionHash,
-          block: res.data.blockNumber,
+          block: res.data.blockNumber
         })
       );
       enqueueSnackbar(null, {
-        content: <Alert severity="success">Transaction confirmed</Alert>,
+        content: <Alert severity="success">Transaction confirmed</Alert>
       });
     } catch (e) {
       enqueueSnackbar(null, {
-        content: <Alert severity="error">{parseError(e)}</Alert>,
+        content: <Alert severity="error">{parseError(e)}</Alert>
       });
       dispatch(setIsRedeeming(false));
     }
@@ -560,13 +561,13 @@ export function useHandleRedeem() {
       handleClick: handleRedeemClick,
       handleAcalaRelayerRedeemClick,
       disabled: !!isRedeeming,
-      showLoader: !!isRedeeming,
+      showLoader: !!isRedeeming
     }),
     [
       handleRedeemClick,
       isRedeeming,
       handleRedeemNativeClick,
-      handleAcalaRelayerRedeemClick,
+      handleAcalaRelayerRedeemClick
     ]
   );
 }

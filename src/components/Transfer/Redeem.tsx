@@ -92,7 +92,7 @@ function Redeem() {
   }, [useRelayer]);
   const targetChain = useSelector(selectTransferTargetChain);
   const targetIsAcala =
-    targetChain === CHAIN_ID_ACALA || targetChain === CHAIN_ID_KARURA;
+    targetChain === CHAIN_ID_ACALA || targetChain === CHAIN_ID_KARURA || targetChain === CHAIN_ID_NEON;
   const targetAsset = useSelector(selectTransferTargetAsset);
   const isRecovery = useSelector(selectTransferIsRecovery);
   const { isTransferCompletedLoading, isTransferCompleted } =
@@ -273,7 +273,6 @@ function Redeem() {
         </ButtonWithLoader>
         <WaitingForWalletMessage />
       </>
-
       {useRelayer && !isTransferCompleted ? (
         <div className={classes.centered}>
           <Button
