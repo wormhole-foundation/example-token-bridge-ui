@@ -334,6 +334,7 @@ function useFetchTargetAsset(nft?: boolean) {
           }
         } catch (e) {
           if (!cancelled) {
+            console.error("error getting foreign asset", e);
             dispatch(
               setTargetAsset(
                 errorDataWrapper(
