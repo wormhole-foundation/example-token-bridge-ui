@@ -9,7 +9,7 @@ import {
 //This is a valuable intermediate step to the parsed token account, as the token has metadata information on it.
 export async function getEthereumToken(
   tokenAddress: string,
-  provider: ethers.providers.Web3Provider
+  provider: ethers.providers.Web3Provider | ethers.providers.JsonRpcProvider
 ) {
   const token = ethers_contracts.TokenImplementation__factory.connect(
     tokenAddress,
