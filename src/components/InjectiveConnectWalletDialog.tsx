@@ -14,7 +14,7 @@ import { Wallet } from "@injectivelabs/wallet-ts";
 import { useCallback } from "react";
 import {
   InjectiveWalletInfo,
-  SUPPORTED_WALLETS,
+  getSupportedWallets,
   useInjectiveContext,
 } from "../contexts/InjectiveWalletContext";
 
@@ -78,27 +78,27 @@ const InjectiveConnectWalletDialog = ({
   const { connect } = useInjectiveContext();
   const classes = useStyles();
 
-  const installedWallets = SUPPORTED_WALLETS.filter(
-    (walletInfo) => walletInfo.isInstalled
-  ).map((walletInfo) => (
-    <WalletOptions
-      walletInfo={walletInfo}
-      connect={connect}
-      onClose={onClose}
-      key={walletInfo.name}
-    />
-  ));
+  const installedWallets = getSupportedWallets()
+    .filter((walletInfo) => walletInfo.isInstalled)
+    .map((walletInfo) => (
+      <WalletOptions
+        walletInfo={walletInfo}
+        connect={connect}
+        onClose={onClose}
+        key={walletInfo.name}
+      />
+    ));
 
-  const undetectedWallets = SUPPORTED_WALLETS.filter(
-    (walletInfo) => !walletInfo.isInstalled
-  ).map((walletInfo) => (
-    <WalletOptions
-      walletInfo={walletInfo}
-      connect={connect}
-      onClose={onClose}
-      key={walletInfo.name}
-    />
-  ));
+  const undetectedWallets = getSupportedWallets()
+    .filter((walletInfo) => !walletInfo.isInstalled)
+    .map((walletInfo) => (
+      <WalletOptions
+        walletInfo={walletInfo}
+        connect={connect}
+        onClose={onClose}
+        key={walletInfo.name}
+      />
+    ));
 
   return (
     <Dialog open={isOpen} onClose={onClose}>

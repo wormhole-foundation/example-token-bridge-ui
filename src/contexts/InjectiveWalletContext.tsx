@@ -32,7 +32,7 @@ export interface InjectiveWalletInfo {
   url: string;
 }
 
-export const SUPPORTED_WALLETS: InjectiveWalletInfo[] = [
+export const getSupportedWallets = (): InjectiveWalletInfo[] => [
   {
     wallet: Wallet.Keplr,
     name: "Keplr",

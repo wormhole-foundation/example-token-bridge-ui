@@ -418,7 +418,7 @@ async function injective(
       msg,
       "Wormhole - Create Wrapped"
     );
-    dispatch(setCreateTx({ id: tx.txhash, block: tx.height }));
+    dispatch(setCreateTx({ id: tx.txHash, block: tx.height }));
     enqueueSnackbar(null, {
       content: <Alert severity="success">Transaction confirmed</Alert>,
     });
