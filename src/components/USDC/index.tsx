@@ -458,13 +458,13 @@ function USDC() {
       const contract = new Contract(
         targetRelayContract,
         [
-          `function calculateMaxSwapAmount(
+          `function calculateMaxSwapAmountIn(
               address token
           ) external view returns (uint256)`,
         ],
         provider
       );
-      const maxSwap = await contract.calculateMaxSwapAmount(targetAsset);
+      const maxSwap = await contract.calculateMaxSwapAmountIn(targetAsset);
       if (cancelled) return;
       dispatch(setMaxSwapAmount(maxSwap.toString()));
     })();
@@ -487,14 +487,14 @@ function USDC() {
       const contract = new Contract(
         targetRelayContract,
         [
-          `function calculateNativeSwapAmount(
+          `function calculateNativeSwapAmountOut(
             address token,
             uint256 toNativeAmount
         ) external view returns (uint256)`,
         ],
         provider
       );
-      const estimatedSwap = await contract.calculateNativeSwapAmount(
+      const estimatedSwap = await contract.calculateNativeSwapAmountOut(
         targetAsset,
         debouncedToNativeAmount
       );
@@ -814,7 +814,7 @@ function USDC() {
           const contract = new Contract(
             targetRelayContract,
             [
-              `function calculateNativeSwapAmount(
+              `function calculateNativeSwapAmountOut(
                 address token,
                 uint256 toNativeAmount
                 ) external view returns (uint256)`,
@@ -837,7 +837,7 @@ function USDC() {
           const toNativeAmount = ethers.utils.hexlify(
             payloadArray.subarray(180, 212)
           );
-          const nativeSwapQuote = await contract.calculateNativeSwapAmount(
+          const nativeSwapQuote = await contract.calculateNativeSwapAmountOut(
             token,
             toNativeAmount
           );
