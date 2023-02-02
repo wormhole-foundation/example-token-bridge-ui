@@ -12,6 +12,7 @@ import {
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_KARURA,
   CHAIN_ID_KLAYTN,
+  CHAIN_ID_MOONBEAM,
   CHAIN_ID_NEAR,
   CHAIN_ID_NEON,
   CHAIN_ID_OASIS,
@@ -57,6 +58,7 @@ import klaytnIcon from "../icons/klaytn.svg";
 import neonIcon from "../icons/neon.svg";
 import oasisIcon from "../icons/oasis-network-rose-logo.svg";
 import polygonIcon from "../icons/polygon.svg";
+import moonbeamIcon from "../icons/moonbeam.svg";
 import {
   errorSourceParsedTokenAccounts as errorSourceParsedTokenAccountsNFT,
   fetchSourceParsedTokenAccounts as fetchSourceParsedTokenAccountsNFT,
@@ -117,6 +119,8 @@ import {
   WROSE_ADDRESS,
   WROSE_DECIMALS,
   getDefaultNativeCurrencyAddressEvm,
+  WGLMR_ADDRESS,
+  WGLMR_DECIMALS,
 } from "../utils/consts";
 import { makeNearAccount } from "../utils/near";
 import {
@@ -535,6 +539,29 @@ const createNativeNeonParsedTokenAccount = (
           "NEON", //A white lie for display purposes
           "NEON", //A white lie for display purposes
           neonIcon,
+          true //isNativeAsset
+        );
+      });
+};
+
+const createNativeMoonbeamParsedTokenAccount = (
+  provider: Provider,
+  signerAddress: string | undefined
+) => {
+  return !(provider && signerAddress)
+    ? Promise.reject()
+    : provider.getBalance(signerAddress).then((balanceInWei) => {
+        const balanceInEth = ethers.utils.formatEther(balanceInWei);
+        return createParsedTokenAccount(
+          signerAddress, //public key
+          WGLMR_ADDRESS, //Mint key, On the other side this will be wneon, so this is hopefully a white lie.
+          balanceInWei.toString(), //amount, in wei
+          WGLMR_DECIMALS,
+          parseFloat(balanceInEth), //This loses precision, but is a limitation of the current datamodel. This field is essentially deprecated
+          balanceInEth.toString(), //This is the actual display field, which has full precision.
+          "GLMR", //A white lie for display purposes
+          "GLMR", //A white lie for display purposes
+          moonbeamIcon,
           true //isNativeAsset
         );
       });
@@ -1397,6 +1424,41 @@ function useGetAvailableTokens(nft: boolean = false) {
             setEthNativeAccount(undefined);
             setEthNativeAccountLoading(false);
             setEthNativeAccountError("Unable to retrieve your Neon balance.");
+          }
+        }
+      );
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [lookupChain, provider, signerAddress, nft, ethNativeAccount]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (
+      signerAddress &&
+      lookupChain === CHAIN_ID_MOONBEAM &&
+      !ethNativeAccount &&
+      !nft
+    ) {
+      setEthNativeAccountLoading(true);
+      createNativeMoonbeamParsedTokenAccount(provider, signerAddress).then(
+        (result) => {
+          console.log("create native account returned with value", result);
+          if (!cancelled) {
+            setEthNativeAccount(result);
+            setEthNativeAccountLoading(false);
+            setEthNativeAccountError("");
+          }
+        },
+        (error) => {
+          if (!cancelled) {
+            setEthNativeAccount(undefined);
+            setEthNativeAccountLoading(false);
+            setEthNativeAccountError(
+              "Unable to retrieve your Moonbeam balance."
+            );
           }
         }
       );

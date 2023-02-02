@@ -118,6 +118,13 @@ export const METAMASK_CHAIN_PARAMETERS: {
     rpcUrls: ["https://testnet.aurora.dev"],
     blockExplorerUrls: ["https://testnet.aurorascan.dev"],
   },
+  1287: {
+    chainId: "0x507",
+    chainName: "Moonbase Alpha",
+    nativeCurrency: { name: "Dev", symbol: "DEV", decimals: 18 },
+    rpcUrls: ["https://rpc.api.moonbase.moonbeam.network"],
+    blockExplorerUrls: ["https://moonbase.moonscan.io"],
+  },
 };
 
 export interface EvmRpcMap {
