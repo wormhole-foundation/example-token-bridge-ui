@@ -26,7 +26,7 @@ export type TerraTokenMap = {
   };
   classic: {
     [address: string]: TerraTokenMetadata;
-  }
+  };
 };
 
 const useTerraTokenMap = (shouldFire: boolean): DataWrapper<TerraTokenMap> => {
