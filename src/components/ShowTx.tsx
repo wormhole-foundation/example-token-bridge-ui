@@ -10,6 +10,7 @@ import {
   CHAIN_ID_KLAYTN,
   CHAIN_ID_KARURA,
   CHAIN_ID_NEAR,
+  CHAIN_ID_MOONBEAM,
   CHAIN_ID_OASIS,
   CHAIN_ID_POLYGON,
   CHAIN_ID_SOLANA,
@@ -114,6 +115,10 @@ export default function ShowTx({
         }/tx/${tx?.id}`
       : chainId === CHAIN_ID_ALGORAND
       ? `https://${CLUSTER === "testnet" ? "testnet." : ""}algoexplorer.io/tx/${
+          tx?.id
+        }`
+      : chainId === CHAIN_ID_MOONBEAM
+      ? `https://${CLUSTER === "testnet" ? "moonbase." : ""}moonscan.io/tx/${
           tx?.id
         }`
       : chainId === CHAIN_ID_XPLA
