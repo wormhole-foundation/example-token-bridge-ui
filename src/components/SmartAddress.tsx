@@ -9,6 +9,7 @@ import {
   CHAIN_ID_FANTOM,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_KARURA,
+  CHAIN_ID_MOONBEAM,
   CHAIN_ID_OASIS,
   CHAIN_ID_POLYGON,
   CHAIN_ID_SOLANA,
@@ -150,6 +151,10 @@ export default function SmartAddress({
     ? `https://${
         CLUSTER === "testnet" ? "alfajores.celoscan.io" : "explorer.celo.org"
       }/address/${useableAddress}`
+    : chainId === CHAIN_ID_MOONBEAM
+    ? `https://${CLUSTER === "testnet" ? "moonbase." : ""}moonscan.io/${
+        isAsset ? "token" : "address"
+      }/${useableAddress}`
     : chainId === CHAIN_ID_KARURA
     ? `https://${
         CLUSTER === "testnet"
