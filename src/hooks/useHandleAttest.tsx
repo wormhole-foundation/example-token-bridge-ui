@@ -94,7 +94,11 @@ import {
   SOL_TOKEN_BRIDGE_ADDRESS,
   WORMHOLE_RPC_HOSTS,
 } from "../utils/consts";
-import { makeNearAccount, makeNearProvider, signAndSendTransactions } from "../utils/near";
+import {
+  makeNearAccount,
+  makeNearProvider,
+  signAndSendTransactions,
+} from "../utils/near";
 import parseError from "../utils/parseError";
 import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees, waitForTerraExecution } from "../utils/terra";

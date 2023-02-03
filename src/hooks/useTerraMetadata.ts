@@ -25,7 +25,10 @@ const fetchSingleMetadata = async (address: string, lcd: LCDClient) =>
         } as TerraMetadata)
     );
 
-const fetchTerraMetadata = async (addresses: string[], chainId: TerraChainId) => {
+const fetchTerraMetadata = async (
+  addresses: string[],
+  chainId: TerraChainId
+) => {
   const lcd = new LCDClient(getTerraConfig(chainId));
   const promises: Promise<TerraMetadata>[] = [];
   addresses.forEach((address) => {
