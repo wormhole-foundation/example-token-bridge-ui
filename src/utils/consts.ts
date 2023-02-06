@@ -496,22 +496,6 @@ export const NEAR_CORE_BRIDGE_ACCOUNT =
 export const NEAR_TOKEN_BRIDGE_ACCOUNT =
   CLUSTER === "testnet" ? "token.wormhole.testnet" : "token.test.near";
 
-export const MOONBEAM_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? CONTRACTS.TESTNET.moonbeam.core
-    : "0xC89Ce4735882C9F0f0FE26686c53074E09B0D550"
-);
-export const MOONBEAM_NFT_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? CONTRACTS.TESTNET.moonbeam.nft_bridge
-    : "0x26b4afb60d6c903165150c6f0aa14f8016be4aec"
-);
-export const MOONBEAM_TOKEN_BRIDGE_ADDRESS = getAddress(
-  CLUSTER === "testnet"
-    ? CONTRACTS.TESTNET.moonbeam.token_bridge
-    : "0x0290FB167208Af455bB137780163b7B7a9a10C16"
-);
-
 export const getBridgeAddressForChain = (chainId: ChainId) =>
   CONTRACTS[CLUSTER === "testnet" ? "TESTNET" : "DEVNET"][
     coalesceChainName(chainId)
