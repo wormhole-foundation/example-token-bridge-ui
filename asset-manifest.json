@@ -1,13 +1,14 @@
 {
   "files": {
     "main.css": "/example-token-bridge-ui/static/css/main.388f3ec5.css",
-    "main.js": "/example-token-bridge-ui/static/js/main.bfdbd211.js",
+    "main.js": "/example-token-bridge-ui/static/js/main.2c3f2157.js",
     "static/js/986.59bb44ed.chunk.js": "/example-token-bridge-ui/static/js/986.59bb44ed.chunk.js",
     "static/js/882.21d5a78a.chunk.js": "/example-token-bridge-ui/static/js/882.21d5a78a.chunk.js",
     "static/js/94.b61bf91f.chunk.js": "/example-token-bridge-ui/static/js/94.b61bf91f.chunk.js",
     "static/js/578.318a21c4.chunk.js": "/example-token-bridge-ui/static/js/578.318a21c4.chunk.js",
     "static/media/keplr.svg": "/example-token-bridge-ui/static/media/keplr.5bd78b0b1b00da236168db2185418da3.svg",
     "static/media/neon.svg": "/example-token-bridge-ui/static/media/neon.c3f3c0c2eeecc7d724bfcce581d1b4bf.svg",
+    "static/media/moonbeam.svg": "/example-token-bridge-ui/static/media/moonbeam.d537e3282e2645ee2f1df9f7c3711f5a.svg",
     "static/media/wormhole.svg": "/example-token-bridge-ui/static/media/wormhole.5bb8fbe223a0218e97e6aa04e03b3c8f.svg",
     "static/media/terra2.svg": "/example-token-bridge-ui/static/media/terra2.3b8a4497121229ac69ab6afa1c4e9317.svg",
     "static/media/metamask-fox.svg": "/example-token-bridge-ui/static/media/metamask-fox.ff320abc80456aa6f689de97f5bc29b4.svg",
@@ -35,7 +36,7 @@
     "static/media/algorand.svg": "/example-token-bridge-ui/static/media/algorand.699bf008d7073523b8edd75d8f3b38ac.svg",
     "static/media/eth.svg": "/example-token-bridge-ui/static/media/eth.5a5de20bf3808241fc61ed9ad7680ab5.svg",
     "main.388f3ec5.css.map": "/example-token-bridge-ui/static/css/main.388f3ec5.css.map",
-    "main.bfdbd211.js.map": "/example-token-bridge-ui/static/js/main.bfdbd211.js.map",
+    "main.2c3f2157.js.map": "/example-token-bridge-ui/static/js/main.2c3f2157.js.map",
     "986.59bb44ed.chunk.js.map": "/example-token-bridge-ui/static/js/986.59bb44ed.chunk.js.map",
     "882.21d5a78a.chunk.js.map": "/example-token-bridge-ui/static/js/882.21d5a78a.chunk.js.map",
     "94.b61bf91f.chunk.js.map": "/example-token-bridge-ui/static/js/94.b61bf91f.chunk.js.map",
@@ -43,6 +44,6 @@
   },
   "entrypoints": [
     "static/css/main.388f3ec5.css",
-    "static/js/main.bfdbd211.js"
+    "static/js/main.2c3f2157.js"
   ]
 }
