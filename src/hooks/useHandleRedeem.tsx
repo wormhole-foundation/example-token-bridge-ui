@@ -374,7 +374,7 @@ async function injective(
       msg,
       "Wormhole - Complete Transfer"
     );
-    dispatch(setRedeemTx({ id: tx.txhash, block: tx.height }));
+    dispatch(setRedeemTx({ id: tx.txHash, block: tx.height }));
     enqueueSnackbar(null, {
       content: <Alert severity="success">Transaction confirmed</Alert>,
     });

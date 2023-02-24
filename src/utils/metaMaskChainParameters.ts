@@ -125,6 +125,13 @@ export const METAMASK_CHAIN_PARAMETERS: {
     rpcUrls: ["https://rpc.api.moonbase.moonbeam.network"],
     blockExplorerUrls: ["https://moonbase.moonscan.io"],
   },
+  84531: {
+    chainId: "0x14A33",
+    chainName: "Base Goerli",
+    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+    rpcUrls: ["https://goerli.base.org"],
+    blockExplorerUrls: ["https://goerli.basescan.org"],
+  },
 };
 
 export interface EvmRpcMap {
