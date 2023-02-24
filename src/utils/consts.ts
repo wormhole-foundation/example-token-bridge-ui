@@ -6,6 +6,7 @@ import {
   CHAIN_ID_ARBITRUM,
   CHAIN_ID_AURORA,
   CHAIN_ID_AVAX,
+  CHAIN_ID_BASE,
   CHAIN_ID_BSC,
   CHAIN_ID_CELO,
   CHAIN_ID_ETH,
@@ -37,6 +38,7 @@ import aptosIcon from "../icons/aptos.svg";
 import arbitrumIcon from "../icons/arbitrum.svg";
 import auroraIcon from "../icons/aurora.svg";
 import avaxIcon from "../icons/avax.svg";
+import baseIcon from "../icons/base.svg";
 import bscIcon from "../icons/bsc.svg";
 import celoIcon from "../icons/celo.svg";
 import ethIcon from "../icons/eth.svg";
@@ -54,7 +56,6 @@ import xplaIcon from "../icons/xpla.svg";
 import injectiveIcon from "../icons/injective.svg";
 import { AptosNetwork } from "./aptos";
 import { getNetworkInfo, Network } from "@injectivelabs/networks";
-import { ChainId as InjectiveChainId } from "@injectivelabs/ts-types";
 import nearIcon from "../icons/near.svg";
 import { ConnectConfig, keyStores } from "near-api-js";
 
@@ -100,6 +101,11 @@ export const CHAINS: ChainInfo[] =
           id: CHAIN_ID_AVAX,
           name: "Avalanche",
           logo: avaxIcon,
+        },
+        {
+          id: CHAIN_ID_BASE,
+          name: "Base Goerli",
+          logo: baseIcon,
         },
         {
           id: CHAIN_ID_BSC,
@@ -240,7 +246,8 @@ export const CHAINS_WITH_NFT_SUPPORT = CHAINS.filter(
     id === CHAIN_ID_CELO ||
     id === CHAIN_ID_NEON ||
     id === CHAIN_ID_ARBITRUM ||
-    id === CHAIN_ID_MOONBEAM
+    id === CHAIN_ID_MOONBEAM ||
+    id === CHAIN_ID_BASE
 );
 export type ChainsById = { [key in ChainId]: ChainInfo };
 export const CHAINS_BY_ID: ChainsById = CHAINS.reduce((obj, chain) => {
@@ -290,6 +297,8 @@ export const getDefaultNativeCurrencySymbol = (chainId: ChainId) =>
     ? "ETH"
     : chainId === CHAIN_ID_MOONBEAM
     ? "GLMR"
+    : chainId === CHAIN_ID_BASE
+    ? "ETH"
     : "";
 
 export const getDefaultNativeCurrencyAddressEvm = (chainId: ChainId) => {
@@ -347,6 +356,8 @@ export const getExplorerName = (chainId: ChainId) =>
     ? "Arbiscan"
     : chainId === CHAIN_ID_MOONBEAM
     ? "Moonscan"
+    : chainId === CHAIN_ID_BASE
+    ? "BaseScan"
     : "Explorer";
 export const WORMHOLE_RPC_HOSTS =
   CLUSTER === "testnet"
@@ -367,6 +378,7 @@ export const CELO_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 44787 : 1381;
 export const NEON_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 245022926 : 1381;
 export const ARBITRUM_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 421613 : 1381;
 export const MOONBEAM_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 1287 : 1381;
+export const BASE_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 84531 : 1381;
 export const getEvmChainId = (chainId: ChainId) =>
   chainId === CHAIN_ID_ETH
     ? ETH_NETWORK_CHAIN_ID
@@ -396,6 +408,8 @@ export const getEvmChainId = (chainId: ChainId) =>
     ? ARBITRUM_NETWORK_CHAIN_ID
     : chainId === CHAIN_ID_MOONBEAM
     ? MOONBEAM_NETWORK_CHAIN_ID
+    : chainId === CHAIN_ID_BASE
+    ? BASE_NETWORK_CHAIN_ID
     : undefined;
 export const SOLANA_HOST = process.env.REACT_APP_SOLANA_API_URL
   ? process.env.REACT_APP_SOLANA_API_URL
@@ -445,8 +459,8 @@ export const APTOS_NETWORK =
 export const APTOS_NATIVE_DECIMALS = 8;
 export const APTOS_NATIVE_TOKEN_KEY = "0x1::aptos_coin::AptosCoin";
 
-export const INJECTIVE_NETWORK = getNetworkInfo(Network.TestnetK8s);
-export const INJECTIVE_NETWORK_CHAIN_ID = InjectiveChainId.Testnet;
+export const INJECTIVE_NETWORK = Network.TestnetK8s;
+export const INJECTIVE_NETWORK_INFO = getNetworkInfo(Network.TestnetK8s);
 
 export const ALGORAND_HOST =
   CLUSTER === "testnet"
@@ -528,6 +542,8 @@ export const COVALENT_ARBITRUM =
 
 export const COVALENT_MOONBEAM =
   CLUSTER === "devnet" ? null : MOONBEAM_NETWORK_CHAIN_ID; // Covalent only supports mainnet
+export const COVALENT_BASE =
+  CLUSTER === "devnet" ? null : BASE_NETWORK_CHAIN_ID;
 
 export const COVALENT_GET_TOKENS_URL = (
   chainId: ChainId,
@@ -556,6 +572,8 @@ export const COVALENT_GET_TOKENS_URL = (
       ? COVALENT_ARBITRUM
       : chainId === CHAIN_ID_MOONBEAM
       ? COVALENT_MOONBEAM
+      : chainId === CHAIN_ID_BASE
+      ? COVALENT_BASE
       : "";
   // https://www.covalenthq.com/docs/api/#get-/v1/{chain_id}/address/{address}/balances_v2/
   return chainNum

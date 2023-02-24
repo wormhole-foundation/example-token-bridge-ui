@@ -637,7 +637,7 @@ async function injective(
       msgs,
       "Wormhole - Initiate Transfer"
     );
-    dispatch(setTransferTx({ id: tx.txhash, block: tx.height }));
+    dispatch(setTransferTx({ id: tx.txHash, block: tx.height }));
     enqueueSnackbar(null, {
       content: <Alert severity="success">Transaction confirmed</Alert>,
     });

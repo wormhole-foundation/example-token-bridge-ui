@@ -21,6 +21,7 @@ import {
   CHAIN_ID_APTOS,
   CHAIN_ID_ARBITRUM,
   CHAIN_ID_INJECTIVE,
+  CHAIN_ID_BASE,
 } from "@certusone/wormhole-sdk";
 import { Button, makeStyles, Typography } from "@material-ui/core";
 import { Transaction } from "../store/transferSlice";
@@ -119,6 +120,10 @@ export default function ShowTx({
         }`
       : chainId === CHAIN_ID_MOONBEAM
       ? `https://${CLUSTER === "testnet" ? "moonbase." : ""}moonscan.io/tx/${
+          tx?.id
+        }`
+      : chainId === CHAIN_ID_BASE
+      ? `https://${CLUSTER === "testnet" ? "goerli." : ""}basescan.org/tx/${
           tx?.id
         }`
       : chainId === CHAIN_ID_XPLA
