@@ -22,6 +22,7 @@ import {
   CHAIN_ID_ARBITRUM,
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_BASE,
+  CHAIN_ID_OPTIMISM,
 } from "@certusone/wormhole-sdk";
 import { Button, makeStyles, Typography } from "@material-ui/core";
 import { Transaction } from "../store/transferSlice";
@@ -126,6 +127,10 @@ export default function ShowTx({
       ? `https://${CLUSTER === "testnet" ? "goerli." : ""}basescan.org/tx/${
           tx?.id
         }`
+      : chainId === CHAIN_ID_OPTIMISM
+      ? `https://${
+          CLUSTER === "testnet" ? "goerli-" : ""
+        }optimism.etherscan.io/tx/${tx?.id}`
       : chainId === CHAIN_ID_XPLA
       ? `https://explorer.xpla.io/${
           CLUSTER === "testnet" ? "testnet/" : ""
