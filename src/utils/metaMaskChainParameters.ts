@@ -132,6 +132,13 @@ export const METAMASK_CHAIN_PARAMETERS: {
     rpcUrls: ["https://goerli.base.org"],
     blockExplorerUrls: ["https://goerli.basescan.org"],
   },
+  420: {
+    chainId: "0x1056",
+    chainName: "Optimism Goerli",
+    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+    rpcUrls: ["https://goerli.optimism.io"],
+    blockExplorerUrls: ["https://goerli-optimism.etherscan.io"],
+  },
 };
 
 export interface EvmRpcMap {

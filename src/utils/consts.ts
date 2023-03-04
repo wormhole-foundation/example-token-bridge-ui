@@ -18,6 +18,7 @@ import {
   CHAIN_ID_NEAR,
   CHAIN_ID_NEON,
   CHAIN_ID_OASIS,
+  CHAIN_ID_OPTIMISM,
   CHAIN_ID_POLYGON,
   CHAIN_ID_SOLANA,
   CHAIN_ID_TERRA,
@@ -48,6 +49,7 @@ import klaytnIcon from "../icons/klaytn.svg";
 import moonbeamIcon from "../icons/moonbeam.svg";
 import neonIcon from "../icons/neon.svg";
 import oasisIcon from "../icons/oasis-network-rose-logo.svg";
+import optimismIcon from "../icons/optimism.svg";
 import polygonIcon from "../icons/polygon.svg";
 import solanaIcon from "../icons/solana.svg";
 import terraIcon from "../icons/terra.svg";
@@ -163,6 +165,11 @@ export const CHAINS: ChainInfo[] =
           logo: oasisIcon,
         },
         {
+          id: CHAIN_ID_OPTIMISM,
+          name: "Optimism (Goerli)",
+          logo: optimismIcon,
+        },
+        {
           id: CHAIN_ID_POLYGON,
           name: "Polygon",
           logo: polygonIcon,
@@ -247,7 +254,8 @@ export const CHAINS_WITH_NFT_SUPPORT = CHAINS.filter(
     id === CHAIN_ID_NEON ||
     id === CHAIN_ID_ARBITRUM ||
     id === CHAIN_ID_MOONBEAM ||
-    id === CHAIN_ID_BASE
+    id === CHAIN_ID_BASE ||
+    id === CHAIN_ID_OPTIMISM
 );
 export type ChainsById = { [key in ChainId]: ChainInfo };
 export const CHAINS_BY_ID: ChainsById = CHAINS.reduce((obj, chain) => {
@@ -298,6 +306,8 @@ export const getDefaultNativeCurrencySymbol = (chainId: ChainId) =>
     : chainId === CHAIN_ID_MOONBEAM
     ? "GLMR"
     : chainId === CHAIN_ID_BASE
+    ? "ETH"
+    : chainId === CHAIN_ID_OPTIMISM
     ? "ETH"
     : "";
 
@@ -379,6 +389,7 @@ export const NEON_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 245022926 : 1381;
 export const ARBITRUM_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 421613 : 1381;
 export const MOONBEAM_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 1287 : 1381;
 export const BASE_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 84531 : 1381;
+export const OPTIMISM_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 420 : 1381;
 export const getEvmChainId = (chainId: ChainId) =>
   chainId === CHAIN_ID_ETH
     ? ETH_NETWORK_CHAIN_ID
@@ -410,6 +421,8 @@ export const getEvmChainId = (chainId: ChainId) =>
     ? MOONBEAM_NETWORK_CHAIN_ID
     : chainId === CHAIN_ID_BASE
     ? BASE_NETWORK_CHAIN_ID
+    : chainId === CHAIN_ID_OPTIMISM
+    ? OPTIMISM_NETWORK_CHAIN_ID
     : undefined;
 export const SOLANA_HOST = process.env.REACT_APP_SOLANA_API_URL
   ? process.env.REACT_APP_SOLANA_API_URL
@@ -544,6 +557,8 @@ export const COVALENT_MOONBEAM =
   CLUSTER === "devnet" ? null : MOONBEAM_NETWORK_CHAIN_ID; // Covalent only supports mainnet
 export const COVALENT_BASE =
   CLUSTER === "devnet" ? null : BASE_NETWORK_CHAIN_ID;
+export const COVALENT_OPTIMISM =
+  CLUSTER === "devnet" ? null : OPTIMISM_NETWORK_CHAIN_ID;
 
 export const COVALENT_GET_TOKENS_URL = (
   chainId: ChainId,
@@ -574,6 +589,8 @@ export const COVALENT_GET_TOKENS_URL = (
       ? COVALENT_MOONBEAM
       : chainId === CHAIN_ID_BASE
       ? COVALENT_BASE
+      : chainId === CHAIN_ID_OPTIMISM
+      ? COVALENT_OPTIMISM
       : "";
   // https://www.covalenthq.com/docs/api/#get-/v1/{chain_id}/address/{address}/balances_v2/
   return chainNum

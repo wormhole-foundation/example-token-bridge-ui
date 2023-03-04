@@ -10,6 +10,7 @@ import {
   CHAIN_ID_KLAYTN,
   CHAIN_ID_MOONBEAM,
   CHAIN_ID_OASIS,
+  CHAIN_ID_OPTIMISM,
   CHAIN_ID_POLYGON,
   CHAIN_ID_SOLANA,
   isEVMChain,
@@ -100,6 +101,8 @@ export default function TransactionProgress({
       ? 64 // something to show progress
       : chainId === CHAIN_ID_BASE
       ? 124 // something to show progress
+      : chainId === CHAIN_ID_OPTIMISM
+      ? 124 // something to show progress
       : isEVMChain(chainId)
       ? 15
       : 1;
@@ -121,6 +124,8 @@ export default function TransactionProgress({
             ? `Waiting for Ethereum finality on Arbitrum block ${tx?.block}` //TODO: more advanced finality checking for Arbitrum
             : chainId === CHAIN_ID_BASE
             ? `Waiting for Ethereum finality on Base block ${tx?.block}` //TODO: more advanced finality checking for Base
+            : chainId === CHAIN_ID_OPTIMISM
+            ? `Waiting for Ethereum finality on Optimism block ${tx?.block}` //TODO: more advanced finality checking for Optimism
             : blockDiff < expectedBlocks
             ? `Waiting for ${blockDiff} / ${expectedBlocks} confirmations on ${CHAINS_BY_ID[chainId].name}...`
             : `Waiting for Wormhole Network consensus...`}
