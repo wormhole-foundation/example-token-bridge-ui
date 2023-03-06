@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/example-token-bridge-ui/static/css/main.388f3ec5.css",
-    "main.js": "/example-token-bridge-ui/static/js/main.76c17212.js",
+    "main.js": "/example-token-bridge-ui/static/js/main.f5c86fa2.js",
     "static/js/986.59bb44ed.chunk.js": "/example-token-bridge-ui/static/js/986.59bb44ed.chunk.js",
     "static/js/882.21d5a78a.chunk.js": "/example-token-bridge-ui/static/js/882.21d5a78a.chunk.js",
     "static/js/94.61e1fa6d.chunk.js": "/example-token-bridge-ui/static/js/94.61e1fa6d.chunk.js",
@@ -16,6 +16,7 @@
     "static/media/injective.svg": "/example-token-bridge-ui/static/media/injective.ac2f95a4532d20546ad21b59abc01d13.svg",
     "static/media/usdc.svg": "/example-token-bridge-ui/static/media/usdc.f08e02b1252e78ae2924100dfcb8428c.svg",
     "static/media/terra.svg": "/example-token-bridge-ui/static/media/terra.77cd51a6fb8dbae70872b3d3b813c2ab.svg",
+    "static/media/optimism.svg": "/example-token-bridge-ui/static/media/optimism.adb3136c2e75a80e611d69918fb05f3a.svg",
     "static/media/acala.svg": "/example-token-bridge-ui/static/media/acala.dad6d76736ec87722300c598c51c3d4f.svg",
     "static/media/klaytn.svg": "/example-token-bridge-ui/static/media/klaytn.5c570c72fc1acba8b9c7bf49e4b838c0.svg",
     "static/media/celo.svg": "/example-token-bridge-ui/static/media/celo.4c9aaaf49dc42d67179ebd8cbc6bf21a.svg",
@@ -37,7 +38,7 @@
     "static/media/algorand.svg": "/example-token-bridge-ui/static/media/algorand.699bf008d7073523b8edd75d8f3b38ac.svg",
     "static/media/eth.svg": "/example-token-bridge-ui/static/media/eth.5a5de20bf3808241fc61ed9ad7680ab5.svg",
     "main.388f3ec5.css.map": "/example-token-bridge-ui/static/css/main.388f3ec5.css.map",
-    "main.76c17212.js.map": "/example-token-bridge-ui/static/js/main.76c17212.js.map",
+    "main.f5c86fa2.js.map": "/example-token-bridge-ui/static/js/main.f5c86fa2.js.map",
     "986.59bb44ed.chunk.js.map": "/example-token-bridge-ui/static/js/986.59bb44ed.chunk.js.map",
     "882.21d5a78a.chunk.js.map": "/example-token-bridge-ui/static/js/882.21d5a78a.chunk.js.map",
     "94.61e1fa6d.chunk.js.map": "/example-token-bridge-ui/static/js/94.61e1fa6d.chunk.js.map",
@@ -45,6 +46,6 @@
   },
   "entrypoints": [
     "static/css/main.388f3ec5.css",
-    "static/js/main.76c17212.js"
+    "static/js/main.f5c86fa2.js"
   ]
 }
