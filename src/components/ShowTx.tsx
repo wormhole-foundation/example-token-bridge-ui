@@ -23,6 +23,7 @@ import {
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_BASE,
   CHAIN_ID_OPTIMISM,
+  CHAIN_ID_SEPOLIA,
 } from "@certusone/wormhole-sdk";
 import { Button, makeStyles, Typography } from "@material-ui/core";
 import { Transaction } from "../store/transferSlice";
@@ -53,6 +54,10 @@ export default function ShowTx({
   const explorerAddress =
     chainId === CHAIN_ID_ETH
       ? `https://${CLUSTER === "testnet" ? "goerli." : ""}etherscan.io/tx/${
+          tx?.id
+        }`
+      : chainId === CHAIN_ID_SEPOLIA
+      ? `https://${CLUSTER === "testnet" ? "sepolia." : ""}etherscan.io/tx/${
           tx?.id
         }`
       : chainId === CHAIN_ID_BSC

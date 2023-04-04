@@ -10,6 +10,7 @@ import {
   CHAIN_ID_NEON,
   CHAIN_ID_OASIS,
   CHAIN_ID_POLYGON,
+  CHAIN_ID_SEPOLIA,
   CHAIN_ID_SOLANA,
   isEVMChain,
   isTerraChain,
@@ -44,6 +45,7 @@ import {
   WAVAX_ADDRESS,
   WBNB_ADDRESS,
   WETH_ADDRESS,
+  WETH_ADDRESS_SEPOLIA,
   WETH_AURORA_ADDRESS,
   WFTM_ADDRESS,
   WKLAY_ADDRESS,
@@ -108,6 +110,10 @@ function Redeem() {
     targetChain === CHAIN_ID_ETH &&
     targetAsset &&
     targetAsset.toLowerCase() === WETH_ADDRESS.toLowerCase();
+  const isSepoliaEthNative =
+    targetChain === CHAIN_ID_SEPOLIA &&
+    targetAsset &&
+    targetAsset.toLowerCase() === WETH_ADDRESS_SEPOLIA.toLowerCase();
   const isBscNative =
     targetChain === CHAIN_ID_BSC &&
     targetAsset &&
@@ -146,6 +152,7 @@ function Redeem() {
     targetAsset === WSOL_ADDRESS;
   const isNativeEligible =
     isEthNative ||
+    isSepoliaEthNative ||
     isBscNative ||
     isPolygonNative ||
     isAvaxNative ||

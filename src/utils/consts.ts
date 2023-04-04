@@ -20,6 +20,7 @@ import {
   CHAIN_ID_OASIS,
   CHAIN_ID_OPTIMISM,
   CHAIN_ID_POLYGON,
+  CHAIN_ID_SEPOLIA,
   CHAIN_ID_SOLANA,
   CHAIN_ID_TERRA,
   CHAIN_ID_TERRA2,
@@ -122,6 +123,11 @@ export const CHAINS: ChainInfo[] =
         {
           id: CHAIN_ID_ETH,
           name: "Ethereum (Goerli)",
+          logo: ethIcon,
+        },
+        {
+          id: CHAIN_ID_SEPOLIA,
+          name: "Ethereum (Sepolia)",
           logo: ethIcon,
         },
         {
@@ -242,6 +248,7 @@ export const CHAINS_WITH_NFT_SUPPORT = CHAINS.filter(
     id === CHAIN_ID_AVAX ||
     id === CHAIN_ID_BSC ||
     id === CHAIN_ID_ETH ||
+    id === CHAIN_ID_SEPOLIA ||
     id === CHAIN_ID_POLYGON ||
     id === CHAIN_ID_OASIS ||
     id === CHAIN_ID_SOLANA ||
@@ -267,7 +274,7 @@ export const COMING_SOON_CHAINS: ChainInfo[] = [];
 export const getDefaultNativeCurrencySymbol = (chainId: ChainId) =>
   chainId === CHAIN_ID_SOLANA
     ? "SOL"
-    : chainId === CHAIN_ID_ETH
+    : chainId === CHAIN_ID_ETH || chainId === CHAIN_ID_SEPOLIA
     ? "ETH"
     : chainId === CHAIN_ID_BSC
     ? "BNB"
@@ -314,6 +321,8 @@ export const getDefaultNativeCurrencySymbol = (chainId: ChainId) =>
 export const getDefaultNativeCurrencyAddressEvm = (chainId: ChainId) => {
   return chainId === CHAIN_ID_ETH
     ? WETH_ADDRESS
+    : chainId === CHAIN_ID_SEPOLIA
+    ? WETH_ADDRESS_SEPOLIA
     : chainId === CHAIN_ID_BSC
     ? WBNB_ADDRESS
     : chainId === CHAIN_ID_POLYGON
@@ -342,7 +351,7 @@ export const getDefaultNativeCurrencyAddressEvm = (chainId: ChainId) => {
 };
 
 export const getExplorerName = (chainId: ChainId) =>
-  chainId === CHAIN_ID_ETH
+  chainId === CHAIN_ID_ETH || chainId === CHAIN_ID_SEPOLIA
     ? "Etherscan"
     : chainId === CHAIN_ID_BSC
     ? "BscScan"
@@ -374,6 +383,7 @@ export const WORMHOLE_RPC_HOSTS =
     ? ["https://wormhole-v2-testnet-api.certus.one"]
     : ["http://localhost:7071"];
 export const ETH_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 5 : 1337;
+export const SEPOLIA_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 11155111 : 1337;
 export const BSC_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 97 : 1397;
 export const POLYGON_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 80001 : 1381;
 export const AVAX_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 43113 : 1381;
@@ -393,6 +403,8 @@ export const OPTIMISM_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 420 : 1381;
 export const getEvmChainId = (chainId: ChainId) =>
   chainId === CHAIN_ID_ETH
     ? ETH_NETWORK_CHAIN_ID
+    : chainId === CHAIN_ID_SEPOLIA
+    ? SEPOLIA_NETWORK_CHAIN_ID
     : chainId === CHAIN_ID_BSC
     ? BSC_NETWORK_CHAIN_ID
     : chainId === CHAIN_ID_POLYGON
@@ -540,7 +552,7 @@ export const COVALENT_API_KEY = process.env.REACT_APP_COVALENT_API_KEY
   ? process.env.REACT_APP_COVALENT_API_KEY
   : "";
 
-export const COVALENT_ETHEREUM = 1; // Covalent only supports mainnet and Kovan
+export const COVALENT_ETHEREUM = 5; // Covalent only supports mainnet and Goerli
 export const COVALENT_BSC = CLUSTER === "devnet" ? 56 : BSC_NETWORK_CHAIN_ID;
 export const COVALENT_POLYGON =
   CLUSTER === "devnet" ? 137 : POLYGON_NETWORK_CHAIN_ID;
@@ -639,6 +651,12 @@ export const WETH_ADDRESS =
     ? "0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6"
     : "0xDDb64fE46a91D46ee29420539FC25FD07c5FEa3E";
 export const WETH_DECIMALS = 18;
+
+export const WETH_ADDRESS_SEPOLIA =
+  CLUSTER === "testnet"
+    ? "0xeef12A83EE5b7161D3873317c8E0E7B76e0B5D9c"
+    : "0xDDb64fE46a91D46ee29420539FC25FD07c5FEa3E";
+export const WETH_DECIMALS_SEPOLIA = 18;
 
 export const WBNB_ADDRESS =
   CLUSTER === "testnet"

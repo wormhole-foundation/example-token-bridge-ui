@@ -30,6 +30,13 @@ export const METAMASK_CHAIN_PARAMETERS: {
     rpcUrls: ["https://rpc.ankr.com/eth_goerli"],
     blockExplorerUrls: ["https://goerli.etherscan.io"],
   },
+  11155111: {
+    chainId: "0xAA36A7",
+    chainName: "Sepolia",
+    nativeCurrency: { name: "Sepolia Ether", symbol: "SEP", decimals: 18 },
+    rpcUrls: ["https://rpc.sepolia.org"],
+    blockExplorerUrls: ["https://sepolia.etherscan.io"],
+  },
   97: {
     chainId: "0x61",
     chainName: "Binance Smart Chain Testnet",

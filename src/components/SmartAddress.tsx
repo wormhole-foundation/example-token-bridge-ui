@@ -26,6 +26,7 @@ import {
   CHAIN_ID_NEAR,
   CHAIN_ID_BASE,
   CHAIN_ID_OPTIMISM,
+  CHAIN_ID_SEPOLIA,
 } from "@certusone/wormhole-sdk";
 import { Button, makeStyles, Tooltip, Typography } from "@material-ui/core";
 import { FileCopy, OpenInNew } from "@material-ui/icons";
@@ -117,6 +118,10 @@ export default function SmartAddress({
     ? null
     : chainId === CHAIN_ID_ETH
     ? `https://${CLUSTER === "testnet" ? "goerli." : ""}etherscan.io/${
+        isAsset ? "token" : "address"
+      }/${useableAddress}`
+    : chainId === CHAIN_ID_SEPOLIA
+    ? `https://${CLUSTER === "testnet" ? "sepolia." : ""}etherscan.io/${
         isAsset ? "token" : "address"
       }/${useableAddress}`
     : chainId === CHAIN_ID_BSC
