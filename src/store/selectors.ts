@@ -1,6 +1,7 @@
 import {
   CHAIN_ID_ACALA,
   CHAIN_ID_KARURA,
+  CHAIN_ID_NEON,
   CHAIN_ID_SOLANA,
   isEVMChain,
 } from "@certusone/wormhole-sdk";
@@ -296,15 +297,18 @@ export const selectTransferTargetError = (state: RootState) => {
     state.transfer.relayerFee === undefined &&
     // Acala offers relaying without a fee for qualified tokens
     state.transfer.targetChain !== CHAIN_ID_ACALA &&
-    state.transfer.targetChain !== CHAIN_ID_KARURA
+    state.transfer.targetChain !== CHAIN_ID_KARURA &&
+    state.transfer.targetChain !== CHAIN_ID_NEON
   ) {
     return "Invalid relayer fee.";
   }
   if (
-    state.transfer.useRelayer &&
-    (state.transfer.targetChain === CHAIN_ID_ACALA ||
-      state.transfer.targetChain === CHAIN_ID_KARURA) &&
-    !state.transfer.acalaRelayerInfo.data?.shouldRelay
+    (state.transfer.useRelayer &&
+      (state.transfer.targetChain === CHAIN_ID_ACALA ||
+        state.transfer.targetChain === CHAIN_ID_KARURA) &&
+      !state.transfer.acalaRelayerInfo.data?.shouldRelay) ||
+    (state.transfer.targetChain === CHAIN_ID_NEON &&
+      !state.transfer.neonRelayerInfo.data?.shouldRelay)
   ) {
     return "Token is ineligible for relay.";
   }
@@ -357,6 +361,8 @@ export const selectTransferRelayerFee = (state: RootState) =>
   state.transfer.relayerFee;
 export const selectAcalaRelayerInfo = (state: RootState) =>
   state.transfer.acalaRelayerInfo;
+export const selectNeonRelayerInfo = (state: RootState) =>
+  state.transfer.neonRelayerInfo;
 export const selectSolanaTokenMap = (state: RootState) => {
   return state.tokens.solanaTokenMap;
 };
