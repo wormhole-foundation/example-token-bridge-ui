@@ -35,6 +35,8 @@ import {
   parseSequenceFromLogXpla,
   TerraChainId,
   uint8ArrayToHex,
+  attestFromSui,
+  CHAIN_ID_SUI,
 } from "@certusone/wormhole-sdk";
 import { WalletStrategy } from "@injectivelabs/wallet-ts";
 import { Alert } from "@material-ui/lab";
@@ -104,6 +106,16 @@ import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees, waitForTerraExecution } from "../utils/terra";
 import { postWithFeesXpla, waitForXplaExecution } from "../utils/xpla";
 import { broadcastInjectiveTx } from "../utils/injective";
+import {
+  useWallet,
+  WalletContextState as WalletContextStateSui,
+} from "@suiet/wallet-kit";
+import {
+  getSuiCoreBridgePackageId,
+  getSuiProvider,
+  getSuiTokenBridgePackageId,
+} from "../utils/sui";
+import { getEmitterAddressAndSequenceFromResponseSui } from "@certusone/wormhole-sdk/lib/esm/sui";
 
 async function algo(
   dispatch: any,
@@ -534,6 +546,66 @@ async function injective(
   }
 }
 
+async function sui(
+  dispatch: any,
+  enqueueSnackbar: any,
+  wallet: WalletContextStateSui,
+  asset: string
+) {
+  dispatch(setIsSending(true));
+  try {
+    const provider = getSuiProvider();
+    const tokenBridgePackageId = await getSuiTokenBridgePackageId(provider);
+    const tx = await attestFromSui(
+      provider,
+      tokenBridgePackageId,
+      getBridgeAddressForChain(CHAIN_ID_SUI),
+      getTokenBridgeAddressForChain(CHAIN_ID_SUI),
+      asset
+    );
+    const response = await wallet.signAndExecuteTransactionBlock({
+      transactionBlock: tx,
+      options: {
+        showEvents: true,
+      },
+    });
+    dispatch(
+      setAttestTx({
+        id: response.digest,
+        block: Number(response.checkpoint || 0),
+      })
+    );
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+    const coreBridgePackageId = await getSuiCoreBridgePackageId(provider);
+    const { sequence, emitterAddress } =
+      getEmitterAddressAndSequenceFromResponseSui(
+        coreBridgePackageId,
+        response
+      );
+    enqueueSnackbar(null, {
+      content: <Alert severity="info">Fetching VAA</Alert>,
+    });
+    const { vaaBytes } = await getSignedVAAWithRetry(
+      WORMHOLE_RPC_HOSTS,
+      CHAIN_ID_SUI,
+      emitterAddress,
+      sequence
+    );
+    dispatch(setSignedVAAHex(uint8ArrayToHex(vaaBytes)));
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Fetched Signed VAA</Alert>,
+    });
+  } catch (e) {
+    console.error(e);
+    enqueueSnackbar(null, {
+      content: <Alert severity="error">{parseError(e)}</Alert>,
+    });
+    dispatch(setIsSending(false));
+  }
+}
+
 export function useHandleAttest() {
   const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
@@ -552,7 +624,8 @@ export function useHandleAttest() {
   const { account: aptosAccount, signAndSubmitTransaction } = useAptosContext();
   const aptosAddress = aptosAccount?.address?.toString();
   const { wallet: injWallet, address: injAddress } = useInjectiveContext();
-  const { accountId: nearAccountId, wallet } = useNearContext();
+  const { accountId: nearAccountId, wallet: nearWallet } = useNearContext();
+  const suiWallet = useWallet();
   const disabled = !isTargetComplete || isSending || isSendComplete;
   const handleAttestClick = useCallback(() => {
     if (isEVMChain(sourceChain) && !!signer) {
@@ -576,9 +649,14 @@ export function useHandleAttest() {
       aptos(dispatch, enqueueSnackbar, sourceAsset, signAndSubmitTransaction);
     } else if (sourceChain === CHAIN_ID_INJECTIVE && injWallet && injAddress) {
       injective(dispatch, enqueueSnackbar, injWallet, injAddress, sourceAsset);
-    } else if (sourceChain === CHAIN_ID_NEAR && nearAccountId && wallet) {
-      near(dispatch, enqueueSnackbar, nearAccountId, sourceAsset, wallet);
-    } else {
+    } else if (sourceChain === CHAIN_ID_NEAR && nearAccountId && nearWallet) {
+      near(dispatch, enqueueSnackbar, nearAccountId, sourceAsset, nearWallet);
+    } else if (
+      sourceChain === CHAIN_ID_SUI &&
+      suiWallet.connected &&
+      suiWallet.address
+    ) {
+      sui(dispatch, enqueueSnackbar, suiWallet, sourceAsset);
     }
   }, [
     dispatch,
@@ -597,7 +675,8 @@ export function useHandleAttest() {
     injWallet,
     injAddress,
     nearAccountId,
-    wallet,
+    nearWallet,
+    suiWallet,
   ]);
   return useMemo(
     () => ({

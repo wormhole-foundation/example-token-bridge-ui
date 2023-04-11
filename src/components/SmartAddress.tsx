@@ -27,6 +27,7 @@ import {
   CHAIN_ID_BASE,
   CHAIN_ID_OPTIMISM,
   CHAIN_ID_SEPOLIA,
+  CHAIN_ID_SUI,
 } from "@certusone/wormhole-sdk";
 import { Button, makeStyles, Tooltip, Typography } from "@material-ui/core";
 import { FileCopy, OpenInNew } from "@material-ui/icons";
@@ -216,6 +217,14 @@ export default function SmartAddress({
           ? useableAddress.split("::")[0]
           : useableAddress
       }${
+        CLUSTER === "testnet"
+          ? "?network=testnet"
+          : CLUSTER === "devnet"
+          ? "?network=local"
+          : ""
+      }`
+    : chainId === CHAIN_ID_SUI // TODO: might need to change for assets / tokens?
+    ? `https://explorer.sui.io/address/${useableAddress}${
         CLUSTER === "testnet"
           ? "?network=testnet"
           : CLUSTER === "devnet"

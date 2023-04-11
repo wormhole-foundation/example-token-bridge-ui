@@ -150,7 +150,6 @@ export const TokenSelector = (props: TokenSelectorProps) => {
       resetAccounts={maps?.resetAccounts}
       tokenAccounts={maps?.tokenAccounts}
     />
-<<<<<<< HEAD
   ) : lookupChain === CHAIN_ID_INJECTIVE ? (
     <InjectiveTokenPicker
       value={sourceParsedTokenAccount || null}

@@ -22,6 +22,9 @@ import {
   queryExternalIdInjective,
   uint8ArrayToHex,
   uint8ArrayToNative,
+  getOriginalAssetSui,
+  CHAIN_ID_SUI,
+  getForeignAssetSui,
 } from "@certusone/wormhole-sdk";
 import {
   getOriginalAssetEth as getOriginalAssetEthNFT,
@@ -60,6 +63,7 @@ import {
 import { getInjectiveWasmClient } from "../utils/injective";
 import { lookupHash, makeNearAccount, makeNearProvider } from "../utils/near";
 import useIsWalletReady from "./useIsWalletReady";
+import { getSuiProvider, getSuiTokenBridgePackageId } from "../utils/sui";
 
 export type OriginalAssetInfo = {
   originChain: ChainId | null;
@@ -123,6 +127,12 @@ export async function getOriginalAssetToken(
       promise = await getOriginalAssetNear(
         provider,
         NEAR_TOKEN_BRIDGE_ACCOUNT,
+        foreignNativeStringAddress
+      );
+    } else if (foreignChain === CHAIN_ID_SUI) {
+      promise = await getOriginalAssetSui(
+        getSuiProvider(),
+        getTokenBridgeAddressForChain(CHAIN_ID_SUI),
         foreignNativeStringAddress
       );
     }
@@ -336,6 +346,17 @@ function useOriginalAsset(
                 });
               });
             }
+          } else if (result.chainId === CHAIN_ID_SUI) {
+            getForeignAssetSui(
+              getSuiProvider(),
+              getTokenBridgeAddressForChain(CHAIN_ID_SUI),
+              result.chainId,
+              result.assetAddress
+            ).then((coinType) => {
+              if (!cancelled) {
+                setOriginAddress(coinType);
+              }
+            });
           } else {
             setOriginAddress(
               hexToNativeAssetString(

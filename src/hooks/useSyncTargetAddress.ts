@@ -9,6 +9,7 @@ import {
   isTerraChain,
   uint8ArrayToHex,
   CHAIN_ID_INJECTIVE,
+  CHAIN_ID_SUI,
 } from "@certusone/wormhole-sdk";
 import { arrayify, zeroPad } from "@ethersproject/bytes";
 import {
@@ -41,6 +42,7 @@ import { makeNearAccount, signAndSendTransactions } from "../utils/near";
 import { NEAR_TOKEN_BRIDGE_ACCOUNT } from "../utils/consts";
 import { getTransactionLastResult } from "near-api-js/lib/providers";
 import BN from "bn.js";
+import { useWallet } from "@suiet/wallet-kit";
 
 function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
   const dispatch = useDispatch();
@@ -63,11 +65,13 @@ function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
   const { account: aptosAccount } = useAptosContext();
   const aptosAddress = aptosAccount?.address?.toString();
   const { address: injAddress } = useInjectiveContext();
-  const { accountId: nearAccountId, wallet } = useNearContext();
+  const { accountId: nearAccountId, wallet: nearWallet } = useNearContext();
+  const { address: suiAddress } = useWallet();
   const setTargetAddressHex = nft
     ? setNFTTargetAddressHex
     : setTransferTargetAddressHex;
   useEffect(() => {
+    console.log(shouldFire, targetChain, suiAddress);
     if (shouldFire) {
       let cancelled = false;
       if (isEVMChain(targetChain) && signerAddress) {
@@ -155,7 +159,7 @@ function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
             uint8ArrayToHex(zeroPad(cosmos.canonicalAddress(injAddress), 32))
           )
         );
-      } else if (targetChain === CHAIN_ID_NEAR && nearAccountId && wallet) {
+      } else if (targetChain === CHAIN_ID_NEAR && nearAccountId && nearWallet) {
         (async () => {
           try {
             const account = await makeNearAccount(nearAccountId);
@@ -178,7 +182,7 @@ function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
                 console.log("Registering the receiving account");
 
                 let myAddress2 = getTransactionLastResult(
-                  await signAndSendTransactions(account, wallet, [
+                  await signAndSendTransactions(account, nearWallet, [
                     {
                       contractId: NEAR_TOKEN_BRIDGE_ACCOUNT,
                       methodName: "register_account",
@@ -204,6 +208,8 @@ function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
             }
           }
         })();
+      } else if (targetChain === CHAIN_ID_SUI && suiAddress) {
+        dispatch(setTargetAddressHex(uint8ArrayToHex(zeroPad(suiAddress, 32))));
       } else {
         dispatch(setTargetAddressHex(undefined));
       }
@@ -227,7 +233,8 @@ function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
     aptosAddress,
     injAddress,
     nearAccountId,
-    wallet,
+    nearWallet,
+    suiAddress,
   ]);
 }
 

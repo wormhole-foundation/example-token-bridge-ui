@@ -24,6 +24,7 @@ import {
   CHAIN_ID_BASE,
   CHAIN_ID_OPTIMISM,
   CHAIN_ID_SEPOLIA,
+  CHAIN_ID_SUI,
 } from "@certusone/wormhole-sdk";
 import { Button, makeStyles, Typography } from "@material-ui/core";
 import { Transaction } from "../store/transferSlice";
@@ -146,6 +147,14 @@ export default function ShowTx({
         }`
       : chainId === CHAIN_ID_APTOS
       ? `https://explorer.aptoslabs.com/txn/${tx?.id}${
+          CLUSTER === "testnet"
+            ? "?network=testnet"
+            : CLUSTER === "devnet"
+            ? "?network=local"
+            : ""
+        }`
+      : chainId === CHAIN_ID_SUI
+      ? `https://explorer.sui.io/txblock/${tx?.id}${
           CLUSTER === "testnet"
             ? "?network=testnet"
             : CLUSTER === "devnet"

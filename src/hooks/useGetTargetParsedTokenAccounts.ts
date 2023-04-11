@@ -4,6 +4,7 @@ import {
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_NEAR,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_SUI,
   CHAIN_ID_XPLA,
   ensureHexPrefix,
   ethers_contracts,
@@ -55,6 +56,8 @@ import useMetadata from "./useMetadata";
 import { useNearContext } from "../contexts/NearWalletContext";
 import { makeNearAccount } from "../utils/near";
 import { fetchSingleMetadata } from "./useNearMetadata";
+import { useWallet } from "@suiet/wallet-kit";
+import { getSuiProvider } from "../utils/sui";
 
 function useGetTargetParsedTokenAccounts() {
   const dispatch = useDispatch();
@@ -88,6 +91,7 @@ function useGetTargetParsedTokenAccounts() {
   const aptosAddress = aptosAccount?.address?.toString();
   const { address: injAddress } = useInjectiveContext();
   const { accountId: nearAccountId } = useNearContext();
+  const { address: suiAddress } = useWallet();
   const hasResolvedMetadata = metadata.data || metadata.error;
   useEffect(() => {
     // targetParsedTokenAccount is cleared on setTargetAsset, but we need to clear it on wallet changes too
@@ -364,6 +368,43 @@ function useGetTargetParsedTokenAccounts() {
       }
     }
 
+    if (targetChain === CHAIN_ID_SUI && suiAddress) {
+      const provider = getSuiProvider();
+      (async () => {
+        try {
+          const { totalBalance } = await provider.getBalance({
+            owner: suiAddress,
+            coinType: targetAsset,
+          });
+          const { decimals, symbol } = await provider.getCoinMetadata({
+            coinType: targetAsset,
+          });
+          if (!cancelled) {
+            dispatch(
+              setTargetParsedTokenAccount(
+                createParsedTokenAccount(
+                  "",
+                  "",
+                  totalBalance,
+                  decimals,
+                  Number(formatUnits(totalBalance, decimals)),
+                  formatUnits(totalBalance, decimals),
+                  symbol,
+                  tokenName,
+                  logo
+                )
+              )
+            );
+          }
+        } catch (e: any) {
+          console.error("error getting target balance", e, e?.message, e?.code);
+          if (!cancelled) {
+            // TODO: error state
+          }
+        }
+      })();
+    }
+
     if (targetChain === CHAIN_ID_SOLANA && solPK) {
       let mint;
       try {
@@ -611,6 +652,7 @@ function useGetTargetParsedTokenAccounts() {
     aptosAddress,
     injAddress,
     nearAccountId,
+    suiAddress,
   ]);
 }
 

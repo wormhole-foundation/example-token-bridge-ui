@@ -22,13 +22,13 @@ import {
 } from "../contexts/EthereumProviderContext";
 import { useNearContext } from "../contexts/NearWalletContext";
 import { useSolanaWallet } from "../contexts/SolanaWalletContext";
-import { useSuiContext } from "../contexts/SuiWalletContext";
 import { APTOS_NETWORK, CLUSTER, getEvmChainId } from "../utils/consts";
 import {
   EVM_RPC_MAP,
   METAMASK_CHAIN_PARAMETERS,
 } from "../utils/metaMaskChainParameters";
 import { useInjectiveContext } from "../contexts/InjectiveWalletContext";
+import { useWallet as useSuiWallet } from "@suiet/wallet-kit";
 
 const createWalletStatus = (
   isReady: boolean,
@@ -84,9 +84,7 @@ function useIsWalletReady(
   const { address: injAddress } = useInjectiveContext();
   const hasInjWallet = !!injAddress;
   const { accountId: nearPK } = useNearContext();
-  const { wallet, accounts } = useSuiContext();
-  const suiWallet = accounts;
-  const hasSuiWallet = !!wallet;
+  const { address: suiAddress } = useSuiWallet();
 
   const forceNetworkSwitch = useCallback(async () => {
     if (provider && correctEvmNetwork) {
@@ -176,7 +174,6 @@ function useIsWalletReady(
         );
       }
     }
-<<<<<<< HEAD
     if (chainId === CHAIN_ID_INJECTIVE && hasInjWallet && injAddress) {
       return createWalletStatus(
         true,
@@ -188,12 +185,12 @@ function useIsWalletReady(
     if (chainId === CHAIN_ID_NEAR && nearPK) {
       return createWalletStatus(true, undefined, forceNetworkSwitch, nearPK);
     }
-    if (chainId === CHAIN_ID_SUI && hasSuiWallet && suiWallet) {
+    if (chainId === CHAIN_ID_SUI && suiAddress) {
       return createWalletStatus(
         true,
         undefined,
         forceNetworkSwitch,
-        suiWallet[0]
+        suiAddress
       );
     }
     if (isEVMChain(chainId) && hasEthInfo && signerAddress) {
@@ -244,8 +241,7 @@ function useIsWalletReady(
     hasInjWallet,
     injAddress,
     nearPK,
-    suiWallet,
-    hasSuiWallet,
+    suiAddress,
   ]);
 }
 

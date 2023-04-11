@@ -36,6 +36,8 @@ import {
   transferNearFromNear,
   transferTokenFromNear,
   uint8ArrayToHex,
+  CHAIN_ID_SUI,
+  transferFromSui,
 } from "@certusone/wormhole-sdk";
 import { transferTokens } from "@certusone/wormhole-sdk/lib/esm/aptos/api/tokenBridge";
 import { WalletStrategy } from "@injectivelabs/wallet-ts";
@@ -116,6 +118,16 @@ import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees, waitForTerraExecution } from "../utils/terra";
 import { postWithFeesXpla, waitForXplaExecution } from "../utils/xpla";
 import useTransferTargetAddressHex from "./useTransferTargetAddress";
+import {
+  useWallet,
+  WalletContextState as WalletContextStateSui,
+} from "@suiet/wallet-kit";
+import {
+  getSuiCoreBridgePackageId,
+  getSuiProvider,
+  getSuiTokenBridgePackageId,
+} from "../utils/sui";
+import { getEmitterAddressAndSequenceFromResponseSui } from "@certusone/wormhole-sdk/lib/esm/sui";
 
 async function fetchSignedVAA(
   chainId: ChainId,
@@ -658,6 +670,78 @@ async function injective(
   }
 }
 
+async function sui(
+  dispatch: any,
+  enqueueSnackbar: any,
+  wallet: WalletContextStateSui,
+  asset: string,
+  amount: string,
+  decimals: number,
+  targetChain: ChainId,
+  targetAddress: Uint8Array,
+  relayerFee?: string
+) {
+  dispatch(setIsSending(true));
+  try {
+    if (!wallet.address) {
+      throw new Error("No wallet address");
+    }
+    const baseAmountParsed = parseUnits(amount, decimals);
+    const feeParsed = parseUnits(relayerFee || "0", decimals);
+    const transferAmountParsed = baseAmountParsed.add(feeParsed);
+    const provider = getSuiProvider();
+    // TODO: handle pagination
+    const coins = (
+      await provider.getCoins({
+        owner: wallet.address,
+        coinType: asset,
+      })
+    ).data.map((c) => ({ type: c.coinType, objectId: c.coinObjectId }));
+    const tokenBridgePackageId = await getSuiTokenBridgePackageId(provider);
+    const tx = await transferFromSui(
+      getBridgeAddressForChain(CHAIN_ID_SUI),
+      tokenBridgePackageId,
+      getTokenBridgeAddressForChain(CHAIN_ID_SUI),
+      coins,
+      asset,
+      transferAmountParsed.toBigInt(),
+      targetChain,
+      targetAddress
+    );
+    const response = await wallet.signAndExecuteTransactionBlock({
+      transactionBlock: tx,
+      options: {
+        showEvents: true,
+      },
+    });
+    dispatch(
+      setTransferTx({
+        id: response.digest,
+        block: Number(response.checkpoint || 0),
+      })
+    );
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+    const coreBridgePackageId = await getSuiCoreBridgePackageId(provider);
+    const { sequence, emitterAddress } =
+      getEmitterAddressAndSequenceFromResponseSui(
+        coreBridgePackageId,
+        response
+      );
+    console.log(emitterAddress, sequence);
+    await fetchSignedVAA(
+      CHAIN_ID_SUI,
+      emitterAddress,
+      sequence,
+      enqueueSnackbar,
+      dispatch
+    );
+  } catch (e) {
+    handleError(e, enqueueSnackbar, dispatch);
+  }
+}
+
 export function useHandleTransfer() {
   const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
@@ -681,7 +765,8 @@ export function useHandleTransfer() {
   const { account: aptosAccount, signAndSubmitTransaction } = useAptosContext();
   const aptosAddress = aptosAccount?.address?.toString();
   const { wallet: injWallet, address: injAddress } = useInjectiveContext();
-  const { accountId: nearAccountId, wallet } = useNearContext();
+  const { accountId: nearAccountId, wallet: nearWallet } = useNearContext();
+  const suiWallet = useWallet();
   const sourceParsedTokenAccount = useSelector(
     selectTransferSourceParsedTokenAccount
   );
@@ -837,7 +922,7 @@ export function useHandleTransfer() {
     } else if (
       sourceChain === CHAIN_ID_NEAR &&
       nearAccountId &&
-      wallet &&
+      nearWallet &&
       !!sourceAsset &&
       decimals !== undefined &&
       !!targetAddress
@@ -845,7 +930,7 @@ export function useHandleTransfer() {
       near(
         dispatch,
         enqueueSnackbar,
-        wallet,
+        nearWallet,
         nearAccountId,
         sourceAsset,
         decimals,
@@ -855,7 +940,25 @@ export function useHandleTransfer() {
         sourceChain,
         relayerFee
       );
-    } else {
+    } else if (
+      sourceChain === CHAIN_ID_SUI &&
+      suiWallet.connected &&
+      suiWallet.address &&
+      !!sourceAsset &&
+      decimals !== undefined &&
+      !!targetAddress
+    ) {
+      sui(
+        dispatch,
+        enqueueSnackbar,
+        suiWallet,
+        sourceAsset,
+        amount,
+        decimals,
+        targetChain,
+        targetAddress,
+        relayerFee
+      );
     }
   }, [
     dispatch,
@@ -883,7 +986,8 @@ export function useHandleTransfer() {
     injWallet,
     injAddress,
     nearAccountId,
-    wallet,
+    nearWallet,
+    suiWallet,
   ]);
   return useMemo(
     () => ({

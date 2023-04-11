@@ -10,6 +10,7 @@ import { NFTParsedTokenAccount } from "../../store/nftSlice";
 import { ParsedTokenAccount } from "../../store/transferSlice";
 import { SUI_NATIVE_DECIMALS, SUI_NATIVE_TOKEN_KEY } from "../../utils/consts";
 import TokenPicker, { BasicAccountRender } from "./TokenPicker";
+import { getSuiProvider } from "../../utils/sui";
 
 type SuiTokenPickerProps = {
   value: ParsedTokenAccount | null;
@@ -20,20 +21,16 @@ type SuiTokenPickerProps = {
 };
 
 export default function SuiTokenPicker(props: SuiTokenPickerProps) {
-  const { value, onChange, disabled } = props;
+  const { value, onChange, tokenAccounts, disabled } = props;
   const { walletAddress } = useIsWalletReady(CHAIN_ID_SUI);
   const nativeRefresh = useRef<() => void>(() => {});
-  const { balance, isLoading: nativeIsLoading } = useSuiNativeBalance(
-    walletAddress,
-    nativeRefresh,
-  );
 
   const resetAccountWrapper = useCallback(() => {
     //we can currently skip calling this as we don't read from sourceParsedTokenAccounts
     //resetAccounts && resetAccounts();
     nativeRefresh.current();
   }, []);
-  const isLoading = nativeIsLoading;
+  const isLoading = tokenAccounts?.isFetching;
 
   const onChangeWrapper = useCallback(
     async (account: NFTParsedTokenAccount | null) => {
@@ -44,29 +41,8 @@ export default function SuiTokenPicker(props: SuiTokenPickerProps) {
       onChange(account);
       return Promise.resolve();
     },
-    [onChange],
+    [onChange]
   );
-
-  const suiTokenArray = useMemo(() => {
-    const balancesItems =
-      balance !== undefined && walletAddress
-        ? [
-            createParsedTokenAccount(
-              walletAddress,
-              SUI_NATIVE_TOKEN_KEY,
-              balance.toString(), //amount
-              SUI_NATIVE_DECIMALS,
-              0, //uiAmount is unused
-              formatUnits(balance, SUI_NATIVE_DECIMALS), //uiAmountString
-              "SUI", // symbol
-              "SUI Coin", //name
-              suiIcon,
-              true, //is native asset
-            ),
-          ]
-        : [];
-    return balancesItems;
-  }, [walletAddress, balance]);
 
   //TODO this only supports non-native assets. Native assets come from the hook.
   //TODO correlate against token list to get metadata
@@ -75,17 +51,33 @@ export default function SuiTokenPicker(props: SuiTokenPickerProps) {
       if (!walletAddress) {
         return Promise.reject("Wallet not connected");
       }
+      const provider = getSuiProvider();
       return (async () => {
         try {
-          // TODO
-          return Promise.resolve(null as any);
+          const { totalBalance } = await provider.getBalance({
+            owner: walletAddress,
+            coinType: lookupAsset,
+          });
+          const { decimals, symbol, name } = await provider.getCoinMetadata({
+            coinType: lookupAsset,
+          });
+          return createParsedTokenAccount(
+            walletAddress,
+            lookupAsset,
+            totalBalance,
+            decimals,
+            Number(formatUnits(totalBalance, decimals)),
+            formatUnits(totalBalance, decimals),
+            symbol,
+            name
+          );
         } catch (e) {
           console.log(e);
           return Promise.reject();
         }
       })();
     },
-    [walletAddress],
+    [walletAddress]
   );
 
   const isSearchableAddress = useCallback((address: string) => {
@@ -97,13 +89,13 @@ export default function SuiTokenPicker(props: SuiTokenPickerProps) {
     ({ account }: { account: NFTParsedTokenAccount }) => {
       return BasicAccountRender(account, false);
     },
-    [],
+    []
   );
 
   return (
     <TokenPicker
       value={value}
-      options={suiTokenArray || []}
+      options={tokenAccounts?.data || []}
       RenderOption={RenderComp}
       onChange={onChangeWrapper}
       isValidAddress={isSearchableAddress}

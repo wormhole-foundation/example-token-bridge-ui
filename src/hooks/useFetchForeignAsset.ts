@@ -20,6 +20,8 @@ import {
   isEVMChain,
   isTerraChain,
   nativeToHexString,
+  CHAIN_ID_SUI,
+  getForeignAssetSui,
 } from "@certusone/wormhole-sdk";
 import { Connection } from "@solana/web3.js";
 import { LCDClient } from "@terra-money/terra.js";
@@ -48,6 +50,7 @@ import { getInjectiveWasmClient } from "../utils/injective";
 import { makeNearProvider } from "../utils/near";
 import { useNearContext } from "../contexts/NearWalletContext";
 import { buildTokenId } from "@certusone/wormhole-sdk/lib/esm/cosmwasm/address";
+import { getSuiProvider } from "../utils/sui";
 
 export type ForeignAssetInfo = {
   doesExist: boolean;
@@ -219,6 +222,15 @@ function useFetchForeignAsset(
             } catch {
               return await Promise.reject("Failed to make Near account");
             }
+          }
+        : foreignChain === CHAIN_ID_SUI
+        ? () => {
+            return getForeignAssetSui(
+              getSuiProvider(),
+              getTokenBridgeAddressForChain(CHAIN_ID_SUI),
+              CHAIN_ID_SUI,
+              hexToUint8Array(originAssetHex)
+            );
           }
         : () => Promise.resolve(null);
 

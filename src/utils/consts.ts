@@ -63,6 +63,11 @@ import { AptosNetwork } from "./aptos";
 import { getNetworkInfo, Network } from "@injectivelabs/networks";
 import nearIcon from "../icons/near.svg";
 import { ConnectConfig, keyStores } from "near-api-js";
+import {
+  testnetConnection,
+  localnetConnection,
+  devnetConnection,
+} from "@mysten/sui.js";
 
 export type Cluster = "devnet" | "testnet";
 const urlParams = new URLSearchParams(window.location.search);
@@ -238,6 +243,11 @@ export const CHAINS: ChainInfo[] =
           id: CHAIN_ID_SOLANA,
           name: "Solana",
           logo: solanaIcon,
+        },
+        {
+          id: CHAIN_ID_SUI,
+          name: "Sui",
+          logo: suiIcon,
         },
         {
           id: CHAIN_ID_TERRA,
@@ -493,21 +503,15 @@ export const APTOS_NETWORK =
 export const APTOS_NATIVE_DECIMALS = 8;
 export const APTOS_NATIVE_TOKEN_KEY = "0x1::aptos_coin::AptosCoin";
 
-<<<<<<< HEAD
 export const INJECTIVE_NETWORK = Network.TestnetK8s;
 export const INJECTIVE_NETWORK_INFO = getNetworkInfo(Network.TestnetK8s);
 
-||||||| parent of 6a0e92b (sui: token picker works)
-=======
-export const SUI_URL =
-  CLUSTER === "testnet"
-    ? "https://fullnode.devnet.sui.io:443"
-    : "http://localhost:5001";
+export const SUI_CONNECTION =
+  CLUSTER === "testnet" ? testnetConnection : localnetConnection;
 
 export const SUI_NATIVE_DECIMALS = 9;
 export const SUI_NATIVE_TOKEN_KEY = "0x2::sui::SUI";
 
->>>>>>> 6a0e92b (sui: token picker works)
 export const ALGORAND_HOST =
   CLUSTER === "testnet"
     ? {
@@ -544,10 +548,10 @@ export const SOL_TOKEN_BRIDGE_ADDRESS =
   CONTRACTS[CLUSTER === "testnet" ? "TESTNET" : "DEVNET"].solana.token_bridge;
 
 export const ALGORAND_BRIDGE_ID = BigInt(
-  CONTRACTS[CLUSTER === "testnet" ? "TESTNET" : "DEVNET"].algorand.core,
+  CONTRACTS[CLUSTER === "testnet" ? "TESTNET" : "DEVNET"].algorand.core
 );
 export const ALGORAND_TOKEN_BRIDGE_ID = BigInt(
-  CONTRACTS[CLUSTER === "testnet" ? "TESTNET" : "DEVNET"].algorand.token_bridge,
+  CONTRACTS[CLUSTER === "testnet" ? "TESTNET" : "DEVNET"].algorand.token_bridge
 );
 
 export const NEAR_CORE_BRIDGE_ACCOUNT =
@@ -597,7 +601,7 @@ export const COVALENT_GET_TOKENS_URL = (
   chainId: ChainId,
   walletAddress: string,
   nft?: boolean,
-  noNftMetadata?: boolean,
+  noNftMetadata?: boolean
 ) => {
   const chainNum =
     chainId === CHAIN_ID_ETH
@@ -635,7 +639,7 @@ export const COVALENT_GET_TOKENS_URL = (
 
 export const BLOCKSCOUT_GET_TOKENS_URL = (
   chainId: ChainId,
-  walletAddress: string,
+  walletAddress: string
 ) => {
   const baseUrl =
     chainId === CHAIN_ID_OASIS
@@ -870,7 +874,7 @@ export const POLYGON_TERRA_WRAPPED_TOKENS = [
 
 export const getIsTransferDisabled = (
   chainId: ChainId,
-  isSourceChain: boolean,
+  isSourceChain: boolean
 ) => {
   const disableTransfers = CHAIN_CONFIG_MAP[chainId]?.disableTransfers;
   return disableTransfers === "from"
@@ -931,7 +935,7 @@ export const DISABLED_TOKEN_TRANSFERS: {
 export const getIsTokenTransferDisabled = (
   sourceChain: ChainId,
   targetChain: ChainId,
-  tokenAddress: string,
+  tokenAddress: string
 ): boolean => {
   const disabledTransfers =
     DISABLED_TOKEN_TRANSFERS[sourceChain]?.[tokenAddress];

@@ -36,6 +36,8 @@ import {
   TerraChainId,
   tryHexToNativeStringNear,
   uint8ArrayToHex,
+  CHAIN_ID_SUI,
+  getForeignAssetSui,
 } from "@certusone/wormhole-sdk";
 import {
   Accordion,
@@ -106,6 +108,8 @@ import {
   getInjectiveTxClient,
   getInjectiveWasmClient,
 } from "../utils/injective";
+import { getSuiCoreBridgePackageId, getSuiProvider } from "../utils/sui";
+import { getEmitterAddressAndSequenceFromResponseSui } from "@certusone/wormhole-sdk/lib/esm/sui";
 
 const useStyles = makeStyles((theme) => ({
   mainCard: {
@@ -310,6 +314,22 @@ async function injective(txHash: string, enqueueSnackbar: any) {
       getTokenBridgeAddressForChain(CHAIN_ID_INJECTIVE)
     );
     return await fetchSignedVAA(CHAIN_ID_INJECTIVE, emitterAddress, sequence);
+  } catch (e) {
+    return handleError(e, enqueueSnackbar);
+  }
+}
+
+async function sui(digest: string, enqueueSnackbar: any) {
+  try {
+    const provider = getSuiProvider();
+    const tx = await provider.getTransactionBlock({
+      digest,
+      options: { showEvents: true },
+    });
+    const coreBridgePackageId = await getSuiCoreBridgePackageId(provider);
+    const { sequence, emitterAddress } =
+      getEmitterAddressAndSequenceFromResponseSui(coreBridgePackageId, tx);
+    return await fetchSignedVAA(CHAIN_ID_SUI, emitterAddress, sequence);
   } catch (e) {
     return handleError(e, enqueueSnackbar);
   }
@@ -542,6 +562,19 @@ export default function Recovery() {
         }
       })();
     }
+    if (parsedPayload && parsedPayload.targetChain === CHAIN_ID_SUI) {
+      (async () => {
+        const tokenId = await getForeignAssetSui(
+          getSuiProvider(),
+          getTokenBridgeAddressForChain(CHAIN_ID_SUI),
+          parsedPayload.originChain as ChainId,
+          hexToUint8Array(parsedPayload.originAddress)
+        );
+        if (!cancelled) {
+          setTokenId(tokenId || "");
+        }
+      })();
+    }
     return () => {
       cancelled = true;
     };
@@ -726,6 +759,26 @@ export default function Recovery() {
             recoverySourceTx,
             enqueueSnackbar,
             nearAccountId
+          );
+          if (!cancelled) {
+            setRecoverySourceTxIsLoading(false);
+            if (vaa) {
+              setRecoverySignedVAA(vaa);
+            }
+            if (error) {
+              setRecoverySourceTxError(error);
+            }
+            setIsVAAPending(isPending);
+          }
+        })();
+      } else if (recoverySourceChain === CHAIN_ID_SUI) {
+        setRecoverySourceTxError("");
+        setRecoverySourceTxIsLoading(true);
+        setTokenId("");
+        (async () => {
+          const { vaa, isPending, error } = await sui(
+            recoverySourceTx,
+            enqueueSnackbar
           );
           if (!cancelled) {
             setRecoverySourceTxIsLoading(false);

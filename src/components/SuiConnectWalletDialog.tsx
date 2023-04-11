@@ -9,7 +9,7 @@ import {
   makeStyles,
 } from "@material-ui/core";
 import CloseIcon from "@material-ui/icons/Close";
-import { useWallet } from "@mysten/wallet-adapter-react";
+import { useWallet } from "@suiet/wallet-kit";
 import { useCallback } from "react";
 
 const useStyles = makeStyles((theme) => ({
@@ -64,15 +64,14 @@ const SuiConnectWalletDialog = ({
   isOpen: boolean;
   onClose: () => void;
 }) => {
-  // const { wallets, select } = useSuiContext();
-  const { wallets, select } = useWallet();
+  const { allAvailableWallets, select } = useWallet();
   const classes = useStyles();
-  const filteredConnections = wallets.map(({ name, icon }) => (
+  const filteredConnections = allAvailableWallets.map(({ name, iconUrl }) => (
     <WalletOptions
       name={name}
       select={select}
       onClose={onClose}
-      icon={icon ?? ""}
+      icon={iconUrl ?? ""}
       key={name}
     />
   ));

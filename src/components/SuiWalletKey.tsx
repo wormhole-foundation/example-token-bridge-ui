@@ -1,24 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
-import { useSuiContext } from "../contexts/SuiWalletContext";
+import { useCallback, useState } from "react";
 import SuiConnectWalletDialog from "./SuiConnectWalletDialog";
 import ToggleConnectedButton from "./ToggleConnectedButton";
+import { useWallet } from "@suiet/wallet-kit";
 
 const SuiWalletKey = () => {
-  const { connected, disconnect, getAccounts, wallet } = useSuiContext();
-  const [address, setAddress] = useState<string | null>(null);
+  const { connected, address, disconnect } = useWallet();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-  // TODO: can we use `accounts` instead of `getAccounts` here?
-  useEffect(() => {
-    (async () => {
-      if (wallet) {
-        const accounts = await getAccounts();
-        setAddress(accounts[0]);
-      } else {
-        setAddress(null);
-      }
-    })();
-  }, [wallet]);
 
   const connect = useCallback(() => {
     setIsDialogOpen(true);
@@ -28,11 +15,15 @@ const SuiWalletKey = () => {
     setIsDialogOpen(false);
   }, [setIsDialogOpen]);
 
+  const onDisconnect = useCallback(() => {
+    disconnect().catch((e) => console.error(e));
+  }, [disconnect]);
+
   return (
     <>
       <ToggleConnectedButton
         connect={connect}
-        disconnect={disconnect}
+        disconnect={onDisconnect}
         connected={connected && !!address}
         pk={address || ""}
       />
