@@ -21,11 +21,18 @@ import {
   redeemOnXpla,
   TerraChainId,
   uint8ArrayToHex,
+  CHAIN_ID_SEI,
 } from "@certusone/wormhole-sdk";
 import { completeTransferAndRegister } from "@certusone/wormhole-sdk/lib/esm/aptos/api/tokenBridge";
+import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
+import { calculateFee } from "@cosmjs/stargate";
 import { WalletStrategy } from "@injectivelabs/wallet-ts";
 import { Alert } from "@material-ui/lab";
 import { Wallet } from "@near-wallet-selector/core";
+import {
+  useSigningCosmWasmClient as useSeiSigningCosmWasmClient,
+  useWallet as useSeiWallet,
+} from "@sei-js/react";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { Connection } from "@solana/web3.js";
 import {
@@ -83,6 +90,7 @@ import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees } from "../utils/terra";
 import { postWithFeesXpla } from "../utils/xpla";
 import useTransferSignedVAA from "./useTransferSignedVAA";
+import { redeemOnSei } from "../utils/sei";
 
 async function algo(
   dispatch: any,
@@ -386,6 +394,38 @@ async function injective(
   }
 }
 
+async function sei(
+  dispatch: any,
+  enqueueSnackbar: any,
+  wallet: SigningCosmWasmClient,
+  walletAddress: string,
+  signedVAA: Uint8Array
+) {
+  dispatch(setIsRedeeming(true));
+  const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_SEI);
+  try {
+    const msg = await redeemOnSei(signedVAA);
+    // TODO: is this right?
+    const fee = calculateFee(300000, "0.1usei");
+    const tx = await wallet.execute(
+      walletAddress,
+      tokenBridgeAddress,
+      msg,
+      fee,
+      "Wormhole - Complete Transfer"
+    );
+    dispatch(setRedeemTx({ id: tx.transactionHash, block: tx.height }));
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+  } catch (e) {
+    enqueueSnackbar(null, {
+      content: <Alert severity="error">{parseError(e)}</Alert>,
+    });
+    dispatch(setIsRedeeming(false));
+  }
+}
+
 export function useHandleRedeem() {
   const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
@@ -401,6 +441,10 @@ export function useHandleRedeem() {
   const aptosAddress = aptosAccount?.address?.toString();
   const { wallet: injWallet, address: injAddress } = useInjectiveContext();
   const { accountId: nearAccountId, wallet } = useNearContext();
+  const { signingCosmWasmClient: seiSigningCosmWasmClient } =
+    useSeiSigningCosmWasmClient();
+  const { accounts: seiAccounts } = useSeiWallet();
+  const seiAddress = seiAccounts.length ? seiAccounts[0].address : null;
   const signedVAA = useTransferSignedVAA();
   const isRedeeming = useSelector(selectTransferIsRedeeming);
   const handleRedeemClick = useCallback(() => {
@@ -447,6 +491,19 @@ export function useHandleRedeem() {
     ) {
       injective(dispatch, enqueueSnackbar, injWallet, injAddress, signedVAA);
     } else if (
+      targetChain === CHAIN_ID_SEI &&
+      seiSigningCosmWasmClient &&
+      seiAddress &&
+      signedVAA
+    ) {
+      sei(
+        dispatch,
+        enqueueSnackbar,
+        seiSigningCosmWasmClient,
+        seiAddress,
+        signedVAA
+      );
+    } else if (
       targetChain === CHAIN_ID_NEAR &&
       nearAccountId &&
       wallet &&
@@ -473,6 +530,8 @@ export function useHandleRedeem() {
     injAddress,
     nearAccountId,
     wallet,
+    seiSigningCosmWasmClient,
+    seiAddress,
   ]);
 
   const handleRedeemNativeClick = useCallback(() => {
@@ -514,6 +573,19 @@ export function useHandleRedeem() {
       signedVAA
     ) {
       injective(dispatch, enqueueSnackbar, injWallet, injAddress, signedVAA);
+    } else if (
+      targetChain === CHAIN_ID_SEI &&
+      seiSigningCosmWasmClient &&
+      seiAddress &&
+      signedVAA
+    ) {
+      sei(
+        dispatch,
+        enqueueSnackbar,
+        seiSigningCosmWasmClient,
+        seiAddress,
+        signedVAA
+      );
     }
   }, [
     dispatch,
@@ -528,6 +600,8 @@ export function useHandleRedeem() {
     algoAccounts,
     injWallet,
     injAddress,
+    seiSigningCosmWasmClient,
+    seiAddress,
   ]);
 
   const handleAcalaRelayerRedeemClick = useCallback(async () => {

@@ -1,5 +1,4 @@
 import {
-  ChainId,
   CHAIN_ID_ACALA,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
@@ -7,8 +6,11 @@ import {
   CHAIN_ID_KARURA,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_NEAR,
+  CHAIN_ID_SEI,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
+  ChainId,
+  TerraChainId,
   createWrappedOnAlgorand,
   createWrappedOnAptos,
   createWrappedOnEth,
@@ -21,16 +23,21 @@ import {
   isEVMChain,
   isTerraChain,
   postVaaSolanaWithRetry,
-  TerraChainId,
   updateWrappedOnEth,
   updateWrappedOnInjective,
   updateWrappedOnSolana,
   updateWrappedOnTerra,
   updateWrappedOnXpla,
 } from "@certusone/wormhole-sdk";
+import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
+import { calculateFee } from "@cosmjs/stargate";
 import { WalletStrategy } from "@injectivelabs/wallet-ts";
 import { Alert } from "@material-ui/lab";
 import { Wallet } from "@near-wallet-selector/core";
+import {
+  useSigningCosmWasmClient as useSeiSigningCosmWasmClient,
+  useWallet as useSeiWallet,
+} from "@sei-js/react";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { Connection } from "@solana/web3.js";
 import {
@@ -66,13 +73,13 @@ import {
   ALGORAND_BRIDGE_ID,
   ALGORAND_HOST,
   ALGORAND_TOKEN_BRIDGE_ID,
-  getTokenBridgeAddressForChain,
   KARURA_HOST,
   MAX_VAA_UPLOAD_RETRIES_SOLANA,
   NEAR_TOKEN_BRIDGE_ACCOUNT,
   SOLANA_HOST,
   SOL_BRIDGE_ADDRESS,
   SOL_TOKEN_BRIDGE_ADDRESS,
+  getTokenBridgeAddressForChain,
 } from "../utils/consts";
 import { broadcastInjectiveTx } from "../utils/injective";
 import { getKaruraGasParams } from "../utils/karura";
@@ -82,6 +89,7 @@ import {
   signAndSendTransactions,
 } from "../utils/near";
 import parseError from "../utils/parseError";
+import { createWrappedOnSei, updateWrappedOnSei } from "../utils/sei";
 import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees } from "../utils/terra";
 import { postWithFeesXpla } from "../utils/xpla";
@@ -430,6 +438,41 @@ async function injective(
   }
 }
 
+async function sei(
+  dispatch: any,
+  enqueueSnackbar: any,
+  wallet: SigningCosmWasmClient,
+  walletAddress: string,
+  signedVAA: Uint8Array,
+  shouldUpdate: boolean
+) {
+  dispatch(setIsCreating(true));
+  const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_SEI);
+  try {
+    const msg = shouldUpdate
+      ? await updateWrappedOnSei(signedVAA)
+      : await createWrappedOnSei(signedVAA);
+    // TODO: is this right?
+    const fee = calculateFee(600000, "0.1usei");
+    const tx = await wallet.execute(
+      walletAddress,
+      tokenBridgeAddress,
+      msg,
+      fee,
+      "Wormhole - Create Wrapped"
+    );
+    dispatch(setCreateTx({ id: tx.transactionHash, block: tx.height }));
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+  } catch (e) {
+    enqueueSnackbar(null, {
+      content: <Alert severity="error">{parseError(e)}</Alert>,
+    });
+    dispatch(setIsCreating(false));
+  }
+}
+
 export function useHandleCreateWrapped(shouldUpdate: boolean) {
   const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
@@ -447,6 +490,10 @@ export function useHandleCreateWrapped(shouldUpdate: boolean) {
   const aptosAddress = aptosAccount?.address?.toString();
   const { wallet: injWallet, address: injAddress } = useInjectiveContext();
   const { accountId: nearAccountId, wallet } = useNearContext();
+  const { signingCosmWasmClient: seiSigningCosmWasmClient } =
+    useSeiSigningCosmWasmClient();
+  const { accounts: seiAccounts } = useSeiWallet();
+  const seiAddress = seiAccounts.length ? seiAccounts[0].address : null;
   const handleCreateClick = useCallback(() => {
     if (isEVMChain(targetChain) && !!signer && !!signedVAA) {
       evm(
@@ -517,6 +564,20 @@ export function useHandleCreateWrapped(shouldUpdate: boolean) {
         shouldUpdate
       );
     } else if (
+      targetChain === CHAIN_ID_SEI &&
+      seiSigningCosmWasmClient &&
+      seiAddress &&
+      !!signedVAA
+    ) {
+      sei(
+        dispatch,
+        enqueueSnackbar,
+        seiSigningCosmWasmClient,
+        seiAddress,
+        signedVAA,
+        shouldUpdate
+      );
+    } else if (
       targetChain === CHAIN_ID_NEAR &&
       nearAccountId &&
       wallet &&
@@ -550,6 +611,8 @@ export function useHandleCreateWrapped(shouldUpdate: boolean) {
     injAddress,
     nearAccountId,
     wallet,
+    seiSigningCosmWasmClient,
+    seiAddress,
   ]);
   return useMemo(
     () => ({

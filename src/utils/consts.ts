@@ -30,6 +30,7 @@ import {
   isEVMChain,
   isTerraChain,
   TerraChainId,
+  CHAIN_ID_SEI,
 } from "@certusone/wormhole-sdk";
 import { clusterApiUrl } from "@solana/web3.js";
 import { getAddress } from "ethers/lib/utils";
@@ -52,6 +53,7 @@ import neonIcon from "../icons/neon.svg";
 import oasisIcon from "../icons/oasis-network-rose-logo.svg";
 import optimismIcon from "../icons/optimism.svg";
 import polygonIcon from "../icons/polygon.svg";
+import seiIcon from "../icons/sei.svg";
 import solanaIcon from "../icons/solana.svg";
 import terraIcon from "../icons/terra.svg";
 import terra2Icon from "../icons/terra2.svg";
@@ -61,6 +63,7 @@ import { AptosNetwork } from "./aptos";
 import { getNetworkInfo, Network } from "@injectivelabs/networks";
 import nearIcon from "../icons/near.svg";
 import { ConnectConfig, keyStores } from "near-api-js";
+import { ChainConfiguration } from "@sei-js/react";
 
 export type Cluster = "devnet" | "testnet";
 const urlParams = new URLSearchParams(window.location.search);
@@ -179,6 +182,11 @@ export const CHAINS: ChainInfo[] =
           id: CHAIN_ID_POLYGON,
           name: "Polygon",
           logo: polygonIcon,
+        },
+        {
+          id: CHAIN_ID_SEI,
+          name: "Sei",
+          logo: seiIcon,
         },
         {
           id: CHAIN_ID_SOLANA,
@@ -486,6 +494,12 @@ export const APTOS_NATIVE_TOKEN_KEY = "0x1::aptos_coin::AptosCoin";
 
 export const INJECTIVE_NETWORK = Network.TestnetK8s;
 export const INJECTIVE_NETWORK_INFO = getNetworkInfo(Network.TestnetK8s);
+
+export const SEI_CHAIN_CONFIGURATION: ChainConfiguration = {
+  chainId: "atlantic-2",
+  restUrl: "https://rest.atlantic-2.seinetwork.io/",
+  rpcUrl: "https://sei-testnet-rpc.polkachu.com/",
+};
 
 export const ALGORAND_HOST =
   CLUSTER === "testnet"

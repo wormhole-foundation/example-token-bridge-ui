@@ -17,6 +17,7 @@ import {
   isTerraChain,
   uint8ArrayToHex,
   WormholeWrappedInfo,
+  CHAIN_ID_SEI,
 } from "@certusone/wormhole-sdk";
 import {
   getOriginalAssetEth as getOriginalAssetEthNFT,
@@ -57,6 +58,7 @@ import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
 import { getInjectiveWasmClient } from "../utils/injective";
 import { getAptosClient } from "../utils/aptos";
 import { makeNearProvider } from "../utils/near";
+import { getOriginalAssetSei, getSeiWasmClient } from "../utils/sei";
 
 export interface StateSafeWormholeWrappedInfo {
   isWrapped: boolean;
@@ -206,6 +208,17 @@ function useCheckIfWormholeWrapped(nft?: boolean) {
           const client = getInjectiveWasmClient();
           const wrappedInfo = makeStateSafe(
             await getOriginalAssetInjective(sourceAsset, client)
+          );
+          if (!cancelled) {
+            dispatch(setSourceWormholeWrappedInfo(wrappedInfo));
+          }
+        } catch (e) {}
+      }
+      if (sourceChain === CHAIN_ID_SEI && sourceAsset) {
+        try {
+          const client = await getSeiWasmClient();
+          const wrappedInfo = makeStateSafe(
+            await getOriginalAssetSei(sourceAsset, client)
           );
           if (!cancelled) {
             dispatch(setSourceWormholeWrappedInfo(wrappedInfo));

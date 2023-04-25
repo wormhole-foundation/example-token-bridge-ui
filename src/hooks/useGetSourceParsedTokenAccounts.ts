@@ -25,6 +25,7 @@ import {
   isTerraChain,
   WSOL_ADDRESS,
   WSOL_DECIMALS,
+  CHAIN_ID_SEI,
 } from "@certusone/wormhole-sdk";
 import { Dispatch } from "@reduxjs/toolkit";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
@@ -1701,6 +1702,10 @@ function useGetAvailableTokens(nft: boolean = false) {
         resetAccounts: resetSourceAccounts,
       }
     : lookupChain === CHAIN_ID_INJECTIVE
+    ? {
+        resetAccounts: resetSourceAccounts,
+      }
+    : lookupChain === CHAIN_ID_SEI
     ? {
         resetAccounts: resetSourceAccounts,
       }

@@ -9,6 +9,7 @@ import {
   isTerraChain,
   uint8ArrayToHex,
   CHAIN_ID_INJECTIVE,
+  CHAIN_ID_SEI,
 } from "@certusone/wormhole-sdk";
 import { arrayify, zeroPad } from "@ethersproject/bytes";
 import {
@@ -17,6 +18,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
+import { useWallet as useSeiWallet } from "@sei-js/react";
 import { useConnectedWallet } from "@terra-money/wallet-provider";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -63,6 +65,8 @@ function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
   const { account: aptosAccount } = useAptosContext();
   const aptosAddress = aptosAccount?.address?.toString();
   const { address: injAddress } = useInjectiveContext();
+  const { accounts: seiAccounts } = useSeiWallet();
+  const seiAddress = seiAccounts.length ? seiAccounts[0].address : null;
   const { accountId: nearAccountId, wallet } = useNearContext();
   const setTargetAddressHex = nft
     ? setNFTTargetAddressHex
@@ -155,6 +159,12 @@ function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
             uint8ArrayToHex(zeroPad(cosmos.canonicalAddress(injAddress), 32))
           )
         );
+      } else if (targetChain === CHAIN_ID_SEI && seiAddress) {
+        dispatch(
+          setTargetAddressHex(
+            uint8ArrayToHex(zeroPad(cosmos.canonicalAddress(seiAddress), 32))
+          )
+        );
       } else if (targetChain === CHAIN_ID_NEAR && nearAccountId && wallet) {
         (async () => {
           try {
@@ -226,6 +236,7 @@ function useSyncTargetAddress(shouldFire: boolean, nft?: boolean) {
     xplaWallet,
     aptosAddress,
     injAddress,
+    seiAddress,
     nearAccountId,
     wallet,
   ]);
