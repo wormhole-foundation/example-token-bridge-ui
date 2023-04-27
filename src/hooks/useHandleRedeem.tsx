@@ -1,12 +1,14 @@
 import {
-  ChainId,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_NEAR,
+  CHAIN_ID_SEI,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
+  ChainId,
+  TerraChainId,
   isEVMChain,
   isTerraChain,
   postVaaSolanaWithRetry,
@@ -19,9 +21,7 @@ import {
   redeemOnSolana,
   redeemOnTerra,
   redeemOnXpla,
-  TerraChainId,
   uint8ArrayToHex,
-  CHAIN_ID_SEI,
 } from "@certusone/wormhole-sdk";
 import { completeTransferAndRegister } from "@certusone/wormhole-sdk/lib/esm/aptos/api/tokenBridge";
 import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
@@ -47,6 +47,7 @@ import algosdk from "algosdk";
 import { Types } from "aptos";
 import axios from "axios";
 import { Signer } from "ethers";
+import { fromUint8Array } from "js-base64";
 import { useSnackbar } from "notistack";
 import { useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -72,12 +73,13 @@ import {
   ALGORAND_BRIDGE_ID,
   ALGORAND_HOST,
   ALGORAND_TOKEN_BRIDGE_ID,
-  getTokenBridgeAddressForChain,
   MAX_VAA_UPLOAD_RETRIES_SOLANA,
   NEAR_TOKEN_BRIDGE_ACCOUNT,
+  SEI_TRANSLATOR,
   SOLANA_HOST,
   SOL_BRIDGE_ADDRESS,
   SOL_TOKEN_BRIDGE_ADDRESS,
+  getTokenBridgeAddressForChain,
 } from "../utils/consts";
 import { broadcastInjectiveTx } from "../utils/injective";
 import {
@@ -90,7 +92,6 @@ import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees } from "../utils/terra";
 import { postWithFeesXpla } from "../utils/xpla";
 import useTransferSignedVAA from "./useTransferSignedVAA";
-import { redeemOnSei } from "../utils/sei";
 
 async function algo(
   dispatch: any,
@@ -402,14 +403,17 @@ async function sei(
   signedVAA: Uint8Array
 ) {
   dispatch(setIsRedeeming(true));
-  const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_SEI);
   try {
-    const msg = await redeemOnSei(signedVAA);
+    const msg = {
+      complete_transfer_and_convert: {
+        vaa: fromUint8Array(signedVAA),
+      },
+    };
     // TODO: is this right?
-    const fee = calculateFee(300000, "0.1usei");
+    const fee = calculateFee(750000, "0.1usei");
     const tx = await wallet.execute(
       walletAddress,
-      tokenBridgeAddress,
+      SEI_TRANSLATOR,
       msg,
       fee,
       "Wormhole - Complete Transfer"

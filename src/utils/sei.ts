@@ -8,12 +8,15 @@ import {
   hexToUint8Array,
   isNativeCosmWasmDenom,
 } from "@certusone/wormhole-sdk";
-import { getCosmWasmClient } from "@sei-js/core";
+import { getCosmWasmClient, getQueryClient } from "@sei-js/core";
 import { fromUint8Array } from "js-base64";
 import { SEI_CHAIN_CONFIGURATION } from "./consts";
 
 export const getSeiWasmClient = () =>
   getCosmWasmClient(SEI_CHAIN_CONFIGURATION.rpcUrl);
+
+export const getSeiQueryClient = () =>
+  getQueryClient(SEI_CHAIN_CONFIGURATION.restUrl);
 
 export type CosmWasmClient = {
   queryContractSmart: (address: string, queryMsg: any) => Promise<any>;

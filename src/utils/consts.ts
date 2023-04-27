@@ -31,6 +31,7 @@ import {
   isTerraChain,
   TerraChainId,
   CHAIN_ID_SEI,
+  cosmos,
 } from "@certusone/wormhole-sdk";
 import { clusterApiUrl } from "@solana/web3.js";
 import { getAddress } from "ethers/lib/utils";
@@ -498,8 +499,13 @@ export const INJECTIVE_NETWORK_INFO = getNetworkInfo(Network.TestnetK8s);
 export const SEI_CHAIN_CONFIGURATION: ChainConfiguration = {
   chainId: "atlantic-2",
   restUrl: "https://rest.atlantic-2.seinetwork.io/",
-  rpcUrl: "https://sei-testnet-rpc.polkachu.com/",
+  rpcUrl: "https://rpc.atlantic-2.seinetwork.io/",
 };
+
+export const SEI_TRANSLATOR =
+  "sei1dkdwdvknx0qav5cp5kw68mkn3r99m3svkyjfvkztwh97dv2lm0ksj6xrak";
+export const SEI_TRANSLATER_TARGET = cosmos.canonicalAddress(SEI_TRANSLATOR);
+export const SEI_DECIMALS = 6;
 
 export const ALGORAND_HOST =
   CLUSTER === "testnet"

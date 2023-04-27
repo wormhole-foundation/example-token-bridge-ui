@@ -1,11 +1,14 @@
 import {
-  ChainId,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_KLAYTN,
+  CHAIN_ID_SEI,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
+  ChainId,
+  TerraChainId,
+  cosmos,
   createNonce,
   getEmitterAddressAlgorand,
   getEmitterAddressEth,
@@ -24,7 +27,6 @@ import {
   parseSequenceFromLogSolana,
   parseSequenceFromLogTerra,
   parseSequenceFromLogXpla,
-  TerraChainId,
   transferFromAlgorand,
   transferFromEth,
   transferFromEthNative,
@@ -37,11 +39,17 @@ import {
   transferTokenFromNear,
   uint8ArrayToHex,
 } from "@certusone/wormhole-sdk";
-import { transferTokens } from "@certusone/wormhole-sdk/lib/esm/aptos/api/tokenBridge";
-import { WalletStrategy } from "@injectivelabs/wallet-ts";
 import { CHAIN_ID_NEAR } from "@certusone/wormhole-sdk/lib/esm";
+import { transferTokens } from "@certusone/wormhole-sdk/lib/esm/aptos/api/tokenBridge";
+import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
+import { calculateFee } from "@cosmjs/stargate";
+import { WalletStrategy } from "@injectivelabs/wallet-ts";
 import { Alert } from "@material-ui/lab";
 import { Wallet } from "@near-wallet-selector/core";
+import {
+  useSigningCosmWasmClient as useSeiSigningCosmWasmClient,
+  useWallet as useSeiWallet,
+} from "@sei-js/react";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { Connection } from "@solana/web3.js";
 import {
@@ -95,14 +103,16 @@ import {
   ALGORAND_BRIDGE_ID,
   ALGORAND_HOST,
   ALGORAND_TOKEN_BRIDGE_ID,
-  getBridgeAddressForChain,
-  getTokenBridgeAddressForChain,
   NATIVE_NEAR_PLACEHOLDER,
   NEAR_CORE_BRIDGE_ACCOUNT,
   NEAR_TOKEN_BRIDGE_ACCOUNT,
+  SEI_TRANSLATER_TARGET,
+  SEI_TRANSLATOR,
   SOLANA_HOST,
   SOL_BRIDGE_ADDRESS,
   SOL_TOKEN_BRIDGE_ADDRESS,
+  getBridgeAddressForChain,
+  getTokenBridgeAddressForChain,
 } from "../utils/consts";
 import { getSignedVAAWithRetry } from "../utils/getSignedVAAWithRetry";
 import { broadcastInjectiveTx } from "../utils/injective";
@@ -116,6 +126,35 @@ import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees, waitForTerraExecution } from "../utils/terra";
 import { postWithFeesXpla, waitForXplaExecution } from "../utils/xpla";
 import useTransferTargetAddressHex from "./useTransferTargetAddress";
+
+type AdditionalPayloadOverride = {
+  receivingContract: Uint8Array;
+  payload: Uint8Array;
+};
+
+function maybeAdditionalPayload(
+  recipientChain: ChainId,
+  recipientAddress: Uint8Array
+): AdditionalPayloadOverride | null {
+  if (recipientChain === CHAIN_ID_SEI) {
+    return {
+      receivingContract: SEI_TRANSLATER_TARGET,
+      payload: new Uint8Array(
+        Buffer.from(
+          JSON.stringify({
+            basic_recipient: {
+              recipient: Buffer.from(
+                // Sei wallet addresses are 20 bytes
+                cosmos.humanAddress("sei", recipientAddress.slice(12))
+              ).toString("base64"),
+            },
+          })
+        )
+      ),
+    };
+  }
+  return null;
+}
 
 async function fetchSignedVAA(
   chainId: ChainId,
@@ -174,6 +213,10 @@ async function algo(
     const baseAmountParsed = parseUnits(amount, decimals);
     const feeParsed = parseUnits(relayerFee || "0", decimals);
     const transferAmountParsed = baseAmountParsed.add(feeParsed);
+    const additionalPayload = maybeAdditionalPayload(
+      recipientChain,
+      recipientAddress
+    );
     const algodClient = new algosdk.Algodv2(
       ALGORAND_HOST.algodToken,
       ALGORAND_HOST.algodServer,
@@ -186,9 +229,10 @@ async function algo(
       senderAddr,
       BigInt(tokenAddress),
       transferAmountParsed.toBigInt(),
-      uint8ArrayToHex(recipientAddress),
+      uint8ArrayToHex(additionalPayload?.receivingContract || recipientAddress),
       recipientChain,
-      feeParsed.toBigInt()
+      feeParsed.toBigInt(),
+      additionalPayload?.payload
     );
     const result = await signSendAndConfirmAlgorand(algodClient, txs);
     const sequence = parseSequenceFromLogAlgorand(result);
@@ -237,6 +281,13 @@ async function aptos(
     const baseAmountParsed = parseUnits(amount, decimals);
     const feeParsed = parseUnits(relayerFee || "0", decimals);
     const transferAmountParsed = baseAmountParsed.add(feeParsed);
+    const additionalPayload = maybeAdditionalPayload(
+      recipientChain,
+      recipientAddress
+    );
+    if (additionalPayload?.payload) {
+      throw new Error("Transfer with payload is unsupported on Aptos");
+    }
     const transferPayload = transferTokens(
       tokenBridgeAddress,
       tokenAddress,
@@ -292,6 +343,10 @@ async function evm(
     const baseAmountParsed = parseUnits(amount, decimals);
     const feeParsed = parseUnits(relayerFee || "0", decimals);
     const transferAmountParsed = baseAmountParsed.add(feeParsed);
+    const additionalPayload = maybeAdditionalPayload(
+      recipientChain,
+      recipientAddress
+    );
     // Klaytn requires specifying gasPrice
     const overrides =
       chainId === CHAIN_ID_KLAYTN
@@ -303,9 +358,10 @@ async function evm(
           signer,
           transferAmountParsed,
           recipientChain,
-          recipientAddress,
+          additionalPayload?.receivingContract || recipientAddress,
           feeParsed,
-          overrides
+          overrides,
+          additionalPayload?.payload
         )
       : await transferFromEth(
           getTokenBridgeAddressForChain(chainId),
@@ -313,9 +369,10 @@ async function evm(
           tokenAddress,
           transferAmountParsed,
           recipientChain,
-          recipientAddress,
+          additionalPayload?.receivingContract || recipientAddress,
           feeParsed,
-          overrides
+          overrides,
+          additionalPayload?.payload
         );
     dispatch(
       setTransferTx({ id: receipt.transactionHash, block: receipt.blockNumber })
@@ -360,6 +417,10 @@ async function near(
     const baseAmountParsed = parseUnits(amount, decimals);
     const feeParsed = parseUnits(relayerFee || "0", decimals);
     const transferAmountParsed = baseAmountParsed.add(feeParsed);
+    const additionalPayload = maybeAdditionalPayload(
+      recipientChain,
+      recipientAddress
+    );
     const account = await makeNearAccount(senderAddr);
     const msgs =
       tokenAddress === NATIVE_NEAR_PLACEHOLDER
@@ -369,9 +430,12 @@ async function near(
               NEAR_CORE_BRIDGE_ACCOUNT,
               NEAR_TOKEN_BRIDGE_ACCOUNT,
               transferAmountParsed.toBigInt(),
-              recipientAddress,
+              additionalPayload?.receivingContract || recipientAddress,
               recipientChain,
-              feeParsed.toBigInt()
+              feeParsed.toBigInt(),
+              additionalPayload?.payload
+                ? uint8ArrayToHex(additionalPayload.payload)
+                : undefined
             ),
           ]
         : await transferTokenFromNear(
@@ -381,9 +445,12 @@ async function near(
             NEAR_TOKEN_BRIDGE_ACCOUNT,
             tokenAddress,
             transferAmountParsed.toBigInt(),
-            recipientAddress,
+            additionalPayload?.receivingContract || recipientAddress,
             recipientChain,
-            feeParsed.toBigInt()
+            feeParsed.toBigInt(),
+            additionalPayload?.payload
+              ? uint8ArrayToHex(additionalPayload.payload)
+              : undefined
           );
     const receipt = await signAndSendTransactions(account, wallet, msgs);
     const sequence = parseSequenceFromLogNear(receipt);
@@ -434,6 +501,10 @@ async function solana(
     const baseAmountParsed = parseUnits(amount, decimals);
     const feeParsed = parseUnits(relayerFee || "0", decimals);
     const transferAmountParsed = baseAmountParsed.add(feeParsed);
+    const additionalPayload = maybeAdditionalPayload(
+      targetChain,
+      targetAddress
+    );
     const originAddress = originAddressStr
       ? zeroPad(hexToUint8Array(originAddressStr), 32)
       : undefined;
@@ -444,9 +515,10 @@ async function solana(
           SOL_TOKEN_BRIDGE_ADDRESS,
           payerAddress,
           transferAmountParsed.toBigInt(),
-          targetAddress,
+          additionalPayload?.receivingContract || targetAddress,
           targetChain,
-          feeParsed.toBigInt()
+          feeParsed.toBigInt(),
+          additionalPayload?.payload
         )
       : transferFromSolana(
           connection,
@@ -456,12 +528,13 @@ async function solana(
           fromAddress,
           mintAddress,
           transferAmountParsed.toBigInt(),
-          targetAddress,
+          additionalPayload?.receivingContract || targetAddress,
           targetChain,
           originAddress,
           originChain,
           undefined,
-          feeParsed.toBigInt()
+          feeParsed.toBigInt(),
+          additionalPayload?.payload
         );
     const transaction = await promise;
     const txid = await signSendAndConfirm(wallet, connection, transaction);
@@ -508,14 +581,19 @@ async function terra(
     const feeParsed = parseUnits(relayerFee || "0", decimals);
     const transferAmountParsed = baseAmountParsed.add(feeParsed);
     const tokenBridgeAddress = getTokenBridgeAddressForChain(chainId);
+    const additionalPayload = maybeAdditionalPayload(
+      targetChain,
+      targetAddress
+    );
     const msgs = await transferFromTerra(
       wallet.terraAddress,
       tokenBridgeAddress,
       asset,
       transferAmountParsed.toString(),
       targetChain,
-      targetAddress,
-      feeParsed.toString()
+      additionalPayload?.receivingContract || targetAddress,
+      feeParsed.toString(),
+      additionalPayload?.payload
     );
 
     const result = await postWithFees(
@@ -565,14 +643,19 @@ async function xpla(
     const feeParsed = parseUnits(relayerFee || "0", decimals);
     const transferAmountParsed = baseAmountParsed.add(feeParsed);
     const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_XPLA);
+    const additionalPayload = maybeAdditionalPayload(
+      targetChain,
+      targetAddress
+    );
     const msgs = await transferFromXpla(
       wallet.xplaAddress,
       tokenBridgeAddress,
       asset,
       transferAmountParsed.toString(),
       targetChain,
-      targetAddress,
-      feeParsed.toString()
+      additionalPayload?.receivingContract || targetAddress,
+      feeParsed.toString(),
+      additionalPayload?.payload
     );
 
     const result = await postWithFeesXpla(
@@ -622,14 +705,19 @@ async function injective(
     const transferAmountParsed = baseAmountParsed.add(feeParsed);
     const tokenBridgeAddress =
       getTokenBridgeAddressForChain(CHAIN_ID_INJECTIVE);
+    const additionalPayload = maybeAdditionalPayload(
+      targetChain,
+      targetAddress
+    );
     const msgs = await transferFromInjective(
       walletAddress,
       tokenBridgeAddress,
       asset,
       transferAmountParsed.toString(),
       targetChain,
-      targetAddress,
-      feeParsed.toString()
+      additionalPayload?.receivingContract || targetAddress,
+      feeParsed.toString(),
+      additionalPayload?.payload
     );
     const tx = await broadcastInjectiveTx(
       wallet,
@@ -648,6 +736,63 @@ async function injective(
     const emitterAddress = await getEmitterAddressInjective(tokenBridgeAddress);
     await fetchSignedVAA(
       CHAIN_ID_INJECTIVE,
+      emitterAddress,
+      sequence,
+      enqueueSnackbar,
+      dispatch
+    );
+  } catch (e) {
+    handleError(e, enqueueSnackbar, dispatch);
+  }
+}
+
+async function sei(
+  dispatch: any,
+  enqueueSnackbar: any,
+  wallet: SigningCosmWasmClient,
+  walletAddress: string,
+  asset: string,
+  amount: string,
+  decimals: number,
+  targetChain: ChainId,
+  targetAddress: Uint8Array,
+  relayerFee?: string
+) {
+  dispatch(setIsSending(true));
+  try {
+    const baseAmountParsed = parseUnits(amount, decimals);
+    const feeParsed = parseUnits(relayerFee || "0", decimals);
+    const transferAmountParsed = baseAmountParsed.add(feeParsed);
+    const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_SEI);
+    // NOTE: this only supports transferring out via the Sei CW20 <> Bank translator
+    const msg = {
+      convert_and_transfer: {
+        recipient_chain: targetChain,
+        recipient: Buffer.from(targetAddress).toString("base64"),
+        fee: feeParsed.toString(),
+      },
+    };
+    const fee = calculateFee(300000, "0.1usei");
+    const tx = await wallet.execute(
+      walletAddress,
+      SEI_TRANSLATOR,
+      msg,
+      fee,
+      "Wormhole - Initiate Transfer",
+      [{ denom: asset, amount: transferAmountParsed.toString() }]
+    );
+    dispatch(setTransferTx({ id: tx.transactionHash, block: tx.height }));
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+    const sequence = parseSequenceFromLogInjective(tx);
+    if (!sequence) {
+      throw new Error("Sequence not found");
+    }
+    const emitterAddress = await getEmitterAddressTerra(tokenBridgeAddress);
+    console.log("Sei VAA", CHAIN_ID_SEI, emitterAddress, sequence);
+    await fetchSignedVAA(
+      CHAIN_ID_SEI,
       emitterAddress,
       sequence,
       enqueueSnackbar,
@@ -682,6 +827,10 @@ export function useHandleTransfer() {
   const aptosAddress = aptosAccount?.address?.toString();
   const { wallet: injWallet, address: injAddress } = useInjectiveContext();
   const { accountId: nearAccountId, wallet } = useNearContext();
+  const { signingCosmWasmClient: seiSigningCosmWasmClient } =
+    useSeiSigningCosmWasmClient();
+  const { accounts: seiAccounts } = useSeiWallet();
+  const seiAddress = seiAccounts.length ? seiAccounts[0].address : null;
   const sourceParsedTokenAccount = useSelector(
     selectTransferSourceParsedTokenAccount
   );
@@ -835,6 +984,26 @@ export function useHandleTransfer() {
         relayerFee
       );
     } else if (
+      sourceChain === CHAIN_ID_SEI &&
+      seiSigningCosmWasmClient &&
+      seiAddress &&
+      !!sourceAsset &&
+      decimals !== undefined &&
+      !!targetAddress
+    ) {
+      sei(
+        dispatch,
+        enqueueSnackbar,
+        seiSigningCosmWasmClient,
+        seiAddress,
+        sourceAsset,
+        amount,
+        decimals,
+        targetChain,
+        targetAddress,
+        relayerFee
+      );
+    } else if (
       sourceChain === CHAIN_ID_NEAR &&
       nearAccountId &&
       wallet &&
@@ -884,6 +1053,8 @@ export function useHandleTransfer() {
     injAddress,
     nearAccountId,
     wallet,
+    seiSigningCosmWasmClient,
+    seiAddress,
   ]);
   return useMemo(
     () => ({
