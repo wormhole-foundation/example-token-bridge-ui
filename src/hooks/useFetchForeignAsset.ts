@@ -1,12 +1,13 @@
 import {
-  ChainId,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_NEAR,
+  CHAIN_ID_SEI,
   CHAIN_ID_SOLANA,
-  CHAIN_ID_XPLA,
   CHAIN_ID_TERRA2,
+  CHAIN_ID_XPLA,
+  ChainId,
   getEmitterAddressNear,
   getForeignAssetAlgorand,
   getForeignAssetAptos,
@@ -21,33 +22,34 @@ import {
   isTerraChain,
   nativeToHexString,
 } from "@certusone/wormhole-sdk";
+import { buildTokenId } from "@certusone/wormhole-sdk/lib/esm/cosmwasm/address";
 import { Connection } from "@solana/web3.js";
 import { LCDClient } from "@terra-money/terra.js";
+import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
+import { Algodv2 } from "algosdk";
 import { ethers } from "ethers";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useEthereumProvider } from "../contexts/EthereumProviderContext";
+import { useNearContext } from "../contexts/NearWalletContext";
 import { DataWrapper } from "../store/helpers";
+import { getAptosClient } from "../utils/aptos";
 import {
   ALGORAND_HOST,
   ALGORAND_TOKEN_BRIDGE_ID,
-  getEvmChainId,
-  getTokenBridgeAddressForChain,
-  SOLANA_HOST,
-  SOL_TOKEN_BRIDGE_ADDRESS,
-  getTerraConfig,
-  XPLA_LCD_CLIENT_CONFIG,
-  NEAR_TOKEN_BRIDGE_ACCOUNT,
   NATIVE_NEAR_PLACEHOLDER,
   NATIVE_NEAR_WH_ADDRESS,
+  NEAR_TOKEN_BRIDGE_ACCOUNT,
+  SOLANA_HOST,
+  SOL_TOKEN_BRIDGE_ADDRESS,
+  XPLA_LCD_CLIENT_CONFIG,
+  getEvmChainId,
+  getTerraConfig,
+  getTokenBridgeAddressForChain,
 } from "../utils/consts";
-import useIsWalletReady from "./useIsWalletReady";
-import { Algodv2 } from "algosdk";
-import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
-import { getAptosClient } from "../utils/aptos";
 import { getInjectiveWasmClient } from "../utils/injective";
 import { makeNearProvider } from "../utils/near";
-import { useNearContext } from "../contexts/NearWalletContext";
-import { buildTokenId } from "@certusone/wormhole-sdk/lib/esm/cosmwasm/address";
+import { getForeignAssetSei, getSeiWasmClient } from "../utils/sei";
+import useIsWalletReady from "./useIsWalletReady";
 
 export type ForeignAssetInfo = {
   doesExist: boolean;
@@ -201,6 +203,16 @@ function useFetchForeignAsset(
         ? () => {
             const client = getInjectiveWasmClient();
             return getForeignAssetInjective(
+              getTokenBridgeAddressForChain(foreignChain),
+              client,
+              originChain,
+              hexToUint8Array(originAssetHex)
+            );
+          }
+        : foreignChain === CHAIN_ID_SEI
+        ? async () => {
+            const client = await getSeiWasmClient();
+            return getForeignAssetSei(
               getTokenBridgeAddressForChain(foreignChain),
               client,
               originChain,

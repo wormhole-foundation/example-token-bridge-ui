@@ -8,9 +8,11 @@ import {
   CHAIN_ID_XPLA,
   isEVMChain,
   isTerraChain,
+  CHAIN_ID_SEI,
 } from "@certusone/wormhole-sdk";
 import { hexlify, hexStripZeros } from "@ethersproject/bytes";
 import { useConnectedWallet } from "@terra-money/wallet-provider";
+import { useWallet as useSeiWallet } from "@sei-js/react";
 import { useConnectedWallet as useXplaConnectedWallet } from "@xpla/wallet-provider";
 import { useCallback, useMemo } from "react";
 import { useAlgorandContext } from "../contexts/AlgorandWalletContext";
@@ -82,6 +84,9 @@ function useIsWalletReady(
   const { address: injAddress } = useInjectiveContext();
   const hasInjWallet = !!injAddress;
   const { accountId: nearPK } = useNearContext();
+  const { accounts: seiAccounts } = useSeiWallet();
+  const seiAddress = seiAccounts.length ? seiAccounts[0].address : null;
+  const hasSeiWallet = !!seiAddress;
 
   const forceNetworkSwitch = useCallback(async () => {
     if (provider && correctEvmNetwork) {
@@ -179,6 +184,14 @@ function useIsWalletReady(
         injAddress
       );
     }
+    if (chainId === CHAIN_ID_SEI && hasSeiWallet && seiAddress) {
+      return createWalletStatus(
+        true,
+        undefined,
+        forceNetworkSwitch,
+        seiAddress
+      );
+    }
     if (chainId === CHAIN_ID_NEAR && nearPK) {
       return createWalletStatus(true, undefined, forceNetworkSwitch, nearPK);
     }
@@ -229,6 +242,8 @@ function useIsWalletReady(
     hasCorrectAptosNetwork,
     hasInjWallet,
     injAddress,
+    hasSeiWallet,
+    seiAddress,
     nearPK,
   ]);
 }

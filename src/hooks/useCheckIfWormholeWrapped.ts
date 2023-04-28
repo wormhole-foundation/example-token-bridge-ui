@@ -17,6 +17,8 @@ import {
   isTerraChain,
   uint8ArrayToHex,
   WormholeWrappedInfo,
+  CHAIN_ID_SEI,
+  cosmos,
 } from "@certusone/wormhole-sdk";
 import {
   getOriginalAssetEth as getOriginalAssetEthNFT,
@@ -52,11 +54,14 @@ import {
   SOL_NFT_BRIDGE_ADDRESS,
   SOL_TOKEN_BRIDGE_ADDRESS,
   XPLA_LCD_CLIENT_CONFIG,
+  SEI_TRANSLATOR,
 } from "../utils/consts";
 import { LCDClient as XplaLCDClient } from "@xpla/xpla.js";
 import { getInjectiveWasmClient } from "../utils/injective";
 import { getAptosClient } from "../utils/aptos";
 import { makeNearProvider } from "../utils/near";
+import { getOriginalAssetSei, getSeiWasmClient } from "../utils/sei";
+import { base58 } from "ethers/lib/utils";
 
 export interface StateSafeWormholeWrappedInfo {
   isWrapped: boolean;
@@ -206,6 +211,25 @@ function useCheckIfWormholeWrapped(nft?: boolean) {
           const client = getInjectiveWasmClient();
           const wrappedInfo = makeStateSafe(
             await getOriginalAssetInjective(sourceAsset, client)
+          );
+          if (!cancelled) {
+            dispatch(setSourceWormholeWrappedInfo(wrappedInfo));
+          }
+        } catch (e) {}
+      }
+      if (sourceChain === CHAIN_ID_SEI && sourceAsset) {
+        try {
+          const client = await getSeiWasmClient();
+          const queryAsset = sourceAsset.startsWith(
+            `factory/${SEI_TRANSLATOR}/`
+          )
+            ? cosmos.humanAddress(
+                "sei",
+                base58.decode(sourceAsset.split("/")[2])
+              )
+            : sourceAsset;
+          const wrappedInfo = makeStateSafe(
+            await getOriginalAssetSei(queryAsset, client)
           );
           if (!cancelled) {
             dispatch(setSourceWormholeWrappedInfo(wrappedInfo));

@@ -3,6 +3,7 @@ import {
   CHAIN_ID_APTOS,
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_NEAR,
+  CHAIN_ID_SEI,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
   ensureHexPrefix,
@@ -14,6 +15,7 @@ import {
   parseSmartContractStateResponse,
   terra,
 } from "@certusone/wormhole-sdk";
+import { useWallet as useSeiWallet } from "@sei-js/react";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { LCDClient } from "@terra-money/terra.js";
 import { useConnectedWallet } from "@terra-money/wallet-provider";
@@ -55,6 +57,7 @@ import useMetadata from "./useMetadata";
 import { useNearContext } from "../contexts/NearWalletContext";
 import { makeNearAccount } from "../utils/near";
 import { fetchSingleMetadata } from "./useNearMetadata";
+import { getSeiWasmClient } from "../utils/sei";
 
 function useGetTargetParsedTokenAccounts() {
   const dispatch = useDispatch();
@@ -87,6 +90,8 @@ function useGetTargetParsedTokenAccounts() {
   const { account: aptosAccount } = useAptosContext();
   const aptosAddress = aptosAccount?.address?.toString();
   const { address: injAddress } = useInjectiveContext();
+  const { accounts: seiAccounts } = useSeiWallet();
+  const seiAddress = seiAccounts.length ? seiAccounts[0].address : null;
   const { accountId: nearAccountId } = useNearContext();
   const hasResolvedMetadata = metadata.data || metadata.error;
   useEffect(() => {
@@ -235,6 +240,73 @@ function useGetTargetParsedTokenAccounts() {
             }
           });
       }
+    }
+
+    if (targetChain === CHAIN_ID_SEI && seiAddress) {
+      (async () => {
+        // if (isNativeDenomXpla(targetAsset)) {
+        //   lcd.bank
+        //     .balance(xplaWallet.walletAddress)
+        //     .then(([coins]) => {
+        //       const balance = coins.get(targetAsset)?.amount?.toString();
+        //       if (balance && !cancelled) {
+        //         dispatch(
+        //           setTargetParsedTokenAccount(
+        //             createParsedTokenAccount(
+        //               "",
+        //               "",
+        //               balance,
+        //               NATIVE_XPLA_DECIMALS,
+        //               Number(formatUnits(balance, NATIVE_XPLA_DECIMALS)),
+        //               formatUnits(balance, NATIVE_XPLA_DECIMALS),
+        //               symbol,
+        //               tokenName,
+        //               logo
+        //             )
+        //           )
+        //         );
+        //       }
+        //     })
+        //     .catch(() => {
+        //       if (!cancelled) {
+        //         // TODO: error state
+        //       }
+        //     });
+        // } else {
+        try {
+          const client = await getSeiWasmClient();
+          const info = await client.queryContractSmart(targetAsset, {
+            token_info: {},
+          });
+          const balance = await client.queryContractSmart(targetAsset, {
+            balance: {
+              address: seiAddress,
+            },
+          });
+          if (balance && info && !cancelled) {
+            dispatch(
+              setTargetParsedTokenAccount(
+                createParsedTokenAccount(
+                  "",
+                  "",
+                  balance.balance.toString(),
+                  info.decimals,
+                  Number(formatUnits(balance.balance, info.decimals)),
+                  formatUnits(balance.balance, info.decimals),
+                  symbol,
+                  tokenName,
+                  logo
+                )
+              )
+            );
+          }
+        } catch (e) {
+          if (!cancelled) {
+            // TODO: error state
+          }
+        }
+        // }
+      })();
     }
 
     if (
@@ -611,6 +683,7 @@ function useGetTargetParsedTokenAccounts() {
     aptosAddress,
     injAddress,
     nearAccountId,
+    seiAddress,
   ]);
 }
 

@@ -1,12 +1,14 @@
 import {
-  ChainId,
   CHAIN_ID_ALGORAND,
   CHAIN_ID_APTOS,
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_NEAR,
+  CHAIN_ID_SEI,
   CHAIN_ID_SOLANA,
   CHAIN_ID_XPLA,
+  ChainId,
+  TerraChainId,
   isEVMChain,
   isTerraChain,
   postVaaSolanaWithRetry,
@@ -19,13 +21,18 @@ import {
   redeemOnSolana,
   redeemOnTerra,
   redeemOnXpla,
-  TerraChainId,
   uint8ArrayToHex,
 } from "@certusone/wormhole-sdk";
 import { completeTransferAndRegister } from "@certusone/wormhole-sdk/lib/esm/aptos/api/tokenBridge";
+import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
+import { calculateFee } from "@cosmjs/stargate";
 import { WalletStrategy } from "@injectivelabs/wallet-ts";
 import { Alert } from "@material-ui/lab";
 import { Wallet } from "@near-wallet-selector/core";
+import {
+  useSigningCosmWasmClient as useSeiSigningCosmWasmClient,
+  useWallet as useSeiWallet,
+} from "@sei-js/react";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { Connection } from "@solana/web3.js";
 import {
@@ -40,6 +47,7 @@ import algosdk from "algosdk";
 import { Types } from "aptos";
 import axios from "axios";
 import { Signer } from "ethers";
+import { fromUint8Array } from "js-base64";
 import { useSnackbar } from "notistack";
 import { useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -65,12 +73,13 @@ import {
   ALGORAND_BRIDGE_ID,
   ALGORAND_HOST,
   ALGORAND_TOKEN_BRIDGE_ID,
-  getTokenBridgeAddressForChain,
   MAX_VAA_UPLOAD_RETRIES_SOLANA,
   NEAR_TOKEN_BRIDGE_ACCOUNT,
+  SEI_TRANSLATOR,
   SOLANA_HOST,
   SOL_BRIDGE_ADDRESS,
   SOL_TOKEN_BRIDGE_ADDRESS,
+  getTokenBridgeAddressForChain,
 } from "../utils/consts";
 import { broadcastInjectiveTx } from "../utils/injective";
 import {
@@ -386,6 +395,41 @@ async function injective(
   }
 }
 
+async function sei(
+  dispatch: any,
+  enqueueSnackbar: any,
+  wallet: SigningCosmWasmClient,
+  walletAddress: string,
+  signedVAA: Uint8Array
+) {
+  dispatch(setIsRedeeming(true));
+  try {
+    const msg = {
+      complete_transfer_and_convert: {
+        vaa: fromUint8Array(signedVAA),
+      },
+    };
+    // TODO: is this right?
+    const fee = calculateFee(750000, "0.1usei");
+    const tx = await wallet.execute(
+      walletAddress,
+      SEI_TRANSLATOR,
+      msg,
+      fee,
+      "Wormhole - Complete Transfer"
+    );
+    dispatch(setRedeemTx({ id: tx.transactionHash, block: tx.height }));
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+  } catch (e) {
+    enqueueSnackbar(null, {
+      content: <Alert severity="error">{parseError(e)}</Alert>,
+    });
+    dispatch(setIsRedeeming(false));
+  }
+}
+
 export function useHandleRedeem() {
   const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
@@ -401,6 +445,10 @@ export function useHandleRedeem() {
   const aptosAddress = aptosAccount?.address?.toString();
   const { wallet: injWallet, address: injAddress } = useInjectiveContext();
   const { accountId: nearAccountId, wallet } = useNearContext();
+  const { signingCosmWasmClient: seiSigningCosmWasmClient } =
+    useSeiSigningCosmWasmClient();
+  const { accounts: seiAccounts } = useSeiWallet();
+  const seiAddress = seiAccounts.length ? seiAccounts[0].address : null;
   const signedVAA = useTransferSignedVAA();
   const isRedeeming = useSelector(selectTransferIsRedeeming);
   const handleRedeemClick = useCallback(() => {
@@ -447,6 +495,19 @@ export function useHandleRedeem() {
     ) {
       injective(dispatch, enqueueSnackbar, injWallet, injAddress, signedVAA);
     } else if (
+      targetChain === CHAIN_ID_SEI &&
+      seiSigningCosmWasmClient &&
+      seiAddress &&
+      signedVAA
+    ) {
+      sei(
+        dispatch,
+        enqueueSnackbar,
+        seiSigningCosmWasmClient,
+        seiAddress,
+        signedVAA
+      );
+    } else if (
       targetChain === CHAIN_ID_NEAR &&
       nearAccountId &&
       wallet &&
@@ -473,6 +534,8 @@ export function useHandleRedeem() {
     injAddress,
     nearAccountId,
     wallet,
+    seiSigningCosmWasmClient,
+    seiAddress,
   ]);
 
   const handleRedeemNativeClick = useCallback(() => {
@@ -514,6 +577,19 @@ export function useHandleRedeem() {
       signedVAA
     ) {
       injective(dispatch, enqueueSnackbar, injWallet, injAddress, signedVAA);
+    } else if (
+      targetChain === CHAIN_ID_SEI &&
+      seiSigningCosmWasmClient &&
+      seiAddress &&
+      signedVAA
+    ) {
+      sei(
+        dispatch,
+        enqueueSnackbar,
+        seiSigningCosmWasmClient,
+        seiAddress,
+        signedVAA
+      );
     }
   }, [
     dispatch,
@@ -528,6 +604,8 @@ export function useHandleRedeem() {
     algoAccounts,
     injWallet,
     injAddress,
+    seiSigningCosmWasmClient,
+    seiAddress,
   ]);
 
   const handleAcalaRelayerRedeemClick = useCallback(async () => {
