@@ -126,6 +126,7 @@ import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees, waitForTerraExecution } from "../utils/terra";
 import { postWithFeesXpla, waitForXplaExecution } from "../utils/xpla";
 import useTransferTargetAddressHex from "./useTransferTargetAddress";
+import { parseSequenceFromLogSei } from "../utils/sei";
 
 type AdditionalPayloadOverride = {
   receivingContract: Uint8Array;
@@ -772,7 +773,7 @@ async function sei(
         fee: feeParsed.toString(),
       },
     };
-    const fee = calculateFee(300000, "0.1usei");
+    const fee = calculateFee(600000, "0.1usei");
     const tx = await wallet.execute(
       walletAddress,
       SEI_TRANSLATOR,
@@ -785,7 +786,7 @@ async function sei(
     enqueueSnackbar(null, {
       content: <Alert severity="success">Transaction confirmed</Alert>,
     });
-    const sequence = parseSequenceFromLogInjective(tx);
+    const sequence = parseSequenceFromLogSei(tx);
     if (!sequence) {
       throw new Error("Sequence not found");
     }

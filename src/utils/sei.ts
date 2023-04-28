@@ -144,3 +144,18 @@ export async function submitVAAOnSei(signedVAA: Uint8Array) {
 export const createWrappedOnSei = submitVAAOnSei;
 export const updateWrappedOnSei = submitVAAOnSei;
 export const redeemOnSei = submitVAAOnSei;
+
+export function parseSequenceFromLogSei(info: any): string {
+  // Scan for the Sequence attribute in all the outputs of the transaction.
+  let sequence = "";
+  info.logs.forEach((row: any) => {
+    row.events.forEach((event: any) => {
+      event.attributes.forEach((attribute: any) => {
+        if (attribute.key === "message.sequence") {
+          sequence = attribute.value;
+        }
+      });
+    });
+  });
+  return sequence.toString();
+}
