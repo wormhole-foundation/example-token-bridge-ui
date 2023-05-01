@@ -8,6 +8,7 @@ import {
   CHAIN_ID_NEAR,
   CHAIN_ID_SEI,
   CHAIN_ID_SOLANA,
+  CHAIN_ID_SUI,
   CHAIN_ID_XPLA,
   ChainId,
   TerraChainId,
@@ -17,11 +18,14 @@ import {
   createWrappedOnInjective,
   createWrappedOnNear,
   createWrappedOnSolana,
+  createWrappedOnSui,
+  createWrappedOnSuiPrepare,
   createWrappedOnTerra,
   createWrappedOnXpla,
   createWrappedTypeOnAptos,
   isEVMChain,
   isTerraChain,
+  parseAttestMetaVaa,
   postVaaSolanaWithRetry,
   updateWrappedOnEth,
   updateWrappedOnInjective,
@@ -40,6 +44,11 @@ import {
 } from "@sei-js/react";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { Connection } from "@solana/web3.js";
+import { SuiSignAndExecuteTransactionBlockOutput } from "@mysten/wallet-standard";
+import {
+  WalletContextState as WalletContextStateSui,
+  useWallet,
+} from "@suiet/wallet-kit";
 import {
   ConnectedWallet,
   useConnectedWallet,
@@ -79,6 +88,7 @@ import {
   SOLANA_HOST,
   SOL_BRIDGE_ADDRESS,
   SOL_TOKEN_BRIDGE_ADDRESS,
+  getBridgeAddressForChain,
   getTokenBridgeAddressForChain,
 } from "../utils/consts";
 import { broadcastInjectiveTx } from "../utils/injective";
@@ -94,6 +104,73 @@ import { signSendAndConfirm } from "../utils/solana";
 import { postWithFees } from "../utils/terra";
 import { postWithFeesXpla } from "../utils/xpla";
 import useAttestSignedVAA from "./useAttestSignedVAA";
+import { getSuiProvider } from "../utils/sui";
+import {
+  JsonRpcProvider,
+  SUI_CLOCK_OBJECT_ID,
+  TransactionBlock,
+  getPublishedObjectChanges,
+} from "@mysten/sui.js";
+import { sleep } from "../utils/sleep";
+import {
+  getPackageId,
+  getWrappedCoinType,
+} from "@certusone/wormhole-sdk/lib/cjs/sui";
+
+// TODO: replace with SDK method
+export async function updateWrappedOnSui(
+  provider: JsonRpcProvider,
+  coreBridgeStateObjectId: string,
+  tokenBridgeStateObjectId: string,
+  coinPackageId: string,
+  attestVAA: Uint8Array
+): Promise<TransactionBlock> {
+  const coreBridgePackageId = await getPackageId(
+    provider,
+    coreBridgeStateObjectId
+  );
+  const tokenBridgePackageId = await getPackageId(
+    provider,
+    tokenBridgeStateObjectId
+  );
+
+  // Get coin metadata
+  const coinType = getWrappedCoinType(coinPackageId);
+  const coinMetadataObjectId = (await provider.getCoinMetadata({ coinType }))
+    ?.id;
+  if (!coinMetadataObjectId) {
+    throw new Error(
+      `Coin metadata object not found for coin type ${coinType}.`
+    );
+  }
+
+  // Get TokenBridgeMessage
+  const tx = new TransactionBlock();
+  const [vaa] = tx.moveCall({
+    target: `${coreBridgePackageId}::vaa::parse_and_verify`,
+    arguments: [
+      tx.object(coreBridgeStateObjectId),
+      tx.pure([...attestVAA]),
+      tx.object(SUI_CLOCK_OBJECT_ID),
+    ],
+  });
+  const [message] = tx.moveCall({
+    target: `${tokenBridgePackageId}::vaa::verify_only_once`,
+    arguments: [tx.object(tokenBridgeStateObjectId), vaa],
+  });
+
+  // Construct complete registration payload
+  tx.moveCall({
+    target: `${tokenBridgePackageId}::create_wrapped::update_attestation`,
+    arguments: [
+      tx.object(tokenBridgeStateObjectId),
+      tx.object(coinMetadataObjectId),
+      message,
+    ],
+    typeArguments: [coinType],
+  });
+  return tx;
+}
 
 async function algo(
   dispatch: any,
@@ -473,7 +550,123 @@ async function sei(
   }
 }
 
-export function useHandleCreateWrapped(shouldUpdate: boolean) {
+async function sui(
+  dispatch: any,
+  enqueueSnackbar: any,
+  wallet: WalletContextStateSui,
+  signedVAA: Uint8Array,
+  foreignAddress: string | null | undefined
+) {
+  dispatch(setIsCreating(true));
+  try {
+    if (!wallet.address) {
+      throw new Error("No wallet address");
+    }
+    const provider = getSuiProvider();
+    let response: SuiSignAndExecuteTransactionBlockOutput;
+    if (foreignAddress) {
+      const suiUpdateWrappedTxPayload = await updateWrappedOnSui(
+        provider,
+        getBridgeAddressForChain(CHAIN_ID_SUI),
+        getTokenBridgeAddressForChain(CHAIN_ID_SUI),
+        foreignAddress.split("::")[0],
+        signedVAA
+      );
+      response = await wallet.signAndExecuteTransactionBlock({
+        transactionBlock: suiUpdateWrappedTxPayload,
+        options: {
+          showEvents: true,
+        },
+      });
+    } else {
+      const suiPrepareRegistrationTxPayload = await createWrappedOnSuiPrepare(
+        provider,
+        getBridgeAddressForChain(CHAIN_ID_SUI),
+        getTokenBridgeAddressForChain(CHAIN_ID_SUI),
+        parseAttestMetaVaa(signedVAA).decimals,
+        wallet.address
+      );
+      const suiPrepareRegistrationTxRes =
+        await wallet.signAndExecuteTransactionBlock({
+          transactionBlock: suiPrepareRegistrationTxPayload,
+          options: {
+            showObjectChanges: true,
+          },
+        });
+      console.log(suiPrepareRegistrationTxRes);
+      const wrappedAssetSetupEvent =
+        suiPrepareRegistrationTxRes.objectChanges?.find(
+          (oc) =>
+            oc.type === "created" && oc.objectType.includes("WrappedAssetSetup")
+        );
+      const wrappedAssetSetupType =
+        (wrappedAssetSetupEvent?.type === "created" &&
+          wrappedAssetSetupEvent.objectType) ||
+        undefined;
+      if (!wrappedAssetSetupType) {
+        throw new Error("Error parsing wrappedAssetSetupType");
+      }
+      const publishEvents = getPublishedObjectChanges(
+        suiPrepareRegistrationTxRes
+      );
+      if (publishEvents.length < 1) {
+        throw new Error("Error parsing publishEvents");
+      }
+      const coinPackageId = publishEvents[0].packageId;
+      let attempts = 0;
+      let suiCompleteRegistrationTxPayload: TransactionBlock | null = null;
+      while (!suiCompleteRegistrationTxPayload) {
+        try {
+          suiCompleteRegistrationTxPayload = await createWrappedOnSui(
+            provider,
+            getBridgeAddressForChain(CHAIN_ID_SUI),
+            getTokenBridgeAddressForChain(CHAIN_ID_SUI),
+            wallet.address,
+            coinPackageId,
+            wrappedAssetSetupType,
+            signedVAA
+          );
+        } catch (e) {
+          console.error(`Error on attempt ${++attempts}`);
+          console.error(e);
+          if (attempts > 15) {
+            throw e;
+          } else {
+            await sleep(2000);
+          }
+        }
+      }
+
+      response = await wallet.signAndExecuteTransactionBlock({
+        transactionBlock: suiCompleteRegistrationTxPayload,
+        options: {
+          showEvents: true,
+        },
+      });
+    }
+
+    dispatch(
+      setCreateTx({
+        id: response.digest,
+        block: Number(response.checkpoint || 0),
+      })
+    );
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+  } catch (e) {
+    console.error(e);
+    enqueueSnackbar(null, {
+      content: <Alert severity="error">{parseError(e)}</Alert>,
+    });
+    dispatch(setIsCreating(false));
+  }
+}
+
+export function useHandleCreateWrapped(
+  shouldUpdate: boolean,
+  foreignAddress: string | null | undefined
+) {
   const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
   const targetChain = useSelector(selectAttestTargetChain);
@@ -494,6 +687,7 @@ export function useHandleCreateWrapped(shouldUpdate: boolean) {
     useSeiSigningCosmWasmClient();
   const { accounts: seiAccounts } = useSeiWallet();
   const seiAddress = seiAccounts.length ? seiAccounts[0].address : null;
+  const suiWallet = useWallet();
   const handleCreateClick = useCallback(() => {
     if (isEVMChain(targetChain) && !!signer && !!signedVAA) {
       evm(
@@ -584,6 +778,13 @@ export function useHandleCreateWrapped(shouldUpdate: boolean) {
       !!signedVAA
     ) {
       near(dispatch, enqueueSnackbar, nearAccountId, signedVAA, wallet);
+    } else if (
+      targetChain === CHAIN_ID_SUI &&
+      suiWallet.connected &&
+      suiWallet.address &&
+      !!signedVAA
+    ) {
+      sui(dispatch, enqueueSnackbar, suiWallet, signedVAA, foreignAddress);
     } else {
       // enqueueSnackbar(
       //   "Creating wrapped tokens on this chain is not yet supported",
@@ -613,6 +814,8 @@ export function useHandleCreateWrapped(shouldUpdate: boolean) {
     wallet,
     seiSigningCosmWasmClient,
     seiAddress,
+    suiWallet,
+    foreignAddress,
   ]);
   return useMemo(
     () => ({

@@ -240,7 +240,7 @@ function useFetchForeignAsset(
             return getForeignAssetSui(
               getSuiProvider(),
               getTokenBridgeAddressForChain(CHAIN_ID_SUI),
-              CHAIN_ID_SUI,
+              originChain,
               hexToUint8Array(originAssetHex)
             );
           }

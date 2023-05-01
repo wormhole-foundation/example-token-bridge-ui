@@ -522,10 +522,6 @@ export const SEI_TRANSLATOR =
 export const SEI_TRANSLATER_TARGET = cosmos.canonicalAddress(SEI_TRANSLATOR);
 export const SEI_DECIMALS = 6;
 
-export const SUI_URL =
-  CLUSTER === "testnet"
-    ? "https://fullnode.devnet.sui.io:443"
-    : "http://localhost:5001";
 export const SUI_CONNECTION =
   CLUSTER === "testnet" ? testnetConnection : localnetConnection;
 
