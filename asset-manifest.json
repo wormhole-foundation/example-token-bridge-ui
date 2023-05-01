@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/example-token-bridge-ui/static/css/main.2e827997.css",
-    "main.js": "/example-token-bridge-ui/static/js/main.d24b821f.js",
+    "main.js": "/example-token-bridge-ui/static/js/main.df4f1028.js",
     "static/js/229.aa8e5ec0.chunk.js": "/example-token-bridge-ui/static/js/229.aa8e5ec0.chunk.js",
     "static/js/396.e710c348.chunk.js": "/example-token-bridge-ui/static/js/396.e710c348.chunk.js",
     "static/js/970.229cc006.chunk.js": "/example-token-bridge-ui/static/js/970.229cc006.chunk.js",
-    "static/js/93.a847cf6c.chunk.js": "/example-token-bridge-ui/static/js/93.a847cf6c.chunk.js",
+    "static/js/283.d1393933.chunk.js": "/example-token-bridge-ui/static/js/283.d1393933.chunk.js",
     "static/js/986.d3cc1bdb.chunk.js": "/example-token-bridge-ui/static/js/986.d3cc1bdb.chunk.js",
     "static/js/882.3a931e6f.chunk.js": "/example-token-bridge-ui/static/js/882.3a931e6f.chunk.js",
-    "static/js/525.5dde4b41.chunk.js": "/example-token-bridge-ui/static/js/525.5dde4b41.chunk.js",
-    "static/js/578.4228fc62.chunk.js": "/example-token-bridge-ui/static/js/578.4228fc62.chunk.js",
+    "static/js/145.615daea3.chunk.js": "/example-token-bridge-ui/static/js/145.615daea3.chunk.js",
+    "static/js/578.05cfeb01.chunk.js": "/example-token-bridge-ui/static/js/578.05cfeb01.chunk.js",
     "static/js/329.a85cd076.chunk.js": "/example-token-bridge-ui/static/js/329.a85cd076.chunk.js",
     "static/media/keplr.svg": "/example-token-bridge-ui/static/media/keplr.5bd78b0b1b00da236168db2185418da3.svg",
     "static/media/leap.png": "/example-token-bridge-ui/static/media/leap.5d7059037c2002226d73.png",
@@ -30,6 +30,7 @@
     "static/media/klaytn.svg": "/example-token-bridge-ui/static/media/klaytn.5c570c72fc1acba8b9c7bf49e4b838c0.svg",
     "static/media/celo.svg": "/example-token-bridge-ui/static/media/celo.4c9aaaf49dc42d67179ebd8cbc6bf21a.svg",
     "static/media/karura.svg": "/example-token-bridge-ui/static/media/karura.0bf5aee4c43aaa67489224bedb70609b.svg",
+    "static/media/sui.svg": "/example-token-bridge-ui/static/media/sui.62d8b0c8e433d8317e0cbf12a08e04b7.svg",
     "static/media/aptos.svg": "/example-token-bridge-ui/static/media/aptos.19d0eda7068d07106473e6218dc2ae3e.svg",
     "static/media/solana.svg": "/example-token-bridge-ui/static/media/solana.61403bc0a0fa16f39ea8b67f1dce06fe.svg",
     "static/media/base.svg": "/example-token-bridge-ui/static/media/base.9d0a30a811c8797eb779959b83a9919f.svg",
@@ -48,19 +49,19 @@
     "static/media/algorand.svg": "/example-token-bridge-ui/static/media/algorand.699bf008d7073523b8edd75d8f3b38ac.svg",
     "static/media/eth.svg": "/example-token-bridge-ui/static/media/eth.5a5de20bf3808241fc61ed9ad7680ab5.svg",
     "main.2e827997.css.map": "/example-token-bridge-ui/static/css/main.2e827997.css.map",
-    "main.d24b821f.js.map": "/example-token-bridge-ui/static/js/main.d24b821f.js.map",
+    "main.df4f1028.js.map": "/example-token-bridge-ui/static/js/main.df4f1028.js.map",
     "229.aa8e5ec0.chunk.js.map": "/example-token-bridge-ui/static/js/229.aa8e5ec0.chunk.js.map",
     "396.e710c348.chunk.js.map": "/example-token-bridge-ui/static/js/396.e710c348.chunk.js.map",
     "970.229cc006.chunk.js.map": "/example-token-bridge-ui/static/js/970.229cc006.chunk.js.map",
-    "93.a847cf6c.chunk.js.map": "/example-token-bridge-ui/static/js/93.a847cf6c.chunk.js.map",
+    "283.d1393933.chunk.js.map": "/example-token-bridge-ui/static/js/283.d1393933.chunk.js.map",
     "986.d3cc1bdb.chunk.js.map": "/example-token-bridge-ui/static/js/986.d3cc1bdb.chunk.js.map",
     "882.3a931e6f.chunk.js.map": "/example-token-bridge-ui/static/js/882.3a931e6f.chunk.js.map",
-    "525.5dde4b41.chunk.js.map": "/example-token-bridge-ui/static/js/525.5dde4b41.chunk.js.map",
-    "578.4228fc62.chunk.js.map": "/example-token-bridge-ui/static/js/578.4228fc62.chunk.js.map",
+    "145.615daea3.chunk.js.map": "/example-token-bridge-ui/static/js/145.615daea3.chunk.js.map",
+    "578.05cfeb01.chunk.js.map": "/example-token-bridge-ui/static/js/578.05cfeb01.chunk.js.map",
     "329.a85cd076.chunk.js.map": "/example-token-bridge-ui/static/js/329.a85cd076.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.2e827997.css",
-    "static/js/main.d24b821f.js"
+    "static/js/main.df4f1028.js"
   ]
 }
