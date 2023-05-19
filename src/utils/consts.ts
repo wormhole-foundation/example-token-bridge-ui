@@ -513,8 +513,8 @@ export const INJECTIVE_NETWORK_INFO = getNetworkInfo(Network.TestnetK8s);
 
 export const SEI_CHAIN_CONFIGURATION: ChainConfiguration = {
   chainId: "atlantic-2",
-  restUrl: "https://rest.atlantic-2.seinetwork.io/",
-  rpcUrl: "https://rpc.atlantic-2.seinetwork.io/",
+  restUrl: "https://sei-testnet-api.polkachu.com",
+  rpcUrl: "https://sei-testnet-rpc.polkachu.com",
 };
 
 export const SEI_TRANSLATOR =
