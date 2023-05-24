@@ -418,7 +418,7 @@ async function sei(
       },
     };
     // TODO: is this right?
-    const fee = calculateFee(750000, "0.1usei");
+    const fee = calculateFee(800000, "0.1usei");
     const tx = await wallet.execute(
       walletAddress,
       SEI_TRANSLATOR,
