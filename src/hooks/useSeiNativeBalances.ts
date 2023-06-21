@@ -2,7 +2,7 @@ import { cosmos } from "@certusone/wormhole-sdk";
 import { base58, formatUnits } from "ethers/lib/utils";
 import { MutableRefObject, useEffect, useMemo, useState } from "react";
 import { NFTParsedTokenAccount } from "../store/nftSlice";
-import { SEI_TRANSLATOR } from "../utils/consts";
+import { SEI_DECIMALS, SEI_TRANSLATOR } from "../utils/consts";
 import { getSeiQueryClient, getSeiWasmClient } from "../utils/sei";
 
 export default function useSeiNativeBalances(
@@ -35,9 +35,9 @@ export default function useSeiNativeBalances(
             address: walletAddress,
           });
           // NOTE: this UI only handles the translator factory tokens for now
-          // const seiCoin = response.balances.find(
-          //   (coin) => coin.denom === "usei"
-          // );
+          const seiCoin = response.balances.find(
+            (coin) => coin.denom === "usei"
+          );
           const translatedCoins = response.balances.filter((coin) =>
             coin.denom.startsWith(`factory/${SEI_TRANSLATOR}/`)
           );
@@ -59,26 +59,26 @@ export default function useSeiNativeBalances(
               )
           );
           const tokenAccounts: NFTParsedTokenAccount[] = [
-            // ...(seiCoin
-            //   ? [
-            //       {
-            //         amount: seiCoin.amount,
-            //         decimals: SEI_DECIMALS,
-            //         mintKey: seiCoin.denom,
-            //         publicKey: walletAddress,
-            //         uiAmount: Number(
-            //           formatUnits(BigInt(seiCoin.amount), SEI_DECIMALS)
-            //         ),
-            //         uiAmountString: formatUnits(
-            //           BigInt(seiCoin.amount),
-            //           SEI_DECIMALS
-            //         ),
-            //         isNativeAsset: true,
-            //         symbol: "SEI",
-            //         name: "Sei",
-            //       },
-            //     ]
-            //   : []),
+            ...(seiCoin
+              ? [
+                  {
+                    amount: seiCoin.amount,
+                    decimals: SEI_DECIMALS,
+                    mintKey: seiCoin.denom,
+                    publicKey: walletAddress,
+                    uiAmount: Number(
+                      formatUnits(BigInt(seiCoin.amount), SEI_DECIMALS)
+                    ),
+                    uiAmountString: formatUnits(
+                      BigInt(seiCoin.amount),
+                      SEI_DECIMALS
+                    ),
+                    isNativeAsset: true,
+                    symbol: "SEI",
+                    name: "Sei",
+                  },
+                ]
+              : []),
             ...translatedCoins.map((coin, idx) => ({
               amount: coin.amount,
               decimals: translatedCoinInfos[idx].decimals,

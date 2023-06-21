@@ -130,7 +130,7 @@ import {
   signAndSendTransactions,
 } from "../utils/near";
 import parseError from "../utils/parseError";
-import { parseSequenceFromLogSei } from "../utils/sei";
+import { isNativeDenomSei, parseSequenceFromLogSei } from "../utils/sei";
 import { signSendAndConfirm } from "../utils/solana";
 import { getSuiProvider } from "../utils/sui";
 import { postWithFees, waitForTerraExecution } from "../utils/terra";
@@ -144,9 +144,10 @@ type AdditionalPayloadOverride = {
 
 function maybeAdditionalPayload(
   recipientChain: ChainId,
-  recipientAddress: Uint8Array
+  recipientAddress: Uint8Array,
+  originChain?: ChainId
 ): AdditionalPayloadOverride | null {
-  if (recipientChain === CHAIN_ID_SEI) {
+  if (recipientChain === CHAIN_ID_SEI && originChain !== CHAIN_ID_SEI) {
     return {
       receivingContract: SEI_TRANSLATER_TARGET,
       payload: new Uint8Array(
@@ -216,6 +217,7 @@ async function algo(
   recipientChain: ChainId,
   recipientAddress: Uint8Array,
   chainId: ChainId,
+  originChain?: ChainId,
   relayerFee?: string
 ) {
   dispatch(setIsSending(true));
@@ -225,7 +227,8 @@ async function algo(
     const transferAmountParsed = baseAmountParsed.add(feeParsed);
     const additionalPayload = maybeAdditionalPayload(
       recipientChain,
-      recipientAddress
+      recipientAddress,
+      originChain
     );
     const algodClient = new algosdk.Algodv2(
       ALGORAND_HOST.algodToken,
@@ -283,6 +286,7 @@ async function aptos(
   ) => Promise<{
     hash: string;
   }>,
+  originChain?: ChainId,
   relayerFee?: string
 ) {
   dispatch(setIsSending(true));
@@ -293,7 +297,8 @@ async function aptos(
     const transferAmountParsed = baseAmountParsed.add(feeParsed);
     const additionalPayload = maybeAdditionalPayload(
       recipientChain,
-      recipientAddress
+      recipientAddress,
+      originChain
     );
     if (additionalPayload?.payload) {
       throw new Error("Transfer with payload is unsupported on Aptos");
@@ -346,6 +351,7 @@ async function evm(
   recipientAddress: Uint8Array,
   isNative: boolean,
   chainId: ChainId,
+  originChain?: ChainId,
   relayerFee?: string
 ) {
   dispatch(setIsSending(true));
@@ -355,7 +361,8 @@ async function evm(
     const transferAmountParsed = baseAmountParsed.add(feeParsed);
     const additionalPayload = maybeAdditionalPayload(
       recipientChain,
-      recipientAddress
+      recipientAddress,
+      originChain
     );
     // Klaytn requires specifying gasPrice
     const overrides =
@@ -420,6 +427,7 @@ async function near(
   recipientChain: ChainId,
   recipientAddress: Uint8Array,
   chainId: ChainId,
+  originChain?: ChainId,
   relayerFee?: string
 ) {
   dispatch(setIsSending(true));
@@ -429,7 +437,8 @@ async function near(
     const transferAmountParsed = baseAmountParsed.add(feeParsed);
     const additionalPayload = maybeAdditionalPayload(
       recipientChain,
-      recipientAddress
+      recipientAddress,
+      originChain
     );
     const account = await makeNearAccount(senderAddr);
     const msgs =
@@ -513,7 +522,8 @@ async function solana(
     const transferAmountParsed = baseAmountParsed.add(feeParsed);
     const additionalPayload = maybeAdditionalPayload(
       targetChain,
-      targetAddress
+      targetAddress,
+      originChain
     );
     const originAddress = originAddressStr
       ? zeroPad(hexToUint8Array(originAddressStr), 32)
@@ -583,6 +593,7 @@ async function terra(
   targetAddress: Uint8Array,
   feeDenom: string,
   chainId: TerraChainId,
+  originChain?: ChainId,
   relayerFee?: string
 ) {
   dispatch(setIsSending(true));
@@ -593,7 +604,8 @@ async function terra(
     const tokenBridgeAddress = getTokenBridgeAddressForChain(chainId);
     const additionalPayload = maybeAdditionalPayload(
       targetChain,
-      targetAddress
+      targetAddress,
+      originChain
     );
     const msgs = await transferFromTerra(
       wallet.terraAddress,
@@ -645,6 +657,7 @@ async function xpla(
   decimals: number,
   targetChain: ChainId,
   targetAddress: Uint8Array,
+  originChain?: ChainId,
   relayerFee?: string
 ) {
   dispatch(setIsSending(true));
@@ -655,7 +668,8 @@ async function xpla(
     const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_XPLA);
     const additionalPayload = maybeAdditionalPayload(
       targetChain,
-      targetAddress
+      targetAddress,
+      originChain
     );
     const msgs = await transferFromXpla(
       wallet.xplaAddress,
@@ -706,6 +720,7 @@ async function injective(
   decimals: number,
   targetChain: ChainId,
   targetAddress: Uint8Array,
+  originChain?: ChainId,
   relayerFee?: string
 ) {
   dispatch(setIsSending(true));
@@ -717,7 +732,8 @@ async function injective(
       getTokenBridgeAddressForChain(CHAIN_ID_INJECTIVE);
     const additionalPayload = maybeAdditionalPayload(
       targetChain,
-      targetAddress
+      targetAddress,
+      originChain
     );
     const msgs = await transferFromInjective(
       walletAddress,
@@ -774,28 +790,73 @@ async function sei(
     const feeParsed = parseUnits(relayerFee || "0", decimals);
     const transferAmountParsed = baseAmountParsed.add(feeParsed);
     const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_SEI);
-    // NOTE: this only supports transferring out via the Sei CW20 <> Bank translator
-    const msg = {
-      convert_and_transfer: {
-        recipient_chain: targetChain,
-        recipient: Buffer.from(targetAddress).toString("base64"),
-        fee: feeParsed.toString(),
-      },
-    };
-    const fee = calculateFee(600000, "0.1usei");
-    const tx = await wallet.execute(
-      walletAddress,
-      SEI_TRANSLATOR,
-      msg,
-      fee,
-      "Wormhole - Initiate Transfer",
-      [{ denom: asset, amount: transferAmountParsed.toString() }]
-    );
-    dispatch(setTransferTx({ id: tx.transactionHash, block: tx.height }));
-    enqueueSnackbar(null, {
-      content: <Alert severity="success">Transaction confirmed</Alert>,
-    });
-    const sequence = parseSequenceFromLogSei(tx);
+    let sequence: string = "";
+    if (asset.startsWith(`factory/${SEI_TRANSLATOR}/`)) {
+      const msg = {
+        convert_and_transfer: {
+          recipient_chain: targetChain,
+          recipient: Buffer.from(targetAddress).toString("base64"),
+          fee: feeParsed.toString(),
+        },
+      };
+      const fee = calculateFee(750000, "0.1usei");
+      const tx = await wallet.execute(
+        walletAddress,
+        SEI_TRANSLATOR,
+        msg,
+        fee,
+        "Wormhole - Initiate Transfer",
+        [{ denom: asset, amount: transferAmountParsed.toString() }]
+      );
+      dispatch(setTransferTx({ id: tx.transactionHash, block: tx.height }));
+      enqueueSnackbar(null, {
+        content: <Alert severity="success">Transaction confirmed</Alert>,
+      });
+      sequence = parseSequenceFromLogSei(tx);
+    } else if (isNativeDenomSei(asset)) {
+      const fee = calculateFee(600000, "0.1usei");
+      const nonce = Math.round(Math.random() * 100000);
+      const tx = await wallet.executeMultiple(
+        walletAddress,
+        [
+          {
+            contractAddress: tokenBridgeAddress,
+            msg: {
+              deposit_tokens: {},
+            },
+            funds: [{ denom: asset, amount: transferAmountParsed.toString() }],
+          },
+          {
+            contractAddress: tokenBridgeAddress,
+            msg: {
+              initiate_transfer: {
+                asset: {
+                  amount: transferAmountParsed.toString(),
+                  info: {
+                    native_token: {
+                      denom: asset,
+                    },
+                  },
+                },
+                recipient_chain: targetChain,
+                recipient: Buffer.from(targetAddress).toString("base64"),
+                fee: feeParsed.toString(),
+                nonce,
+              },
+            },
+          },
+        ],
+        fee,
+        "Wormhole - Initiate Transfer"
+      );
+      dispatch(setTransferTx({ id: tx.transactionHash, block: tx.height }));
+      enqueueSnackbar(null, {
+        content: <Alert severity="success">Transaction confirmed</Alert>,
+      });
+      sequence = parseSequenceFromLogSei(tx);
+    } else {
+      throw new Error("Unsupported asset");
+    }
     if (!sequence) {
       throw new Error("Sequence not found");
     }
@@ -822,6 +883,7 @@ async function sui(
   decimals: number,
   targetChain: ChainId,
   targetAddress: Uint8Array,
+  originChain?: ChainId,
   relayerFee?: string
 ) {
   dispatch(setIsSending(true));
@@ -947,6 +1009,7 @@ export function useHandleTransfer() {
         targetAddress,
         isNative,
         sourceChain,
+        originChain,
         relayerFee
       );
     } else if (
@@ -992,6 +1055,7 @@ export function useHandleTransfer() {
         targetAddress,
         terraFeeDenom,
         sourceChain,
+        originChain,
         relayerFee
       );
     } else if (
@@ -1010,6 +1074,7 @@ export function useHandleTransfer() {
         decimals,
         targetChain,
         targetAddress,
+        originChain,
         relayerFee
       );
     } else if (
@@ -1029,6 +1094,7 @@ export function useHandleTransfer() {
         targetChain,
         targetAddress,
         sourceChain,
+        originChain,
         relayerFee
       );
     } else if (
@@ -1048,6 +1114,7 @@ export function useHandleTransfer() {
         targetAddress,
         sourceChain,
         signAndSubmitTransaction,
+        originChain,
         relayerFee
       );
     } else if (
@@ -1068,6 +1135,7 @@ export function useHandleTransfer() {
         decimals,
         targetChain,
         targetAddress,
+        originChain,
         relayerFee
       );
     } else if (
@@ -1109,6 +1177,7 @@ export function useHandleTransfer() {
         targetChain,
         targetAddress,
         sourceChain,
+        originChain,
         relayerFee
       );
     } else if (
@@ -1128,6 +1197,7 @@ export function useHandleTransfer() {
         decimals,
         targetChain,
         targetAddress,
+        originChain,
         relayerFee
       );
     }
