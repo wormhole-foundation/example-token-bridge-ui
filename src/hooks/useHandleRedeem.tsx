@@ -12,6 +12,8 @@ import {
   TerraChainId,
   isEVMChain,
   isTerraChain,
+  parseTransferPayload,
+  parseVaa,
   postVaaSolanaWithRetry,
   redeemAndUnwrapOnSolana,
   redeemOnAlgorand,
@@ -81,6 +83,7 @@ import {
   ALGORAND_TOKEN_BRIDGE_ID,
   MAX_VAA_UPLOAD_RETRIES_SOLANA,
   NEAR_TOKEN_BRIDGE_ACCOUNT,
+  SEI_TRANSLATER_TARGET,
   SEI_TRANSLATOR,
   SOLANA_HOST,
   SOL_BRIDGE_ADDRESS,
@@ -412,24 +415,45 @@ async function sei(
 ) {
   dispatch(setIsRedeeming(true));
   try {
-    const msg = {
-      complete_transfer_and_convert: {
-        vaa: fromUint8Array(signedVAA),
-      },
-    };
-    // TODO: is this right?
-    const fee = calculateFee(800000, "0.1usei");
-    const tx = await wallet.execute(
-      walletAddress,
-      SEI_TRANSLATOR,
-      msg,
-      fee,
-      "Wormhole - Complete Transfer"
-    );
-    dispatch(setRedeemTx({ id: tx.transactionHash, block: tx.height }));
-    enqueueSnackbar(null, {
-      content: <Alert severity="success">Transaction confirmed</Alert>,
-    });
+    const parsed = parseVaa(signedVAA);
+    const payload = parseTransferPayload(parsed.payload);
+    if (payload.targetAddress === uint8ArrayToHex(SEI_TRANSLATER_TARGET)) {
+      const msg = {
+        complete_transfer_and_convert: {
+          vaa: fromUint8Array(signedVAA),
+        },
+      };
+      const fee = calculateFee(800000, "0.1usei");
+      const tx = await wallet.execute(
+        walletAddress,
+        SEI_TRANSLATOR,
+        msg,
+        fee,
+        "Wormhole - Complete Transfer"
+      );
+      dispatch(setRedeemTx({ id: tx.transactionHash, block: tx.height }));
+      enqueueSnackbar(null, {
+        content: <Alert severity="success">Transaction confirmed</Alert>,
+      });
+    } else {
+      const msg = {
+        submit_vaa: {
+          data: fromUint8Array(signedVAA),
+        },
+      };
+      const fee = calculateFee(800000, "0.1usei");
+      const tx = await wallet.execute(
+        walletAddress,
+        getTokenBridgeAddressForChain(CHAIN_ID_SEI),
+        msg,
+        fee,
+        "Wormhole - Complete Transfer"
+      );
+      dispatch(setRedeemTx({ id: tx.transactionHash, block: tx.height }));
+      enqueueSnackbar(null, {
+        content: <Alert severity="success">Transaction confirmed</Alert>,
+      });
+    }
   } catch (e) {
     enqueueSnackbar(null, {
       content: <Alert severity="error">{parseError(e)}</Alert>,

@@ -1,14 +1,21 @@
 import {
+  CHAIN_ID_INJECTIVE,
   CHAIN_ID_SEI,
+  CHAIN_ID_TERRA,
+  CHAIN_ID_XPLA,
   ChainId,
   ChainName,
+  CosmWasmChainId,
+  CosmWasmChainName,
   WormholeWrappedInfo,
-  buildTokenId,
   coalesceChainId,
+  coalesceCosmWasmChainId,
   hexToUint8Array,
-  isNativeCosmWasmDenom,
+  isTerraChain,
 } from "@certusone/wormhole-sdk";
+import { isNativeDenom } from "@certusone/wormhole-sdk/lib/esm/terra";
 import { getCosmWasmClient, getQueryClient } from "@sei-js/core";
+import { keccak256 } from "ethers/lib/utils";
 import { fromUint8Array } from "js-base64";
 import { SEI_CHAIN_CONFIGURATION } from "./consts";
 
@@ -21,6 +28,57 @@ export const getSeiQueryClient = () =>
 export type CosmWasmClient = {
   queryContractSmart: (address: string, queryMsg: any) => Promise<any>;
 };
+
+// START SDK PATCH
+export const isNativeDenomInjective = (denom: string) => denom === "inj";
+export const isNativeDenomXpla = (denom: string) => denom === "axpla";
+export const isNativeDenomSei = (denom: string) => denom === "usei";
+
+export function isNativeCosmWasmDenom(
+  chainId: CosmWasmChainId,
+  address: string
+) {
+  return (
+    (isTerraChain(chainId) && isNativeDenom(address)) ||
+    (chainId === CHAIN_ID_INJECTIVE && isNativeDenomInjective(address)) ||
+    (chainId === CHAIN_ID_XPLA && isNativeDenomXpla(address)) ||
+    (chainId === CHAIN_ID_SEI && isNativeDenomSei(address))
+  );
+}
+
+export function buildTokenId(
+  chain: Exclude<
+    CosmWasmChainId | CosmWasmChainName,
+    typeof CHAIN_ID_TERRA | "terra"
+  >,
+  address: string
+) {
+  const chainId: CosmWasmChainId = coalesceCosmWasmChainId(chain);
+  return (
+    (isNativeCosmWasmDenom(chainId, address) ? "01" : "00") +
+    keccak256(Buffer.from(address, "utf-8")).substring(4)
+  );
+}
+// END SDK PATCH
+
+export function attestFromSeiMsg(asset: string) {
+  const nonce = Math.round(Math.random() * 100000);
+  const isNativeAsset = isNativeDenomSei(asset);
+  return {
+    create_asset_meta: {
+      asset_info: isNativeAsset
+        ? {
+            native_token: { denom: asset },
+          }
+        : {
+            token: {
+              contract_addr: asset,
+            },
+          },
+      nonce: nonce,
+    },
+  };
+}
 
 /**
  * Returns the address of the foreign asset

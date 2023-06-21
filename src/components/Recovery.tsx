@@ -5,6 +5,7 @@ import {
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_KARURA,
   CHAIN_ID_NEAR,
+  CHAIN_ID_SEI,
   CHAIN_ID_SOLANA,
   CHAIN_ID_SUI,
   CHAIN_ID_TERRA2,
@@ -105,6 +106,12 @@ import {
 } from "../utils/injective";
 import { makeNearProvider } from "../utils/near";
 import parseError from "../utils/parseError";
+import {
+  getSeiQueryClient,
+  getSeiWasmClient,
+  parseSequenceFromLogSei,
+  queryExternalIdSei,
+} from "../utils/sei";
 import { getSuiProvider } from "../utils/sui";
 import ButtonWithLoader from "./ButtonWithLoader";
 import ChainSelect from "./ChainSelect";
@@ -315,6 +322,26 @@ async function injective(txHash: string, enqueueSnackbar: any) {
       getTokenBridgeAddressForChain(CHAIN_ID_INJECTIVE)
     );
     return await fetchSignedVAA(CHAIN_ID_INJECTIVE, emitterAddress, sequence);
+  } catch (e) {
+    return handleError(e, enqueueSnackbar);
+  }
+}
+
+async function sei(txHash: string, enqueueSnackbar: any) {
+  try {
+    const client = await getSeiQueryClient();
+    const tx = await client.cosmos.tx.v1beta1.getTx({ hash: txHash });
+    if (!tx || !tx.tx_response) {
+      throw new Error("Unable to fetch transaction");
+    }
+    const sequence = parseSequenceFromLogSei(tx.tx_response);
+    if (!sequence) {
+      throw new Error("Sequence not found");
+    }
+    const emitterAddress = await getEmitterAddressTerra(
+      getTokenBridgeAddressForChain(CHAIN_ID_SEI)
+    );
+    return await fetchSignedVAA(CHAIN_ID_SEI, emitterAddress, sequence);
   } catch (e) {
     return handleError(e, enqueueSnackbar);
   }
@@ -568,6 +595,19 @@ export default function Recovery() {
         }
       })();
     }
+    if (parsedPayload && parsedPayload.targetChain === CHAIN_ID_SEI) {
+      (async () => {
+        const client = await getSeiWasmClient();
+        const tokenId = await queryExternalIdSei(
+          client,
+          getTokenBridgeAddressForChain(CHAIN_ID_SEI),
+          parsedPayload.originAddress
+        );
+        if (!cancelled) {
+          setTokenId(tokenId || "");
+        }
+      })();
+    }
     if (parsedPayload && parsedPayload.targetChain === CHAIN_ID_SUI) {
       (async () => {
         const tokenId = await getForeignAssetSui(
@@ -765,6 +805,26 @@ export default function Recovery() {
             recoverySourceTx,
             enqueueSnackbar,
             nearAccountId
+          );
+          if (!cancelled) {
+            setRecoverySourceTxIsLoading(false);
+            if (vaa) {
+              setRecoverySignedVAA(vaa);
+            }
+            if (error) {
+              setRecoverySourceTxError(error);
+            }
+            setIsVAAPending(isPending);
+          }
+        })();
+      } else if (recoverySourceChain === CHAIN_ID_SEI) {
+        setRecoverySourceTxError("");
+        setRecoverySourceTxIsLoading(true);
+        setTokenId("");
+        (async () => {
+          const { vaa, isPending, error } = await sei(
+            recoverySourceTx,
+            enqueueSnackbar
           );
           if (!cancelled) {
             setRecoverySourceTxIsLoading(false);

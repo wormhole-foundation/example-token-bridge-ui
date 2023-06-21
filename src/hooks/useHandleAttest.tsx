@@ -4,6 +4,7 @@ import {
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_KLAYTN,
   CHAIN_ID_NEAR,
+  CHAIN_ID_SEI,
   CHAIN_ID_SOLANA,
   CHAIN_ID_SUI,
   CHAIN_ID_XPLA,
@@ -40,9 +41,15 @@ import {
 } from "@certusone/wormhole-sdk";
 import { getOriginalPackageId } from "@certusone/wormhole-sdk/lib/cjs/sui";
 import { getEmitterAddressAndSequenceFromResponseSui } from "@certusone/wormhole-sdk/lib/esm/sui";
+import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
+import { calculateFee } from "@cosmjs/stargate";
 import { WalletStrategy } from "@injectivelabs/wallet-ts";
 import { Alert } from "@material-ui/lab";
 import { Wallet } from "@near-wallet-selector/core";
+import {
+  useSigningCosmWasmClient as useSeiSigningCosmWasmClient,
+  useWallet as useSeiWallet,
+} from "@sei-js/react";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { Connection, PublicKey } from "@solana/web3.js";
 import {
@@ -113,6 +120,7 @@ import { signSendAndConfirm } from "../utils/solana";
 import { getSuiProvider } from "../utils/sui";
 import { postWithFees, waitForTerraExecution } from "../utils/terra";
 import { postWithFeesXpla, waitForXplaExecution } from "../utils/xpla";
+import { attestFromSeiMsg, parseSequenceFromLogSei } from "../utils/sei";
 
 async function algo(
   dispatch: any,
@@ -543,6 +551,56 @@ async function injective(
   }
 }
 
+async function sei(
+  dispatch: any,
+  enqueueSnackbar: any,
+  wallet: SigningCosmWasmClient,
+  walletAddress: string,
+  asset: string
+) {
+  dispatch(setIsSending(true));
+  try {
+    const msg = attestFromSeiMsg(asset);
+    const fee = calculateFee(600000, "0.1usei");
+    const tokenBridgeAddress = getTokenBridgeAddressForChain(CHAIN_ID_SEI);
+    const tx = await wallet.execute(
+      walletAddress,
+      tokenBridgeAddress,
+      msg,
+      fee,
+      "Wormhole - Create Wrapped"
+    );
+    dispatch(setAttestTx({ id: tx.transactionHash, block: tx.height }));
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Transaction confirmed</Alert>,
+    });
+    const sequence = parseSequenceFromLogSei(tx);
+    if (!sequence) {
+      throw new Error("Sequence not found");
+    }
+    const emitterAddress = await getEmitterAddressTerra(tokenBridgeAddress);
+    enqueueSnackbar(null, {
+      content: <Alert severity="info">Fetching VAA</Alert>,
+    });
+    const { vaaBytes } = await getSignedVAAWithRetry(
+      WORMHOLE_RPC_HOSTS,
+      CHAIN_ID_SEI,
+      emitterAddress,
+      sequence
+    );
+    dispatch(setSignedVAAHex(uint8ArrayToHex(vaaBytes)));
+    enqueueSnackbar(null, {
+      content: <Alert severity="success">Fetched Signed VAA</Alert>,
+    });
+  } catch (e) {
+    console.error(e);
+    enqueueSnackbar(null, {
+      content: <Alert severity="error">{parseError(e)}</Alert>,
+    });
+    dispatch(setIsSending(false));
+  }
+}
+
 async function sui(
   dispatch: any,
   enqueueSnackbar: any,
@@ -624,6 +682,10 @@ export function useHandleAttest() {
   const { account: aptosAccount, signAndSubmitTransaction } = useAptosContext();
   const aptosAddress = aptosAccount?.address?.toString();
   const { wallet: injWallet, address: injAddress } = useInjectiveContext();
+  const { signingCosmWasmClient: seiSigningCosmWasmClient } =
+    useSeiSigningCosmWasmClient();
+  const { accounts: seiAccounts } = useSeiWallet();
+  const seiAddress = seiAccounts.length ? seiAccounts[0].address : null;
   const { accountId: nearAccountId, wallet: nearWallet } = useNearContext();
   const suiWallet = useWallet();
   const disabled = !isTargetComplete || isSending || isSendComplete;
@@ -649,6 +711,18 @@ export function useHandleAttest() {
       aptos(dispatch, enqueueSnackbar, sourceAsset, signAndSubmitTransaction);
     } else if (sourceChain === CHAIN_ID_INJECTIVE && injWallet && injAddress) {
       injective(dispatch, enqueueSnackbar, injWallet, injAddress, sourceAsset);
+    } else if (
+      sourceChain === CHAIN_ID_SEI &&
+      seiSigningCosmWasmClient &&
+      seiAddress
+    ) {
+      sei(
+        dispatch,
+        enqueueSnackbar,
+        seiSigningCosmWasmClient,
+        seiAddress,
+        sourceAsset
+      );
     } else if (sourceChain === CHAIN_ID_NEAR && nearAccountId && nearWallet) {
       near(dispatch, enqueueSnackbar, nearAccountId, sourceAsset, nearWallet);
     } else if (
@@ -677,6 +751,8 @@ export function useHandleAttest() {
     nearAccountId,
     nearWallet,
     suiWallet,
+    seiSigningCosmWasmClient,
+    seiAddress,
   ]);
   return useMemo(
     () => ({
