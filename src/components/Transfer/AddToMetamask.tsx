@@ -45,6 +45,7 @@ export default function AddToMetamask() {
             signerAddress
           );
           const ethereum = (await detectEthereumProvider()) as any;
+          // https://docs.metamask.io/wallet/reference/wallet_watchasset/
           ethereum.request({
             method: "wallet_watchAsset",
             params: {
@@ -55,7 +56,7 @@ export default function AddToMetamask() {
                   symbol ||
                   sourceParsedTokenAccount?.symbol ||
                   "wh"
-                ).substr(0, 5), // A ticker symbol or shorthand, up to 5 characters
+                ).substring(0, 11), // A ticker symbol or shorthand, up to 11 characters as of 2023-09-05
                 decimals, // The number of token decimals
                 // image: string; // A string url of the token logo
               },
