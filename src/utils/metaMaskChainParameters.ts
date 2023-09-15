@@ -106,7 +106,7 @@ export const METAMASK_CHAIN_PARAMETERS: {
   },
   421613: {
     chainId: "0x66EED",
-    chainName: "Arbitrum Görli",
+    chainName: "Arbitrum Goerli",
     nativeCurrency: { name: "AGOR", symbol: "AGOR", decimals: 18 },
     rpcUrls: ["https://goerli-rollup.arbitrum.io/rpc"],
     blockExplorerUrls: ["https://goerli.arbiscan.io"],
@@ -140,8 +140,8 @@ export const METAMASK_CHAIN_PARAMETERS: {
     blockExplorerUrls: ["https://goerli.basescan.org"],
   },
   420: {
-    chainId: "0x1056",
-    chainName: "Optimism Goerli",
+    chainId: "0x1a4",
+    chainName: "Optimism Goerli Testnet",
     nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
     rpcUrls: ["https://goerli.optimism.io"],
     blockExplorerUrls: ["https://goerli-optimism.etherscan.io"],
