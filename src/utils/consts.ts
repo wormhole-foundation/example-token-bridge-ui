@@ -404,7 +404,11 @@ export const getExplorerName = (chainId: ChainId) =>
     : "Explorer";
 export const WORMHOLE_RPC_HOSTS =
   CLUSTER === "testnet"
-    ? ["https://wormhole-v2-testnet-api.certus.one"]
+    ? [
+        "https://guardian-01.testnet.xlabs.xyz",
+        "https://guardian-02.testnet.xlabs.xyz",
+        "https://wormhole-v2-testnet-api.certus.one",
+      ]
     : ["http://localhost:7071"];
 export const ETH_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 5 : 1337;
 export const SEPOLIA_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 11155111 : 1337;
