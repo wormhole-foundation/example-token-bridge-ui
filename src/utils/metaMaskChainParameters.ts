@@ -132,12 +132,12 @@ export const METAMASK_CHAIN_PARAMETERS: {
     rpcUrls: ["https://rpc.api.moonbase.moonbeam.network"],
     blockExplorerUrls: ["https://moonbase.moonscan.io"],
   },
-  84531: {
-    chainId: "0x14A33",
-    chainName: "Base Goerli",
+  84532: {
+    chainId: "0x14A34",
+    chainName: "Base Sepolia",
     nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-    rpcUrls: ["https://goerli.base.org"],
-    blockExplorerUrls: ["https://goerli.basescan.org"],
+    rpcUrls: ["https://sepolia.base.org"],
+    blockExplorerUrls: ["https://sepolia.basescan.org"],
   },
   420: {
     chainId: "0x1a4",

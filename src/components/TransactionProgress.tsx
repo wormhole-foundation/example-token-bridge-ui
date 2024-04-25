@@ -4,6 +4,7 @@ import {
   CHAIN_ID_ARBITRUM,
   CHAIN_ID_AURORA,
   CHAIN_ID_BASE,
+  CHAIN_ID_BASE_SEPOLIA,
   CHAIN_ID_CELO,
   CHAIN_ID_FANTOM,
   CHAIN_ID_KARURA,
@@ -101,6 +102,8 @@ export default function TransactionProgress({
       ? 64 // something to show progress
       : chainId === CHAIN_ID_BASE
       ? 124 // something to show progress
+      : chainId === CHAIN_ID_BASE_SEPOLIA
+      ? 124 // something to show progress
       : chainId === CHAIN_ID_OPTIMISM
       ? 124 // something to show progress
       : isEVMChain(chainId)
@@ -123,6 +126,8 @@ export default function TransactionProgress({
           {chainId === CHAIN_ID_ARBITRUM
             ? `Waiting for Ethereum finality on Arbitrum block ${tx?.block}` //TODO: more advanced finality checking for Arbitrum
             : chainId === CHAIN_ID_BASE
+            ? `Waiting for Ethereum finality on Base block ${tx?.block}` //TODO: more advanced finality checking for Base
+            : chainId === CHAIN_ID_BASE_SEPOLIA
             ? `Waiting for Ethereum finality on Base block ${tx?.block}` //TODO: more advanced finality checking for Base
             : chainId === CHAIN_ID_OPTIMISM
             ? `Waiting for Ethereum finality on Optimism block ${tx?.block}` //TODO: more advanced finality checking for Optimism

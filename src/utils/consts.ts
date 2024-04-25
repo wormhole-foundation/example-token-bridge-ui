@@ -7,6 +7,7 @@ import {
   CHAIN_ID_AURORA,
   CHAIN_ID_AVAX,
   CHAIN_ID_BASE,
+  CHAIN_ID_BASE_SEPOLIA,
   CHAIN_ID_BSC,
   CHAIN_ID_CELO,
   CHAIN_ID_ETH,
@@ -113,8 +114,8 @@ export const CHAINS: ChainInfo[] =
           logo: avaxIcon,
         },
         {
-          id: CHAIN_ID_BASE,
-          name: "Base Goerli",
+          id: CHAIN_ID_BASE_SEPOLIA,
+          name: "Base Sepolia",
           logo: baseIcon,
         },
         {
@@ -284,6 +285,7 @@ export const CHAINS_WITH_NFT_SUPPORT = CHAINS.filter(
     id === CHAIN_ID_ARBITRUM ||
     id === CHAIN_ID_MOONBEAM ||
     id === CHAIN_ID_BASE ||
+    id === CHAIN_ID_BASE_SEPOLIA ||
     id === CHAIN_ID_OPTIMISM
 );
 export type ChainsById = { [key in ChainId]: ChainInfo };
@@ -335,6 +337,8 @@ export const getDefaultNativeCurrencySymbol = (chainId: ChainId) =>
     : chainId === CHAIN_ID_MOONBEAM
     ? "GLMR"
     : chainId === CHAIN_ID_BASE
+    ? "ETH"
+    : chainId === CHAIN_ID_BASE_SEPOLIA
     ? "ETH"
     : chainId === CHAIN_ID_OPTIMISM
     ? "ETH"
@@ -401,6 +405,8 @@ export const getExplorerName = (chainId: ChainId) =>
     ? "Moonscan"
     : chainId === CHAIN_ID_BASE
     ? "BaseScan"
+    : chainId === CHAIN_ID_BASE_SEPOLIA
+    ? "BaseScan"
     : "Explorer";
 export const WORMHOLE_RPC_HOSTS =
   CLUSTER === "testnet"
@@ -427,6 +433,7 @@ export const NEON_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 245022926 : 1381;
 export const ARBITRUM_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 421613 : 1381;
 export const MOONBEAM_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 1287 : 1381;
 export const BASE_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 84531 : 1381;
+export const BASE_SEPOLIA_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 84532 : 1381;
 export const OPTIMISM_NETWORK_CHAIN_ID = CLUSTER === "testnet" ? 420 : 1381;
 export const getEvmChainId = (chainId: ChainId) =>
   chainId === CHAIN_ID_ETH
@@ -461,6 +468,8 @@ export const getEvmChainId = (chainId: ChainId) =>
     ? MOONBEAM_NETWORK_CHAIN_ID
     : chainId === CHAIN_ID_BASE
     ? BASE_NETWORK_CHAIN_ID
+    : chainId === CHAIN_ID_BASE_SEPOLIA
+    ? BASE_SEPOLIA_NETWORK_CHAIN_ID
     : chainId === CHAIN_ID_OPTIMISM
     ? OPTIMISM_NETWORK_CHAIN_ID
     : undefined;
@@ -614,6 +623,8 @@ export const COVALENT_MOONBEAM =
   CLUSTER === "devnet" ? null : MOONBEAM_NETWORK_CHAIN_ID; // Covalent only supports mainnet
 export const COVALENT_BASE =
   CLUSTER === "devnet" ? null : BASE_NETWORK_CHAIN_ID;
+export const COVALENT_BASE_SEPOLIA =
+  CLUSTER === "devnet" ? null : BASE_SEPOLIA_NETWORK_CHAIN_ID;
 export const COVALENT_OPTIMISM =
   CLUSTER === "devnet" ? null : OPTIMISM_NETWORK_CHAIN_ID;
 
@@ -646,6 +657,8 @@ export const COVALENT_GET_TOKENS_URL = (
       ? COVALENT_MOONBEAM
       : chainId === CHAIN_ID_BASE
       ? COVALENT_BASE
+      : chainId === CHAIN_ID_BASE_SEPOLIA
+      ? COVALENT_BASE_SEPOLIA
       : chainId === CHAIN_ID_OPTIMISM
       ? COVALENT_OPTIMISM
       : "";
