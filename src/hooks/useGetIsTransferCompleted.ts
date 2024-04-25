@@ -142,8 +142,9 @@ export default function useGetIsTransferCompleted(
             transferCompleted = await getIsTransferCompletedTerra(
               getTokenBridgeAddressForChain(targetChain),
               signedVAA,
-              lcdClient,
-              getTerraGasPricesUrl(targetChain)
+              lcdClient
+              // lcdClient,
+              // getTerraGasPricesUrl(targetChain)
             );
           } catch (error) {
             console.error(error);

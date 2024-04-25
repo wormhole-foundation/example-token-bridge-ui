@@ -22,6 +22,7 @@ import {
   CHAIN_ID_ARBITRUM,
   CHAIN_ID_INJECTIVE,
   CHAIN_ID_BASE,
+  CHAIN_ID_BASE_SEPOLIA,
   CHAIN_ID_OPTIMISM,
   CHAIN_ID_SEPOLIA,
   CHAIN_ID_SUI,
@@ -131,6 +132,10 @@ export default function ShowTx({
         }`
       : chainId === CHAIN_ID_BASE
       ? `https://${CLUSTER === "testnet" ? "goerli." : ""}basescan.org/tx/${
+          tx?.id
+        }`
+      : chainId === CHAIN_ID_BASE_SEPOLIA
+      ? `https://${CLUSTER === "testnet" ? "sepolia." : ""}basescan.org/tx/${
           tx?.id
         }`
       : chainId === CHAIN_ID_OPTIMISM

@@ -25,6 +25,7 @@ import {
   terra,
   CHAIN_ID_NEAR,
   CHAIN_ID_BASE,
+  CHAIN_ID_BASE_SEPOLIA,
   CHAIN_ID_OPTIMISM,
   CHAIN_ID_SEPOLIA,
   CHAIN_ID_SUI,
@@ -165,6 +166,10 @@ export default function SmartAddress({
       }/${useableAddress}`
     : chainId === CHAIN_ID_BASE
     ? `https://${CLUSTER === "testnet" ? "goerli." : ""}basescan.org/${
+        isAsset ? "token" : "address"
+      }/${useableAddress}`
+    : chainId === CHAIN_ID_BASE_SEPOLIA
+    ? `https://${CLUSTER === "testnet" ? "sepolia." : ""}basescan.org/${
         isAsset ? "token" : "address"
       }/${useableAddress}`
     : chainId === CHAIN_ID_OPTIMISM
