@@ -52,14 +52,14 @@ export const METAMASK_CHAIN_PARAMETERS: {
     chainId: "0x254",
     chainName: "Karura Testnet",
     nativeCurrency: { name: "Karura Token", symbol: "KAR", decimals: 18 },
-    rpcUrls: ["https://karura-dev.aca-dev.network/eth/http"],
+    rpcUrls: ["https://eth-rpc-karura-testnet.aca-staging.network"],
     blockExplorerUrls: ["https://blockscout.karura-dev.aca-dev.network"],
   },
   597: {
     chainId: "0x255",
     chainName: "Acala Testnet",
     nativeCurrency: { name: "Acala Token", symbol: "ACA", decimals: 18 },
-    rpcUrls: ["https://acala-dev.aca-dev.network/eth/http"],
+    rpcUrls: ["https://eth-rpc-acala-testnet.aca-staging.network"],
     blockExplorerUrls: ["https://blockscout.acala-dev.aca-dev.network"],
   },
   4002: {
