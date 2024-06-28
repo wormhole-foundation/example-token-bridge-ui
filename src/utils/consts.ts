@@ -546,9 +546,9 @@ export const ALGORAND_HOST =
         algodPort: "4001",
       };
 export const KARURA_HOST =
-  CLUSTER === "testnet" ? "https://karura-dev.aca-dev.network/eth/http" : "";
+  CLUSTER === "testnet" ? "https://eth-rpc-karura-testnet.aca-staging.network" : "";
 export const ACALA_HOST =
-  CLUSTER === "testnet" ? "https://acala-dev.aca-dev.network/eth/http" : "";
+  CLUSTER === "testnet" ? "https://eth-rpc-acala-testnet.aca-staging.network" : "";
 
 export const SOL_CUSTODY_ADDRESS =
   "GugU1tP7doLeTw9hQP51xRJyS8Da1fWxuiy2rVrnMD2m";
